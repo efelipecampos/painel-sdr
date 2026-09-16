@@ -1,0 +1,91 @@
+import express, { type Request } from "express";
+import { pinoHttp } from "pino-http";
+import { env } from "./config/env.js";
+import { logger } from "./logger.js";
+import { verifyPoliSignature } from "./poli/webhookAuth.js";
+import { poliWebhookBodySchema } from "./poli/types.js";
+import { parseMessageEvent } from "./poli/parser.js";
+import { processMessage } from "./pipeline/processMessage.js";
+import { isAlreadyProcessed, markProcessed, recordFailure, clearFailure, listFailedJobs } from "./queue/store.js";
+
+interface RequestWithRawBody extends Request {
+  rawBody?: Buffer;
+}
+
+const app = express();
+app.use(pinoHttp({ logger }));
+app.use(
+  express.json({
+    verify: (req: RequestWithRawBody, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+);
+
+app.get("/health", (_req, res) => {
+  res.json({ ok: true });
+});
+
+app.post("/webhooks/poli", async (req: RequestWithRawBody, res) => {
+  const signatureValid = verifyPoliSignature(req.rawBody ?? Buffer.from(""), req.headers["x-webhook-signature"] as string | undefined);
+  if (!signatureValid) {
+    req.log.warn("Assinatura do webhook inválida, rejeitando");
+    return res.status(401).json({ error: "invalid_signature" });
+  }
+
+  const parsedBody = poliWebhookBodySchema.safeParse(req.body);
+  if (!parsedBody.success) {
+    req.log.warn({ issues: parsedBody.error.issues }, "Payload da Poli não bateu com o schema esperado");
+    return res.status(400).json({ error: "invalid_payload" });
+  }
+
+  const message = parseMessageEvent(parsedBody.data);
+
+  // Responde rápido e sempre 2xx pra Poli não ficar reentregando, mesmo que
+  // o processamento em si falhe (falhas viram retry na fila local).
+  res.status(200).json({ received: true });
+
+  if (isAlreadyProcessed(message.externalMessageId)) {
+    req.log.debug({ id: message.externalMessageId }, "Mensagem já processada, ignorando reentrega");
+    return;
+  }
+
+  try {
+    await processMessage(message);
+    markProcessed(message.externalMessageId);
+    clearFailure(message.externalMessageId);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    req.log.error({ err, id: message.externalMessageId }, "Falha ao processar mensagem, agendando retry");
+    recordFailure(message.externalMessageId, parsedBody.data, errorMessage);
+  }
+});
+
+const RETRY_INTERVAL_MS = 60_000;
+const MAX_RETRY_ATTEMPTS = 10;
+
+async function retryFailedJobs(): Promise<void> {
+  const jobs = listFailedJobs(MAX_RETRY_ATTEMPTS);
+  for (const job of jobs) {
+    try {
+      const body = poliWebhookBodySchema.parse(JSON.parse(job.payload));
+      const message = parseMessageEvent(body);
+      await processMessage(message);
+      markProcessed(message.externalMessageId);
+      clearFailure(message.externalMessageId);
+      logger.info({ id: message.externalMessageId }, "Retry bem-sucedido");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      recordFailure(job.external_message_id, JSON.parse(job.payload), errorMessage);
+      logger.warn({ id: job.external_message_id, attempts: job.attempts }, "Retry falhou de novo");
+    }
+  }
+}
+
+setInterval(() => {
+  retryFailedJobs().catch((err) => logger.error({ err }, "Erro no loop de retry"));
+}, RETRY_INTERVAL_MS);
+
+app.listen(env.PORT, () => {
+  logger.info(`Serviço PoliChat -> HubSpot rodando na porta ${env.PORT}`);
+});
