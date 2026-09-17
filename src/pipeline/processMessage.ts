@@ -1,29 +1,63 @@
-import { isPreSalesAttendant } from "../config/team.js";
+import { getAttendantRole } from "../config/team.js";
+import { env } from "../config/env.js";
 import type { MessageEvent } from "../poli/parser.js";
-import { findContactIdByPhone } from "../hubspot/contacts.js";
+import { findContact } from "../hubspot/contacts.js";
 import { createCommunication } from "../hubspot/communications.js";
 import { updatePoliContactProperties } from "../hubspot/contactProperties.js";
 import { getOwnerIdByEmail } from "../hubspot/owners.js";
 import { sendLeadNotInHubSpotAlert } from "../alerts/googleChat.js";
+import { recordDryRunResult } from "../queue/store.js";
 import { logger } from "../logger.js";
 
 export type ProcessResult =
   | { outcome: "skipped_not_presales" }
   | { outcome: "logged"; contactId: string; communicationId: string }
+  | { outcome: "dry_run"; contactId: string | null }
   | { outcome: "alerted_contact_not_found" };
 
 export async function processMessage(message: MessageEvent): Promise<ProcessResult> {
-  if (!isPreSalesAttendant(message.attendantEmail)) {
+  const role = getAttendantRole(message.attendantEmail);
+  if (!role) {
     logger.debug({ attendantEmail: message.attendantEmail }, "Mensagem fora do time de pré-vendas, ignorada");
     return { outcome: "skipped_not_presales" };
   }
 
-  const contactId = await findContactIdByPhone(message.leadPhone);
+  const match = await findContact({
+    leadPhone: message.leadPhone,
+    leadName: message.leadName,
+    leadUuid: message.leadUuid,
+    deprecatedContactId: message.deprecatedContactId,
+  });
+  const contactId = match?.contactId ?? null;
+
+  if (env.DRY_RUN) {
+    recordDryRunResult({
+      externalMessageId: message.externalMessageId,
+      direction: message.direction,
+      leadName: message.leadName,
+      leadPhone: message.leadPhone,
+      leadUuid: message.leadUuid,
+      messagePreview: message.text.slice(0, 200),
+      attendantEmail: message.attendantEmail,
+      contactId,
+      isTemplate: message.isTemplate,
+      templateName: message.templateName,
+      matchedVia: match?.matchedVia,
+    });
+    logger.info(
+      { leadPhone: message.leadPhone, contactId, matchedVia: match?.matchedVia, dryRun: true },
+      "Dry run: mensagem avaliada, nada escrito no HubSpot",
+    );
+  }
 
   if (!contactId) {
-    logger.info({ leadPhone: message.leadPhone }, "Contato não encontrado no HubSpot, enviando alerta");
-    await sendLeadNotInHubSpotAlert(message);
-    return { outcome: "alerted_contact_not_found" };
+    logger.info({ leadPhone: message.leadPhone, role }, "Contato não encontrado no HubSpot, enviando alerta");
+    await sendLeadNotInHubSpotAlert(message, role);
+    return env.DRY_RUN ? { outcome: "dry_run", contactId: null } : { outcome: "alerted_contact_not_found" };
+  }
+
+  if (env.DRY_RUN) {
+    return { outcome: "dry_run", contactId };
   }
 
   const ownerId =

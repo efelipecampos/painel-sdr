@@ -17,12 +17,20 @@ const schema = z.object({
 
   POLI_WEBHOOK_SIGNING_SECRET: z.string().optional().default(""),
   POLI_WEBHOOK_VERIFY_SIGNATURE: booleanFromEnv(true),
-  POLI_SDR_CLOSER_EMAILS: z.string().optional().default(""),
+  POLI_SDR_EMAILS: z.string().optional().default(""),
+  POLI_CLOSER_EMAILS: z.string().optional().default(""),
 
   HUBSPOT_PRIVATE_APP_TOKEN: z.string().min(1, "HUBSPOT_PRIVATE_APP_TOKEN é obrigatório"),
   HUBSPOT_PORTAL_ID: z.string().optional(),
 
-  GOOGLE_CHAT_WEBHOOK_URL: z.string().url().optional().or(z.literal("")),
+  // Quando true, faz a busca de contato no HubSpot (e o alerta do Google
+  // Chat quando não encontra) normalmente, mas NÃO cria Communication nem
+  // atualiza propriedades do contato — só registra o resultado em
+  // dry_run_results pra conferência antes de ligar a escrita de verdade.
+  DRY_RUN: booleanFromEnv(false),
+
+  GOOGLE_CHAT_WEBHOOK_URL_SDR: z.string().url().or(z.literal("")).default(""),
+  GOOGLE_CHAT_WEBHOOK_URL_CLOSER: z.string().url().or(z.literal("")).default(""),
 
   SQLITE_PATH: z.string().default("./data/queue.sqlite"),
 

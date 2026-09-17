@@ -13,7 +13,7 @@ export interface CreateCommunicationParams {
 }
 
 export function buildCommunicationBody(message: MessageEvent): string {
-  const label = message.direction === "IN" ? "Lead" : (message.attendantName ?? message.authorName ?? "SDR");
+  const label = message.direction === "IN" ? "Recebida" : "Enviada";
   return `[${label}] ${message.text}`;
 }
 
@@ -25,9 +25,17 @@ export async function createCommunication({ contactId, message, ownerId }: Creat
     hs_communication_logged_from: "CRM",
     hs_communication_body: buildCommunicationBody(message),
     hs_timestamp: String(message.timestampMs),
+    // Propriedade customizada própria pra direção (a Communications API não
+    // tem um campo nativo de direção) — fica filtrável/reportável no
+    // registro, além do prefixo no corpo pra leitura rápida no timeline.
+    poli_direcao: message.direction === "IN" ? "RECEBIDA" : "ENVIADA",
+    poli_tipo_mensagem: message.isTemplate ? "TEMPLATE" : "LIVRE",
   };
   if (message.direction === "OUT" && ownerId) {
     properties.hubspot_owner_id = ownerId;
+  }
+  if (message.isTemplate && message.templateName) {
+    properties.poli_nome_template = message.templateName;
   }
 
   const res = await hubspotFetch<CommunicationCreateResponse>("/crm/v3/objects/communications", {

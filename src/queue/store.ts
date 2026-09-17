@@ -28,7 +28,33 @@ db.exec(`
     created_at INTEGER NOT NULL,
     last_attempt_at INTEGER NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS dry_run_results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    external_message_id TEXT NOT NULL,
+    direction TEXT NOT NULL,
+    lead_name TEXT,
+    lead_phone TEXT NOT NULL,
+    lead_uuid TEXT,
+    message_preview TEXT,
+    attendant_email TEXT,
+    contact_found INTEGER NOT NULL,
+    contact_id TEXT,
+    created_at INTEGER NOT NULL
+  );
 `);
+
+// Migração leve pra bancos criados antes de campos serem adicionados.
+const dryRunColumns = db.prepare("PRAGMA table_info(dry_run_results)").all() as Array<{ name: string }>;
+const addDryRunColumnIfMissing = (name: string, ddl: string) => {
+  if (!dryRunColumns.some((c) => c.name === name)) {
+    db.exec(`ALTER TABLE dry_run_results ADD COLUMN ${ddl}`);
+  }
+};
+addDryRunColumnIfMissing("lead_uuid", "lead_uuid TEXT");
+addDryRunColumnIfMissing("is_template", "is_template INTEGER");
+addDryRunColumnIfMissing("template_name", "template_name TEXT");
+addDryRunColumnIfMissing("matched_via", "matched_via TEXT");
 
 export function isAlreadyProcessed(externalMessageId: string): boolean {
   const row = db
@@ -76,4 +102,79 @@ export function listFailedJobs(maxAttempts: number): FailedJob[] {
   return db
     .prepare("SELECT id, external_message_id, payload, attempts FROM failed_jobs WHERE attempts <= ?")
     .all(maxAttempts) as FailedJob[];
+}
+
+export interface DryRunResultInput {
+  externalMessageId: string;
+  direction: "IN" | "OUT";
+  leadName?: string;
+  leadPhone: string;
+  leadUuid: string;
+  messagePreview: string;
+  attendantEmail?: string;
+  contactId: string | null;
+  isTemplate: boolean;
+  templateName?: string;
+  matchedVia?: string;
+}
+
+export function recordDryRunResult(result: DryRunResultInput): void {
+  db.prepare(
+    `INSERT INTO dry_run_results
+       (external_message_id, direction, lead_name, lead_phone, lead_uuid, message_preview, attendant_email, contact_found, contact_id, is_template, template_name, matched_via, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(
+    result.externalMessageId,
+    result.direction,
+    result.leadName ?? null,
+    result.leadPhone,
+    result.leadUuid,
+    result.messagePreview,
+    result.attendantEmail ?? null,
+    result.contactId ? 1 : 0,
+    result.contactId,
+    result.isTemplate ? 1 : 0,
+    result.templateName ?? null,
+    result.matchedVia ?? null,
+    Date.now(),
+  );
+}
+
+export interface TemplateDryRunResult {
+  external_message_id: string;
+  lead_name: string | null;
+  lead_phone: string;
+  template_name: string | null;
+  created_at: number;
+}
+
+export function listTemplateMessages(limit: number): TemplateDryRunResult[] {
+  return db
+    .prepare(
+      `SELECT external_message_id, lead_name, lead_phone, template_name, created_at
+       FROM dry_run_results
+       WHERE is_template = 1
+       ORDER BY created_at DESC
+       LIMIT ?`,
+    )
+    .all(limit) as TemplateDryRunResult[];
+}
+
+export interface NotFoundDryRunContact {
+  lead_name: string | null;
+  lead_phone: string;
+  lead_uuid: string;
+}
+
+export function listLatestNotFoundContacts(limit: number): NotFoundDryRunContact[] {
+  return db
+    .prepare(
+      `SELECT lead_name, lead_phone, lead_uuid, MAX(created_at) as created_at
+       FROM dry_run_results
+       WHERE contact_found = 0
+       GROUP BY lead_phone
+       ORDER BY created_at DESC
+       LIMIT ?`,
+    )
+    .all(limit) as NotFoundDryRunContact[];
 }

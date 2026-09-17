@@ -1,19 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { isPreSalesAttendant } from "../src/config/team.js";
+import { getAttendantRole } from "../src/config/team.js";
 
-describe("isPreSalesAttendant", () => {
-  it("reconhece e-mail da whitelist (case-insensitive)", () => {
-    expect(isPreSalesAttendant("sdr1@poli.digital")).toBe(true);
-    expect(isPreSalesAttendant("SDR2@Poli.Digital")).toBe(true);
+describe("getAttendantRole", () => {
+  it("reconhece e-mail de SDR (case-insensitive)", () => {
+    expect(getAttendantRole("sdr1@poli.digital")).toBe("SDR");
+    expect(getAttendantRole("SDR1@Poli.Digital")).toBe("SDR");
   });
 
-  it("rejeita e-mail fora da whitelist", () => {
-    expect(isPreSalesAttendant("suporte@poli.digital")).toBe(false);
+  it("reconhece e-mail de Closer (case-insensitive)", () => {
+    expect(getAttendantRole("closer1@poli.digital")).toBe("CLOSER");
+    expect(getAttendantRole("CLOSER1@Poli.Digital")).toBe("CLOSER");
   });
 
-  it("rejeita valores vazios/indefinidos", () => {
-    expect(isPreSalesAttendant(undefined)).toBe(false);
-    expect(isPreSalesAttendant(null)).toBe(false);
-    expect(isPreSalesAttendant("")).toBe(false);
+  it("retorna null pra e-mail fora das duas listas", () => {
+    expect(getAttendantRole("suporte@poli.digital")).toBeNull();
+  });
+
+  it("retorna null pra valores vazios/indefinidos", () => {
+    expect(getAttendantRole(undefined)).toBeNull();
+    expect(getAttendantRole(null)).toBeNull();
+    expect(getAttendantRole("")).toBeNull();
   });
 });

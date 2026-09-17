@@ -40,3 +40,25 @@ export function brazilianPhoneCandidates(rawPhone: string): string[] {
   }
   return [...all];
 }
+
+/**
+ * Forma "core" de um telefone BR: DDD + número local de 8 dígitos, sem DDI e
+ * sem o 9º dígito. Duas strings de telefone que reduzem pro mesmo core são o
+ * mesmo número, independente de pontuação, DDI ou 9º dígito — usado pra
+ * confirmar candidatos vindos de uma busca ampla (ver findContactIdByPhone).
+ */
+export function corePhoneDigits(rawPhone: string): string {
+  let digits = digitsOnly(rawPhone);
+  if (digits.startsWith("55") && digits.length >= 12) {
+    digits = digits.slice(2);
+  }
+  if (digits.length === 11 && digits[2] === "9") {
+    digits = digits.slice(0, 2) + digits.slice(3);
+  }
+  return digits;
+}
+
+/** Últimos N dígitos do telefone — usado como termo de busca CONTAINS_TOKEN. */
+export function phoneSuffix(rawPhone: string, length = 4): string {
+  return digitsOnly(rawPhone).slice(-length);
+}

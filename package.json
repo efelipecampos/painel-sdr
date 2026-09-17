@@ -14,7 +14,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "setup:hubspot-properties": "tsx scripts/setupHubspotProperties.ts"
+    "setup:hubspot-properties": "tsx scripts/setupHubspotProperties.ts",
+    "dry-run-report": "tsx scripts/dryRunReport.ts",
+    "test:google-chat-alert": "tsx scripts/testGoogleChatAlert.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",

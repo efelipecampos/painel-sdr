@@ -1,21 +1,33 @@
 import { env } from "./env.js";
 
-const sdrCloserEmails = new Set(
-  env.POLI_SDR_CLOSER_EMAILS.split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean),
-);
+export type AttendantRole = "SDR" | "CLOSER";
+
+function parseEmailList(raw: string): Set<string> {
+  return new Set(
+    raw
+      .split(",")
+      .map((email) => email.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
+
+const sdrEmails = parseEmailList(env.POLI_SDR_EMAILS);
+const closerEmails = parseEmailList(env.POLI_CLOSER_EMAILS);
 
 /**
- * Whitelist de e-mails do time de pré-vendas (SDR/Closer). A Poli não expõe
- * departamento/fila no webhook — só o e-mail do atendente — então o filtro é
- * mantido aqui e editado conforme o time muda.
+ * Papel do atendente da Poli (SDR ou Closer), a partir de uma whitelist
+ * mantida na config — a Poli não expõe departamento/fila no webhook, só o
+ * e-mail do atendente. E-mails fora das duas listas (ex.: gestores) voltam
+ * null e a mensagem é ignorada, igual antes.
  */
-export function isPreSalesAttendant(email: string | undefined | null): boolean {
-  if (!email) return false;
-  return sdrCloserEmails.has(email.trim().toLowerCase());
+export function getAttendantRole(email: string | undefined | null): AttendantRole | null {
+  if (!email) return null;
+  const normalized = email.trim().toLowerCase();
+  if (sdrEmails.has(normalized)) return "SDR";
+  if (closerEmails.has(normalized)) return "CLOSER";
+  return null;
 }
 
 export function getPreSalesEmailCount(): number {
-  return sdrCloserEmails.size;
+  return sdrEmails.size + closerEmails.size;
 }

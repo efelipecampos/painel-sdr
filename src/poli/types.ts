@@ -49,11 +49,29 @@ const componentsSchema = z
   })
   .passthrough();
 
+// Formato de exemplo visto em `context.message.components` (mensagem
+// original de um clique de botão) — `value.template` provavelmente segue a
+// mesma forma quando a própria mensagem é um envio de template. Ainda não
+// validamos contra um evento real com `template` preenchido, então fica
+// bem permissivo (.passthrough() + tudo opcional).
+const templateSchema = z
+  .object({
+    name: z.string().optional(),
+    category: z.union([z.string(), z.number()]).optional(),
+    language: z.union([z.string(), z.number()]).optional(),
+  })
+  .passthrough();
+
 const metadataSchema = z
   .object({
     external_message_id: z.string().optional(),
     direction: z.enum(["IN", "OUT"]).optional(),
     created_at: z.string().optional(),
+    // ID numérico legado do contato na Poli — usado hoje no HubSpot em
+    // `id_do_contato_na_poli` pra ~49 mil contatos populados num bulk
+    // histórico. Continua útil pra matching mesmo migrando o link pro
+    // formato com UUID.
+    deprecated_contact_id: z.union([z.number(), z.string()]).optional(),
   })
   .passthrough();
 
@@ -67,6 +85,7 @@ const valueSchema = z
     components: componentsSchema,
     attendance: attendanceSchema.optional(),
     metadata: metadataSchema,
+    template: templateSchema.nullable().optional(),
   })
   .passthrough();
 

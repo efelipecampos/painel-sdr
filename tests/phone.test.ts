@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { brazilianPhoneCandidates } from "../src/hubspot/phone.js";
+import { brazilianPhoneCandidates, corePhoneDigits, phoneSuffix } from "../src/hubspot/phone.js";
 
 describe("brazilianPhoneCandidates", () => {
   it("gera variações com e sem DDI e com/sem o 9º dígito", () => {
@@ -19,5 +19,27 @@ describe("brazilianPhoneCandidates", () => {
 
   it("retorna vazio para entrada vazia", () => {
     expect(brazilianPhoneCandidates("")).toEqual([]);
+  });
+});
+
+describe("corePhoneDigits", () => {
+  it("reduz formatos equivalentes pro mesmo core (DDD + 8 dígitos, sem DDI/9º dígito)", () => {
+    const forms = [
+      "553299886563",
+      "+5532999886563",
+      "32999886563",
+      "3299886563",
+      "+55(32) 99988-6563",
+      "(32) 99988-6563",
+    ];
+    const cores = forms.map(corePhoneDigits);
+    expect(new Set(cores).size).toBe(1);
+    expect(cores[0]).toBe("3299886563");
+  });
+});
+
+describe("phoneSuffix", () => {
+  it("pega os últimos N dígitos, ignorando pontuação", () => {
+    expect(phoneSuffix("+55(32) 99988-6563", 4)).toBe("6563");
   });
 });

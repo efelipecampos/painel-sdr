@@ -26,7 +26,10 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.post("/webhooks/poli", async (req: RequestWithRawBody, res) => {
+// A Poli está configurada (no painel deles) pra entregar na raiz "/" — o
+// alias "/webhooks/poli" fica mantido por clareza/documentação, caso o
+// painel seja reconfigurado depois.
+const webhookHandler = async (req: RequestWithRawBody, res: express.Response) => {
   const signatureValid = verifyPoliSignature(req.rawBody ?? Buffer.from(""), req.headers["x-webhook-signature"] as string | undefined);
   if (!signatureValid) {
     req.log.warn("Assinatura do webhook inválida, rejeitando");
@@ -40,6 +43,11 @@ app.post("/webhooks/poli", async (req: RequestWithRawBody, res) => {
   }
 
   const message = parseMessageEvent(parsedBody.data);
+
+  req.log.debug(
+    { contactAttributeKeys: Object.keys(parsedBody.data.value.contact.attributes), metadata: parsedBody.data.value.metadata },
+    "Campos disponíveis em value.contact.attributes / value.metadata",
+  );
 
   // Responde rápido e sempre 2xx pra Poli não ficar reentregando, mesmo que
   // o processamento em si falhe (falhas viram retry na fila local).
@@ -59,7 +67,10 @@ app.post("/webhooks/poli", async (req: RequestWithRawBody, res) => {
     req.log.error({ err, id: message.externalMessageId }, "Falha ao processar mensagem, agendando retry");
     recordFailure(message.externalMessageId, parsedBody.data, errorMessage);
   }
-});
+};
+
+app.post("/", webhookHandler);
+app.post("/webhooks/poli", webhookHandler);
 
 const RETRY_INTERVAL_MS = 60_000;
 const MAX_RETRY_ATTEMPTS = 10;

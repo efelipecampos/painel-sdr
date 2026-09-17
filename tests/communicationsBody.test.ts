@@ -8,20 +8,17 @@ const base: MessageEvent = {
   timestampMs: 1_700_000_000_000,
   text: "Vamos marcar",
   leadPhone: "5516997220323",
+  leadUuid: "a21bb5bf-8b92-4bc3-859e-b48f130970f8",
+  isTemplate: false,
 };
 
 describe("buildCommunicationBody", () => {
-  it("prefixa com [Lead] quando a direção é IN", () => {
-    expect(buildCommunicationBody(base)).toBe("[Lead] Vamos marcar");
+  it("prefixa com [Recebida] quando a direção é IN", () => {
+    expect(buildCommunicationBody(base)).toBe("[Recebida] Vamos marcar");
   });
 
-  it("prefixa com o nome do atendente quando a direção é OUT", () => {
+  it("prefixa com [Enviada] quando a direção é OUT, independente do atendente", () => {
     const outMessage: MessageEvent = { ...base, direction: "OUT", attendantName: "Felipe Mendes" };
-    expect(buildCommunicationBody(outMessage)).toBe("[Felipe Mendes] Vamos marcar");
-  });
-
-  it("cai pro nome do autor se não houver nome de atendente", () => {
-    const outMessage: MessageEvent = { ...base, direction: "OUT", authorName: "Felipe Mendes" };
-    expect(buildCommunicationBody(outMessage)).toBe("[Felipe Mendes] Vamos marcar");
+    expect(buildCommunicationBody(outMessage)).toBe("[Enviada] Vamos marcar");
   });
 });
