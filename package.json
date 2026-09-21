@@ -18,7 +18,8 @@
     "dry-run-report": "tsx scripts/dryRunReport.ts",
     "test:google-chat-alert": "tsx scripts/testGoogleChatAlert.ts",
     "backfill:deal-associations": "tsx scripts/backfillDealAssociations.ts",
-    "backfill:deal-chat-links": "tsx scripts/backfillDealChatLinks.ts"
+    "backfill:deal-chat-links": "tsx scripts/backfillDealChatLinks.ts",
+    "backfill:contact-chat-links": "tsx scripts/backfillContactChatLinks.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",
