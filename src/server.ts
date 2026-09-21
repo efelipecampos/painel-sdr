@@ -45,10 +45,22 @@ const webhookHandler = async (req: RequestWithRawBody, res: express.Response) =>
     return res.status(200).json({ received: true, handled: false });
   }
 
+  // Só mensagens novas (recebida/enviada) viram Communication. Os demais
+  // eventos de mensagem (ACK de entrega/leitura, atualização) têm outro
+  // formato e são muito frequentes — confirma recebido sem logar, pra não
+  // virar 400 e reentrega em massa do lado da Poli.
+  const rawEvent = (req.body as { event?: unknown }).event;
+  if (rawEvent !== "received" && rawEvent !== "sent") {
+    return res.status(200).json({ received: true, handled: false });
+  }
+
+  // Payload fora do formato esperado responde 200 mesmo assim: reentregar o
+  // mesmo corpo falharia igual, e 400 só gera erro/retry na Poli. O aviso no
+  // log carrega o corpo pra ajustar o schema.
   const parsedBody = poliWebhookBodySchema.safeParse(req.body);
   if (!parsedBody.success) {
-    req.log.warn({ issues: parsedBody.error.issues }, "Payload da Poli não bateu com o schema esperado");
-    return res.status(400).json({ error: "invalid_payload" });
+    req.log.warn({ event: rawEvent, issues: parsedBody.error.issues, body: req.body }, "Payload da Poli não bateu com o schema esperado");
+    return res.status(200).json({ received: true, handled: false, error: "invalid_payload" });
   }
 
   const message = parseMessageEvent(parsedBody.data);
