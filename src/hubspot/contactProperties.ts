@@ -1,6 +1,10 @@
 import { hubspotFetch } from "./client.js";
 import type { MessageEvent } from "../poli/parser.js";
 
+export function buildPoliChatLink(leadUuid: string): string {
+  return `https://app.poli.digital/chat/${leadUuid}`;
+}
+
 /**
  * Atualiza as propriedades do Contact que dão visibilidade ao SDR dentro do
  * próprio HubSpot (fila "aguardando minha resposta" via
@@ -21,7 +25,7 @@ export async function updatePoliContactProperties(contactId: string, message: Me
         // qualquer camada) — melhora a cobertura do Tier 0 (busca exata por
         // id) nas próximas mensagens desse mesmo lead.
         id_do_contato_na_poli: message.leadUuid,
-        link_do_chat_na_poli: `https://app.poli.digital/chat/${message.leadUuid}`,
+        link_do_chat_na_poli: buildPoliChatLink(message.leadUuid),
       },
     }),
   });

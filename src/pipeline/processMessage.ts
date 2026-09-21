@@ -3,7 +3,8 @@ import { env } from "../config/env.js";
 import type { MessageEvent } from "../poli/parser.js";
 import { findContact } from "../hubspot/contacts.js";
 import { createCommunication } from "../hubspot/communications.js";
-import { updatePoliContactProperties } from "../hubspot/contactProperties.js";
+import { buildPoliChatLink, updatePoliContactProperties } from "../hubspot/contactProperties.js";
+import { fillMissingDealChatLinks, getOpenDealsForContact, type OpenDeal } from "../hubspot/deals.js";
 import { getOwnerIdByEmail } from "../hubspot/owners.js";
 import { sendLeadNotInHubSpotAlert } from "../alerts/googleChat.js";
 import { recordDryRunResult } from "../queue/store.js";
@@ -65,8 +66,29 @@ export async function processMessage(message: MessageEvent): Promise<ProcessResu
       ? await getOwnerIdByEmail(message.attendantEmail)
       : undefined;
 
-  const communicationId = await createCommunication({ contactId, message, ownerId });
+  // Falha em negócios não pode impedir o registro da mensagem em si — o
+  // contato já garante a associação mínima.
+  let openDeals: OpenDeal[] = [];
+  try {
+    openDeals = await getOpenDealsForContact(contactId);
+  } catch (err) {
+    logger.warn({ err, contactId }, "Falha ao buscar negócios abertos do contato, seguindo só com o Contact");
+  }
+
+  const communicationId = await createCommunication({
+    contactId,
+    dealIds: openDeals.map((d) => d.id),
+    message,
+    ownerId,
+  });
   await updatePoliContactProperties(contactId, message);
+
+  try {
+    const filled = await fillMissingDealChatLinks(openDeals, buildPoliChatLink(message.leadUuid));
+    if (filled.length > 0) logger.info({ contactId, dealIds: filled }, "Link do chat na Poli preenchido nos negócios");
+  } catch (err) {
+    logger.warn({ err, contactId }, "Falha ao preencher o link do chat na Poli nos negócios");
+  }
 
   logger.info({ contactId, communicationId, direction: message.direction }, "Mensagem registrada no HubSpot");
   return { outcome: "logged", contactId, communicationId };

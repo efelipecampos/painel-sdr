@@ -11,7 +11,7 @@
  *   npm run backfill:deal-associations -- --since 2026-09-18
  *   npm run backfill:deal-associations -- --since 2026-09-18 --apply
  */
-import { hubspotFetch as rawHubspotFetch, HubSpotApiError } from "../src/hubspot/client.js";
+import { chunk, hubspotFetch } from "./throttledHubspot.js";
 
 const args = process.argv.slice(2);
 const apply = args.includes("--apply");
@@ -37,28 +37,6 @@ interface DealBatchReadResponse {
     id: string;
     properties: { dealname?: string; createdate?: string; closedate?: string | null; hs_is_closed?: string };
   }>;
-}
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// A busca do HubSpot tem limite por segundo compartilhado com a integração em
-// produção — espaça as chamadas e, se bater no limite, espera e tenta de novo.
-async function hubspotFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  for (let attempt = 1; ; attempt++) {
-    await sleep(400);
-    try {
-      return await rawHubspotFetch<T>(path, init);
-    } catch (err) {
-      if (!(err instanceof HubSpotApiError) || err.status !== 429 || attempt >= 8) throw err;
-      await sleep(2000 * attempt);
-    }
-  }
-}
-
-function chunk<T>(items: T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
-  return out;
 }
 
 async function searchPoliCommunications(): Promise<Map<string, number>> {
