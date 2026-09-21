@@ -10,16 +10,17 @@ import { z } from "zod";
 const attendantSchema = z
   .object({
     uuid: z.string(),
-    email: z.string().email().optional(),
-    attributes: z.object({ name: z.string().optional() }).passthrough().optional(),
+    email: z.string().nullish(),
+    attributes: z.object({ name: z.string().nullish() }).passthrough().nullish(),
   })
   .passthrough();
 
 const attendanceSchema = z
   .object({
     uuid: z.string(),
-    status: z.string(),
-    attendant: attendantSchema.optional(),
+    // Vem null em eventos reais (ex.: atendimento iniciado pelo contato).
+    status: z.string().nullish(),
+    attendant: attendantSchema.nullish(),
   })
   .passthrough();
 
@@ -28,7 +29,7 @@ const contactSchema = z
     uuid: z.string(),
     attributes: z
       .object({
-        name: z.string().optional(),
+        name: z.string().nullish(),
         phone: z.string(),
       })
       .passthrough(),
@@ -37,15 +38,15 @@ const contactSchema = z
 
 const authorSchema = z
   .object({
-    type: z.enum(["CONTACT", "USER"]),
+    type: z.string(),
     uuid: z.string(),
-    attributes: z.object({ name: z.string().optional() }).passthrough().optional(),
+    attributes: z.object({ name: z.string().nullish() }).passthrough().nullish(),
   })
   .passthrough();
 
 const componentsSchema = z
   .object({
-    body: z.object({ text: z.string().optional() }).passthrough().optional(),
+    body: z.object({ text: z.string().nullish() }).passthrough().nullish(),
   })
   .passthrough();
 
@@ -56,22 +57,25 @@ const componentsSchema = z
 // bem permissivo (.passthrough() + tudo opcional).
 const templateSchema = z
   .object({
-    name: z.string().optional(),
-    category: z.union([z.string(), z.number()]).optional(),
-    language: z.union([z.string(), z.number()]).optional(),
+    // Em eventos reais o identificador do template vem em `key` (ex.:
+    // "SDR_DIA01_NEW"), e category/goal podem vir null.
+    key: z.string().nullish(),
+    name: z.string().nullish(),
+    category: z.union([z.string(), z.number()]).nullish(),
+    language: z.union([z.string(), z.number()]).nullish(),
   })
   .passthrough();
 
 const metadataSchema = z
   .object({
-    external_message_id: z.string().optional(),
-    direction: z.enum(["IN", "OUT"]).optional(),
-    created_at: z.string().optional(),
+    external_message_id: z.string().nullish(),
+    direction: z.enum(["IN", "OUT"]).nullish(),
+    created_at: z.string().nullish(),
     // ID numérico legado do contato na Poli — usado hoje no HubSpot em
     // `id_do_contato_na_poli` pra ~49 mil contatos populados num bulk
     // histórico. Continua útil pra matching mesmo migrando o link pro
     // formato com UUID.
-    deprecated_contact_id: z.union([z.number(), z.string()]).optional(),
+    deprecated_contact_id: z.union([z.number(), z.string()]).nullish(),
   })
   .passthrough();
 
@@ -83,7 +87,7 @@ const valueSchema = z
     author: authorSchema,
     contact: contactSchema,
     components: componentsSchema,
-    attendance: attendanceSchema.optional(),
+    attendance: attendanceSchema.nullish(),
     metadata: metadataSchema,
     template: templateSchema.nullable().optional(),
   })

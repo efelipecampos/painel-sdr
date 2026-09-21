@@ -53,13 +53,24 @@ const webhookHandler = async (req: RequestWithRawBody, res: express.Response) =>
   if (rawEvent !== "received" && rawEvent !== "sent") {
     return res.status(200).json({ received: true, handled: false });
   }
+  // Mensagens de sistema da Poli (direction "SYSTEM", ex.: transferência de
+  // atendimento) não são conversa com o lead.
+  const rawDirection = (req.body as { value?: { direction?: unknown } }).value?.direction;
+  if (rawDirection !== "IN" && rawDirection !== "OUT") {
+    return res.status(200).json({ received: true, handled: false });
+  }
 
-  // Payload fora do formato esperado responde 200 mesmo assim: reentregar o
-  // mesmo corpo falharia igual, e 400 só gera erro/retry na Poli. O aviso no
-  // log carrega o corpo pra ajustar o schema.
+  // Payload fora do formato esperado responde 200 mesmo assim (reentregar o
+  // mesmo corpo falharia igual, e 400 só gera erro/retry na Poli), mas vai
+  // pra fila de falhas — depois de ajustar o schema, o retry reprocessa.
   const parsedBody = poliWebhookBodySchema.safeParse(req.body);
   if (!parsedBody.success) {
+    const rawValue = (req.body as { uuid?: string; value?: { uuid?: string; metadata?: { external_message_id?: string } } }).value;
+    const fallbackId = rawValue?.metadata?.external_message_id ?? rawValue?.uuid ?? (req.body as { uuid?: string }).uuid;
     req.log.warn({ event: rawEvent, issues: parsedBody.error.issues, body: req.body }, "Payload da Poli não bateu com o schema esperado");
+    if (fallbackId) {
+      recordFailure(fallbackId, req.body, `invalid_payload: ${JSON.stringify(parsedBody.error.issues).slice(0, 500)}`);
+    }
     return res.status(200).json({ received: true, handled: false, error: "invalid_payload" });
   }
 

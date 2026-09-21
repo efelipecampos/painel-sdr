@@ -31,13 +31,13 @@ export function parseMessageEvent(body: PoliWebhookBody): MessageEvent {
     timestampMs: value.timestamp * 1000,
     text: value.components.body?.text ?? "",
     leadPhone: value.contact.attributes.phone,
-    leadName: value.contact.attributes.name,
+    leadName: value.contact.attributes.name ?? undefined,
     leadUuid: value.contact.uuid,
-    attendantEmail: value.attendance?.attendant?.email,
-    attendantName: value.attendance?.attendant?.attributes?.name,
-    authorName: value.author.attributes?.name,
+    attendantEmail: value.attendance?.attendant?.email ?? undefined,
+    attendantName: value.attendance?.attendant?.attributes?.name ?? undefined,
+    authorName: value.author.attributes?.name ?? undefined,
     isTemplate: value.template != null,
-    templateName: value.template?.name,
+    templateName: value.template?.key ?? value.template?.name ?? undefined,
     deprecatedContactId:
       value.metadata.deprecated_contact_id != null ? String(value.metadata.deprecated_contact_id) : undefined,
   };

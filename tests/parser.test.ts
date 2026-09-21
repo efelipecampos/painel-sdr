@@ -3,6 +3,8 @@ import { poliWebhookBodySchema } from "../src/poli/types.js";
 import { parseMessageEvent } from "../src/poli/parser.js";
 import received from "./fixtures/received.json" with { type: "json" };
 import sent from "./fixtures/sent.json" with { type: "json" };
+import receivedNullStatus from "./fixtures/received-null-attendance-status.json" with { type: "json" };
+import sentTemplateNullCategory from "./fixtures/sent-template-null-category.json" with { type: "json" };
 
 describe("parseMessageEvent com payloads reais da Poli", () => {
   it("interpreta uma mensagem recebida do lead (IN)", () => {
@@ -40,5 +42,21 @@ describe("parseMessageEvent com payloads reais da Poli", () => {
 
     expect(message.isTemplate).toBe(true);
     expect(message.templateName).toBe("polichat_quick_message_488676");
+  });
+
+  it("aceita attendance.status null (evento real que era rejeitado com 400)", () => {
+    const message = parseMessageEvent(poliWebhookBodySchema.parse(receivedNullStatus));
+
+    expect(message.direction).toBe("IN");
+    expect(message.attendantEmail).toBe("atendente.a@poli.digital");
+    expect(message.text).toBe("sim, mas eu já tentei");
+  });
+
+  it("aceita template com category null e usa template.key como nome", () => {
+    const message = parseMessageEvent(poliWebhookBodySchema.parse(sentTemplateNullCategory));
+
+    expect(message.direction).toBe("OUT");
+    expect(message.isTemplate).toBe(true);
+    expect(message.templateName).toBe("SDR_DIA01_NEW");
   });
 });
