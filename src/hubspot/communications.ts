@@ -1,5 +1,7 @@
 import { hubspotFetch } from "./client.js";
 import { getDefaultAssociationTypeId } from "./associations.js";
+import { getOpenDealIdsForContact } from "./deals.js";
+import { logger } from "../logger.js";
 import type { MessageEvent } from "../poli/parser.js";
 
 interface CommunicationCreateResponse {
@@ -18,7 +20,31 @@ export function buildCommunicationBody(message: MessageEvent): string {
 }
 
 export async function createCommunication({ contactId, message, ownerId }: CreateCommunicationParams): Promise<string> {
-  const associationTypeId = await getDefaultAssociationTypeId("communications", "contacts");
+  const contactAssociationTypeId = await getDefaultAssociationTypeId("communications", "contacts");
+
+  const associations: Array<{ to: { id: string }; types: Array<{ associationCategory: string; associationTypeId: number }> }> = [
+    {
+      to: { id: contactId },
+      types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId: contactAssociationTypeId }],
+    },
+  ];
+
+  try {
+    const openDealIds = await getOpenDealIdsForContact(contactId);
+    if (openDealIds.length > 0) {
+      const dealAssociationTypeId = await getDefaultAssociationTypeId("communications", "deals");
+      for (const dealId of openDealIds) {
+        associations.push({
+          to: { id: dealId },
+          types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId: dealAssociationTypeId }],
+        });
+      }
+    }
+  } catch (err) {
+    // Não deixa a falha de associar negócio impedir o registro da mensagem
+    // em si — o contato já garante a associação mínima.
+    logger.warn({ err, contactId }, "Falha ao buscar/associar negócios abertos do contato, seguindo só com o Contact");
+  }
 
   const properties: Record<string, string> = {
     hs_communication_channel_type: "WHATS_APP",
@@ -40,15 +66,7 @@ export async function createCommunication({ contactId, message, ownerId }: Creat
 
   const res = await hubspotFetch<CommunicationCreateResponse>("/crm/v3/objects/communications", {
     method: "POST",
-    body: JSON.stringify({
-      properties,
-      associations: [
-        {
-          to: { id: contactId },
-          types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId }],
-        },
-      ],
-    }),
+    body: JSON.stringify({ properties, associations }),
   });
 
   return res.id;
