@@ -39,7 +39,8 @@ const contactSchema = z
 const authorSchema = z
   .object({
     type: z.string(),
-    uuid: z.string(),
+    // Mensagens automáticas (boas-vindas do bot) vêm sem uuid do autor.
+    uuid: z.string().nullish(),
     attributes: z.object({ name: z.string().nullish() }).passthrough().nullish(),
   })
   .passthrough();

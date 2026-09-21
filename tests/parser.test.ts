@@ -59,4 +59,14 @@ describe("parseMessageEvent com payloads reais da Poli", () => {
     expect(message.isTemplate).toBe(true);
     expect(message.templateName).toBe("SDR_DIA01_NEW");
   });
+
+  it("aceita mensagem automática sem author.uuid e sem atendente", () => {
+    const body = structuredClone(sentTemplateNullCategory) as Record<string, any>;
+    body.value.author = { type: "USER" };
+    delete body.value.attendance;
+    const message = parseMessageEvent(poliWebhookBodySchema.parse(body));
+
+    expect(message.direction).toBe("OUT");
+    expect(message.attendantEmail).toBeUndefined();
+  });
 });
