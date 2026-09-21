@@ -36,6 +36,15 @@ const webhookHandler = async (req: RequestWithRawBody, res: express.Response) =>
     return res.status(401).json({ error: "invalid_signature" });
   }
 
+  // Eventos que não são de mensagem (ex.: contacts.contact.updated) ainda
+  // não têm handler — loga o corpo bruto pra investigação e confirma
+  // recebido, pra Poli não ficar reentregando à toa.
+  const rawObjectType = (req.body as { object?: unknown } | undefined)?.object;
+  if (rawObjectType !== "message") {
+    req.log.info({ event: req.headers["x-webhook-event"], object: rawObjectType, body: req.body }, "Evento não-mensagem recebido, ainda sem handler");
+    return res.status(200).json({ received: true, handled: false });
+  }
+
   const parsedBody = poliWebhookBodySchema.safeParse(req.body);
   if (!parsedBody.success) {
     req.log.warn({ issues: parsedBody.error.issues }, "Payload da Poli não bateu com o schema esperado");
