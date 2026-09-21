@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit",
     "setup:hubspot-properties": "tsx scripts/setupHubspotProperties.ts",
     "dry-run-report": "tsx scripts/dryRunReport.ts",
-    "test:google-chat-alert": "tsx scripts/testGoogleChatAlert.ts"
+    "test:google-chat-alert": "tsx scripts/testGoogleChatAlert.ts",
+    "backfill:deal-associations": "tsx scripts/backfillDealAssociations.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",
