@@ -21,4 +21,13 @@ describe("buildCommunicationBody", () => {
     const outMessage: MessageEvent = { ...base, direction: "OUT", attendantName: "Felipe Mendes" };
     expect(buildCommunicationBody(outMessage)).toBe("[Enviada] Vamos marcar");
   });
+
+  it("descreve mídia quando não há texto, em vez de registrar vazio", () => {
+    const audio: MessageEvent = { ...base, text: "", mediaDescription: "[Áudio] (https://cdn.poli/a.ogg)" };
+    expect(buildCommunicationBody(audio)).toBe("[Recebida] [Áudio] (https://cdn.poli/a.ogg)");
+  });
+
+  it("marca mensagem sem texto e sem mídia reconhecida", () => {
+    expect(buildCommunicationBody({ ...base, text: "" })).toBe("[Recebida] (mensagem sem texto)");
+  });
 });

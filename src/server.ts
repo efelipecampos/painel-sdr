@@ -76,6 +76,15 @@ const webhookHandler = async (req: RequestWithRawBody, res: express.Response) =>
 
   const message = parseMessageEvent(parsedBody.data);
 
+  // Formato de mídia ainda não validado contra eventos reais — registra o
+  // shape das mensagens sem texto pra conferir/ajustar describeMedia.
+  if (!message.text) {
+    req.log.info(
+      { type: parsedBody.data.value.type, components: parsedBody.data.value.components, described: message.mediaDescription },
+      "Mensagem sem texto recebida",
+    );
+  }
+
   req.log.debug(
     { contactAttributeKeys: Object.keys(parsedBody.data.value.contact.attributes), metadata: parsedBody.data.value.metadata },
     "Campos disponíveis em value.contact.attributes / value.metadata",

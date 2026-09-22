@@ -69,4 +69,25 @@ describe("parseMessageEvent com payloads reais da Poli", () => {
     expect(message.direction).toBe("OUT");
     expect(message.attendantEmail).toBeUndefined();
   });
+
+  it("descreve anexos de mídia (formato da documentação da Poli)", () => {
+    const body = structuredClone(received) as Record<string, any>;
+    body.value.type = "MEDIA";
+    body.value.components = {
+      attachments: [{ type: "IMAGE", media: { uploaded: true, caption: "Foto do cardápio", url: "https://cdn.poli/x.jpg" } }],
+    };
+    const message = parseMessageEvent(poliWebhookBodySchema.parse(body));
+
+    expect(message.text).toBe("");
+    expect(message.mediaDescription).toBe("[Imagem] Foto do cardápio (https://cdn.poli/x.jpg)");
+  });
+
+  it("usa o tipo da mensagem quando não há texto nem anexo", () => {
+    const body = structuredClone(received) as Record<string, any>;
+    body.value.type = "LOCATION";
+    body.value.components = {};
+    const message = parseMessageEvent(poliWebhookBodySchema.parse(body));
+
+    expect(message.mediaDescription).toBe("[Localização]");
+  });
 });

@@ -15,7 +15,8 @@ export interface CreateCommunicationParams {
 
 export function buildCommunicationBody(message: MessageEvent): string {
   const label = message.direction === "IN" ? "Recebida" : "Enviada";
-  return `[${label}] ${message.text}`;
+  const content = [message.mediaDescription, message.text].filter(Boolean).join("\n");
+  return `[${label}] ${content || "(mensagem sem texto)"}`;
 }
 
 export async function createCommunication({ contactId, dealIds, message, ownerId }: CreateCommunicationParams): Promise<string> {

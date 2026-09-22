@@ -45,9 +45,28 @@ const authorSchema = z
   })
   .passthrough();
 
+// Mídia (áudio, imagem, documento...) vem em `attachments`, sem body.text.
+// Formato baseado nos exemplos da documentação da Poli — tudo opcional até
+// validarmos contra eventos reais.
+const attachmentSchema = z
+  .object({
+    type: z.string().nullish(),
+    media: z
+      .object({
+        caption: z.string().nullish(),
+        url: z.string().nullish(),
+        filename: z.string().nullish(),
+        name: z.string().nullish(),
+      })
+      .passthrough()
+      .nullish(),
+  })
+  .passthrough();
+
 const componentsSchema = z
   .object({
     body: z.object({ text: z.string().nullish() }).passthrough().nullish(),
+    attachments: z.array(attachmentSchema).nullish(),
   })
   .passthrough();
 
@@ -83,6 +102,8 @@ const metadataSchema = z
 const valueSchema = z
   .object({
     uuid: z.string(),
+    // CHAT, MEDIA, AUDIO, LOCATION... — usado pra descrever mensagem sem texto.
+    type: z.string().nullish(),
     direction: z.enum(["IN", "OUT"]),
     timestamp: z.number(),
     author: authorSchema,
