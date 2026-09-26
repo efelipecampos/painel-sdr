@@ -40,6 +40,67 @@ const contactProperties = [
       { label: "Não", value: "false", displayOrder: 1 },
     ],
   },
+  {
+    name: "poli_prospeccao_iniciada_em",
+    label: "Poli - prospecção iniciada em",
+    type: "datetime",
+    fieldType: "date",
+    groupName: GROUP_NAME,
+  },
+  {
+    name: "poli_template_da_prospeccao",
+    label: "Poli - template da prospecção",
+    type: "string",
+    fieldType: "text",
+    groupName: GROUP_NAME,
+  },
+  {
+    name: "poli_primeira_resposta_em",
+    label: "Poli - primeira resposta do lead em",
+    type: "datetime",
+    fieldType: "date",
+    groupName: GROUP_NAME,
+  },
+  {
+    name: "poli_tempo_ate_resposta_horas",
+    label: "Poli - horas até a resposta do lead",
+    type: "number",
+    fieldType: "number",
+    groupName: GROUP_NAME,
+  },
+];
+
+// Mesmos campos do ciclo no negócio: no contato eles são sobrescritos a cada
+// nova prospecção; no negócio ficam os do ciclo daquela oportunidade.
+const dealProperties = [
+  {
+    name: "poli_prospeccao_iniciada_em",
+    label: "Poli - prospecção iniciada em",
+    type: "datetime",
+    fieldType: "date",
+    groupName: GROUP_NAME,
+  },
+  {
+    name: "poli_template_da_prospeccao",
+    label: "Poli - template da prospecção",
+    type: "string",
+    fieldType: "text",
+    groupName: GROUP_NAME,
+  },
+  {
+    name: "poli_primeira_resposta_em",
+    label: "Poli - primeira resposta do lead em",
+    type: "datetime",
+    fieldType: "date",
+    groupName: GROUP_NAME,
+  },
+  {
+    name: "poli_tempo_ate_resposta_horas",
+    label: "Poli - horas até a resposta do lead",
+    type: "number",
+    fieldType: "number",
+    groupName: GROUP_NAME,
+  },
 ];
 
 const communicationProperties = [
@@ -92,7 +153,10 @@ async function ensurePropertyGroup(objectType: string): Promise<void> {
 
 async function ensureProperty(
   objectType: string,
-  property: (typeof contactProperties)[number] | (typeof communicationProperties)[number],
+  property:
+    | (typeof contactProperties)[number]
+    | (typeof communicationProperties)[number]
+    | (typeof dealProperties)[number],
 ): Promise<void> {
   try {
     await hubspotFetch(`/crm/v3/properties/${objectType}`, {
@@ -110,7 +174,7 @@ async function ensureProperty(
 }
 
 async function main() {
-  for (const objectType of ["contacts", "communications"]) {
+  for (const objectType of ["contacts", "communications", "deals"]) {
     await ensurePropertyGroup(objectType);
   }
   for (const property of contactProperties) {
@@ -118,6 +182,9 @@ async function main() {
   }
   for (const property of communicationProperties) {
     await ensureProperty("communications", property);
+  }
+  for (const property of dealProperties) {
+    await ensureProperty("deals", property);
   }
   logger.info("Setup de propriedades do HubSpot concluído");
 }

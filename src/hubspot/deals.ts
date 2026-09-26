@@ -1,4 +1,11 @@
 import { hubspotFetch } from "./client.js";
+import {
+  CYCLE_HOURS,
+  CYCLE_REPLIED_AT,
+  CYCLE_START_AT,
+  CYCLE_TEMPLATE,
+  type CompletedCycle,
+} from "../pipeline/prospectingCycle.js";
 
 interface AssociationsResponse {
   results: Array<{ toObjectId: number }>;
@@ -61,4 +68,29 @@ export async function fillMissingDealChatLinks(deals: OpenDeal[], chatLink: stri
     }),
   });
   return missing;
+}
+
+/**
+ * Copia o ciclo de prospecção que acabou de fechar pros negócios abertos do
+ * contato. No contato os campos são sobrescritos pelo próximo ciclo; no
+ * negócio ficam os dados do ciclo daquela oportunidade.
+ */
+export async function writeCycleToDeals(deals: OpenDeal[], cycle: CompletedCycle): Promise<string[]> {
+  if (deals.length === 0) return [];
+
+  await hubspotFetch("/crm/v3/objects/deals/batch/update", {
+    method: "POST",
+    body: JSON.stringify({
+      inputs: deals.map((d) => ({
+        id: d.id,
+        properties: {
+          [CYCLE_START_AT]: String(cycle.startedAtMs),
+          [CYCLE_REPLIED_AT]: String(cycle.repliedAtMs),
+          [CYCLE_HOURS]: String(cycle.hours),
+          [CYCLE_TEMPLATE]: cycle.templateName ?? "",
+        },
+      })),
+    }),
+  });
+  return deals.map((d) => d.id);
 }

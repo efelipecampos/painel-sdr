@@ -4,7 +4,7 @@ import type { MessageEvent } from "../poli/parser.js";
 import { findContact } from "../hubspot/contacts.js";
 import { createCommunication } from "../hubspot/communications.js";
 import { buildPoliChatLink, updatePoliContactProperties } from "../hubspot/contactProperties.js";
-import { fillMissingDealChatLinks, getOpenDealsForContact, type OpenDeal } from "../hubspot/deals.js";
+import { fillMissingDealChatLinks, getOpenDealsForContact, writeCycleToDeals, type OpenDeal } from "../hubspot/deals.js";
 import { getOwnerIdByEmail } from "../hubspot/owners.js";
 import { sendLeadNotInHubSpotAlert } from "../alerts/googleChat.js";
 import { recordDryRunResult } from "../queue/store.js";
@@ -81,7 +81,18 @@ export async function processMessage(message: MessageEvent): Promise<ProcessResu
     message,
     ownerId,
   });
-  await updatePoliContactProperties(contactId, message);
+  const completedCycle = await updatePoliContactProperties(contactId, message);
+  if (completedCycle) {
+    logger.info(
+      { contactId, horas: completedCycle.hours, template: completedCycle.templateName },
+      "Lead respondeu a prospecção",
+    );
+    try {
+      await writeCycleToDeals(openDeals, completedCycle);
+    } catch (err) {
+      logger.warn({ err, contactId }, "Falha ao copiar o ciclo de prospecção pros negócios");
+    }
+  }
 
   try {
     const filled = await fillMissingDealChatLinks(openDeals, buildPoliChatLink(message.leadUuid));
