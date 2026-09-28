@@ -6,6 +6,7 @@ import { verifyPoliSignature } from "./poli/webhookAuth.js";
 import { poliWebhookBodySchema } from "./poli/types.js";
 import { parseMessageEvent } from "./poli/parser.js";
 import { processMessage } from "./pipeline/processMessage.js";
+import { runPendingDailyNotes } from "./jobs/dailyNotes.js";
 import { isAlreadyProcessed, markProcessed, recordFailure, clearFailure, listFailedJobs } from "./queue/store.js";
 
 interface RequestWithRawBody extends Request {
@@ -137,6 +138,17 @@ async function retryFailedJobs(): Promise<void> {
 setInterval(() => {
   retryFailedJobs().catch((err) => logger.error({ err }, "Erro no loop de retry"));
 }, RETRY_INTERVAL_MS);
+
+// Nota diária por contato (fonte pra IA do HubSpot): a cada hora verifica se
+// o dia anterior já virou nota. Ver runPendingDailyNotes.
+const DAILY_NOTES_INTERVAL_MS = 60 * 60_000;
+
+if (env.DAILY_NOTES_ENABLED) {
+  const tick = () =>
+    runPendingDailyNotes().catch((err) => logger.error({ err }, "Erro no loop da nota diária"));
+  setInterval(tick, DAILY_NOTES_INTERVAL_MS);
+  tick();
+}
 
 app.listen(env.PORT, () => {
   logger.info(`Serviço PoliChat -> HubSpot rodando na porta ${env.PORT}`);

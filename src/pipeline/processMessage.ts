@@ -8,15 +8,41 @@ import { fillMissingDealChatLinks, getOpenDealsForContact, writeCycleToDeals, ty
 import { getOwnerIdByEmail } from "../hubspot/owners.js";
 import { sendLeadNotInHubSpotAlert } from "../alerts/googleChat.js";
 import { recordDryRunResult } from "../queue/store.js";
+import { isSupabaseConfigured } from "../supabase/client.js";
+import { buildMessageRow, upsertMessages } from "../supabase/messages.js";
 import { logger } from "../logger.js";
 
 export type ProcessResult =
   | { outcome: "skipped_not_presales" }
-  | { outcome: "logged"; contactId: string; communicationId: string }
+  | { outcome: "logged"; contactId: string; communicationId: string; dealIds: string[] }
   | { outcome: "dry_run"; contactId: string | null }
   | { outcome: "alerted_contact_not_found" };
 
 export async function processMessage(message: MessageEvent): Promise<ProcessResult> {
+  const result = await handleMessage(message);
+
+  // Espelha TODA mensagem no Supabase (inclusive fora da pré-venda) pro
+  // painel de análise. Falha aqui não pode derrubar o fluxo do HubSpot, que
+  // é o que o time usa no dia a dia.
+  if (isSupabaseConfigured()) {
+    try {
+      await upsertMessages([
+        buildMessageRow(message, {
+          outcome: result.outcome,
+          contactId: "contactId" in result ? result.contactId : null,
+          communicationId: "communicationId" in result ? result.communicationId : null,
+          dealIds: "dealIds" in result ? result.dealIds : undefined,
+        }),
+      ]);
+    } catch (err) {
+      logger.warn({ err, id: message.externalMessageId }, "Falha ao espelhar a mensagem no Supabase");
+    }
+  }
+
+  return result;
+}
+
+async function handleMessage(message: MessageEvent): Promise<ProcessResult> {
   const role = getAttendantRole(message.attendantEmail);
   if (!role) {
     logger.debug({ attendantEmail: message.attendantEmail }, "Mensagem fora do time de pré-vendas, ignorada");
@@ -102,5 +128,5 @@ export async function processMessage(message: MessageEvent): Promise<ProcessResu
   }
 
   logger.info({ contactId, communicationId, direction: message.direction }, "Mensagem registrada no HubSpot");
-  return { outcome: "logged", contactId, communicationId };
+  return { outcome: "logged", contactId, communicationId, dealIds: openDeals.map((d) => d.id) };
 }

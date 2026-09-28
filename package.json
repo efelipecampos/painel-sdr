@@ -20,7 +20,9 @@
     "backfill:deal-associations": "tsx scripts/backfillDealAssociations.ts",
     "backfill:deal-chat-links": "tsx scripts/backfillDealChatLinks.ts",
     "backfill:contact-chat-links": "tsx scripts/backfillContactChatLinks.ts",
-    "backfill:contact-chat-links-poli": "tsx scripts/backfillContactChatLinksFromPoli.ts"
+    "backfill:contact-chat-links-poli": "tsx scripts/backfillContactChatLinksFromPoli.ts",
+    "backfill:supabase": "tsx scripts/backfillSupabaseFromHubspot.ts",
+    "daily-notes": "tsx scripts/runDailyNotes.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",

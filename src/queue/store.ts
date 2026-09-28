@@ -29,6 +29,14 @@ db.exec(`
     last_attempt_at INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS daily_notes (
+    contact_id TEXT NOT NULL,
+    day TEXT NOT NULL,
+    note_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY (contact_id, day)
+  );
+
   CREATE TABLE IF NOT EXISTS dry_run_results (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     external_message_id TEXT NOT NULL,
@@ -177,4 +185,15 @@ export function listLatestNotFoundContacts(limit: number): NotFoundDryRunContact
        LIMIT ?`,
     )
     .all(limit) as NotFoundDryRunContact[];
+}
+
+export function isDailyNoteDone(contactId: string, day: string): boolean {
+  const row = db.prepare("SELECT 1 FROM daily_notes WHERE contact_id = ? AND day = ?").get(contactId, day);
+  return row !== undefined;
+}
+
+export function markDailyNoteDone(contactId: string, day: string, noteId: string): void {
+  db.prepare(
+    "INSERT OR REPLACE INTO daily_notes (contact_id, day, note_id, created_at) VALUES (?, ?, ?, ?)",
+  ).run(contactId, day, noteId, Date.now());
 }

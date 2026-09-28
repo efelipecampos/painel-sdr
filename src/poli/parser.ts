@@ -3,6 +3,8 @@ import type { PoliWebhookBody } from "./types.js";
 export interface MessageEvent {
   /** Chave de dedupe: wamid do WhatsApp quando disponível, senão o uuid da mensagem. */
   externalMessageId: string;
+  /** uuid da mensagem na Poli (value.uuid) — chave estável do lado deles. */
+  poliMessageUuid: string;
   direction: "IN" | "OUT";
   timestampMs: number;
   text: string;
@@ -72,6 +74,7 @@ export function parseMessageEvent(body: PoliWebhookBody): MessageEvent {
 
   return {
     externalMessageId: value.metadata.external_message_id ?? value.uuid,
+    poliMessageUuid: value.uuid,
     direction: value.direction,
     timestampMs: value.timestamp * 1000,
     text: value.components.body?.text ?? "",

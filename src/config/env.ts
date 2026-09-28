@@ -32,6 +32,12 @@ const schema = z.object({
   GOOGLE_CHAT_WEBHOOK_URL_SDR: z.string().url().or(z.literal("")).default(""),
   GOOGLE_CHAT_WEBHOOK_URL_CLOSER: z.string().url().or(z.literal("")).default(""),
 
+  // Espelho das mensagens pro painel de análise e base da nota diária.
+  // Vazio = integração roda normalmente, só sem Supabase e sem nota diária.
+  SUPABASE_URL: z.string().url().or(z.literal("")).default(""),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional().default(""),
+  DAILY_NOTES_ENABLED: booleanFromEnv(true),
+
   SQLITE_PATH: z.string().default("./data/queue.sqlite"),
 
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
