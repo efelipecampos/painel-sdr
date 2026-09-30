@@ -46,17 +46,22 @@ const authorSchema = z
   .passthrough();
 
 // Mídia (áudio, imagem, documento...) vem em `attachments`, sem body.text.
-// Formato baseado nos exemplos da documentação da Poli — tudo opcional até
-// validarmos contra eventos reais.
+// Confirmado com eventos reais (2026-09-30): o arquivo fica em
+// `media.url` (CDN público) e o tipo aparece em `type`/`mime_type`, com
+// caixa inconsistente ("AUDIO" e "audio", "IMAGE" e "image").
 const attachmentSchema = z
   .object({
     type: z.string().nullish(),
+    mime_type: z.string().nullish(),
     media: z
       .object({
         caption: z.string().nullish(),
         url: z.string().nullish(),
         filename: z.string().nullish(),
+        file_name: z.string().nullish(),
         name: z.string().nullish(),
+        mime_type: z.string().nullish(),
+        resource_url: z.string().nullish(),
       })
       .passthrough()
       .nullish(),

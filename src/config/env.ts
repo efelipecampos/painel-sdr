@@ -44,6 +44,16 @@ const schema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional().default(""),
   DAILY_NOTES_ENABLED: booleanFromEnv(true),
 
+  // --- OpenAI: transcrição de áudio e leitura de imagem (só pro Supabase) ---
+  OPENAI_API_KEY: z.string().optional().default(""),
+  MEDIA_UNDERSTANDING_ENABLED: booleanFromEnv(true),
+  // Nomes de modelo em env porque o catálogo da OpenAI muda com frequência.
+  OPENAI_TRANSCRIPTION_MODEL: z.string().default("gpt-4o-mini-transcribe"),
+  OPENAI_VISION_MODEL: z.string().default("gpt-4o-mini"),
+  OPENAI_TIMEOUT_MS: z.coerce.number().default(120_000),
+  MEDIA_DOWNLOAD_TIMEOUT_MS: z.coerce.number().default(30_000),
+  MEDIA_MAX_MB: z.coerce.number().default(20),
+
   SQLITE_PATH: z.string().default("./data/queue.sqlite"),
 
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),

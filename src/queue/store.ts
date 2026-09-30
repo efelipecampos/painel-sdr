@@ -49,6 +49,19 @@ db.exec(`
     first_seen_at INTEGER NOT NULL
   );
 
+  -- Mídia cujo texto (transcrição/leitura) não saiu na primeira tentativa.
+  -- A mensagem já foi gravada sem texto; o retry só atualiza a linha no
+  -- Supabase quando a OpenAI responder.
+  CREATE TABLE IF NOT EXISTS media_text_jobs (
+    external_message_id TEXT PRIMARY KEY,
+    target TEXT NOT NULL,
+    original_text TEXT,
+    last_error TEXT,
+    attempts INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    last_attempt_at INTEGER NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS daily_notes (
     contact_id TEXT NOT NULL,
     day TEXT NOT NULL,
@@ -269,4 +282,46 @@ export function listRawEventJobs(maxAttempts: number): RawEventJob[] {
   return db
     .prepare("SELECT external_id, event_type, payload, attempts FROM raw_event_jobs WHERE attempts <= ?")
     .all(maxAttempts) as RawEventJob[];
+}
+
+export function recordMediaTextFailure(
+  externalMessageId: string,
+  target: unknown,
+  originalText: string,
+  error: string,
+): void {
+  const existing = db
+    .prepare("SELECT attempts FROM media_text_jobs WHERE external_message_id = ?")
+    .get(externalMessageId) as { attempts: number } | undefined;
+
+  if (existing) {
+    db.prepare(
+      "UPDATE media_text_jobs SET attempts = ?, last_error = ?, last_attempt_at = ? WHERE external_message_id = ?",
+    ).run(existing.attempts + 1, error, Date.now(), externalMessageId);
+    return;
+  }
+
+  db.prepare(
+    `INSERT INTO media_text_jobs (external_message_id, target, original_text, last_error, attempts, created_at, last_attempt_at)
+     VALUES (?, ?, ?, ?, 1, ?, ?)`,
+  ).run(externalMessageId, JSON.stringify(target), originalText, error, Date.now(), Date.now());
+}
+
+export function clearMediaTextJob(externalMessageId: string): void {
+  db.prepare("DELETE FROM media_text_jobs WHERE external_message_id = ?").run(externalMessageId);
+}
+
+export interface MediaTextJob {
+  external_message_id: string;
+  target: string;
+  original_text: string | null;
+  attempts: number;
+}
+
+export function listMediaTextJobs(maxAttempts: number): MediaTextJob[] {
+  return db
+    .prepare(
+      "SELECT external_message_id, target, original_text, attempts FROM media_text_jobs WHERE attempts <= ?",
+    )
+    .all(maxAttempts) as MediaTextJob[];
 }

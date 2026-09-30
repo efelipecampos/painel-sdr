@@ -10,6 +10,8 @@ import { sendLeadNotInHubSpotAlert } from "../alerts/googleChat.js";
 import { recordDryRunResult } from "../queue/store.js";
 import { isSupabaseConfigured } from "../supabase/client.js";
 import { buildMessageRow, upsertMessages } from "../supabase/messages.js";
+import { extractMediaText, isMediaUnderstandingEnabled, mergeText, pickMediaTarget } from "../media/mediaText.js";
+import { recordMediaTextFailure, clearMediaTextJob } from "../queue/store.js";
 import { logger } from "../logger.js";
 
 export type ProcessResult =
@@ -25,9 +27,25 @@ export async function processMessage(message: MessageEvent): Promise<ProcessResu
   // painel de análise. Falha aqui não pode derrubar o fluxo do HubSpot, que
   // é o que o time usa no dia a dia.
   if (isSupabaseConfigured()) {
+    // Áudio e imagem viram texto (OpenAI) só aqui, pro painel — o registro no
+    // HubSpot continua com rótulo e link. Falha não impede a gravação da
+    // mensagem: ela entra sem texto e o retry atualiza a linha depois.
+    let text = message.text;
+    const target = isMediaUnderstandingEnabled() ? pickMediaTarget(message.attachments) : undefined;
+    if (target) {
+      try {
+        text = mergeText(message.text, await extractMediaText(target));
+        clearMediaTextJob(message.externalMessageId);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        recordMediaTextFailure(message.externalMessageId, target, message.text, errorMessage);
+        logger.warn({ err, id: message.externalMessageId, kind: target.kind }, "Texto da mídia falhou, enfileirado pra retry");
+      }
+    }
+
     try {
       await upsertMessages([
-        buildMessageRow(message, {
+        buildMessageRow({ ...message, text }, {
           outcome: result.outcome,
           contactId: "contactId" in result ? result.contactId : null,
           communicationId: "communicationId" in result ? result.communicationId : null,
