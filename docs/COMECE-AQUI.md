@@ -124,6 +124,8 @@ Registre aqui toda decisão nova, com data.
 - 2026-09-29 — Banco único `pabbgxaphooftdsdewmq` para integração e painel. Migrations de todo o banco ficam neste repositório. Integração escreve em `public.messages` e `public.raw_events`; painel só lê essas duas e mantém o resto no schema `painel`.
 - 2026-09-29 — Migrations aplicadas só pelo Supabase CLI (`supabase db push`), depois da aprovação do Felipe. Integração GitHub ↔ Supabase desligada.
 - 2026-09-29 — Deploy no padrão Coolify/Traefik da VPS, igual à integração. Sem Caddy ou Nginx.
+- 2026-09-29 — Testes das funções SQL rodam no PGlite (Postgres em memória, dependência só de desenvolvimento), aplicando as migrations reais. Sem Docker e sem tocar o banco de produção.
+- 2026-09-29 — Horário comercial inicial: segunda a sexta, 08:00–18:00 (protótipo). Configurações iniciais: fuso `America/Sao_Paulo`, parado a partir de 30 min, feriados não contam.
 
 ## 9. Primeira mensagem ao Felipe
 
