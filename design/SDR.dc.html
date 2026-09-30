@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Chats do SDR</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#1a1a1a;font-family:"Rubik",system-ui,sans-serif;color:#f6f7f9}
+a{color:#f6f7f9}a:hover{color:#cecff0}
+button,input,select{font-family:inherit}
+input::placeholder{color:#a7abb5}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #f6f7f9;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1060px; display: flex; flex-direction: column; background: #1a1a1a; font-family: Rubik, system-ui, sans-serif; color: #f6f7f9">
+
+<div style="height: 46px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid #252c3c; font-size: 14px; line-height: 20px">
+<img src="/_blob/836dc846171f77c8e53729b39de898fe" alt="Poli" style="height: 24px; margin-right: 4px">
+<a href="Main.dc.html" style="text-decoration: none">Painel SDR</a>
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6"></path></svg>
+<span aria-current="page" style="font-weight: 600">Diego Rocha</span>
+</div>
+
+<div style="flex-grow: 1; padding: 20px 16px 16px 16px; display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<a href="Main.dc.html" aria-label="Voltar ao painel" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid #4e5d7f; border-radius: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6l6 6"></path></svg></a>
+<div style="width: 40px; height: 40px; border-radius: 8px; background: #4b194d; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 500">DR</div>
+<div style="display: flex; flex-direction: column">
+<h1 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; color: #6868d7">Diego Rocha</h1>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Carteira: 156 leads · Hoje (29/09 00:00 até 29/09 23:59) · Tempos em horário comercial</span>
+</div>
+<span style="background: #20293a; border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600">Dados de exemplo</span>
+</div>
+
+<section aria-label="Indicadores do SDR" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Leads abordados</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">22</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Templates enviados</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">25</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">1ª resposta (média)</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">11min 05s</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Tempo de resposta (média)</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">18min 40s</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Aguardando resposta</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">15</span><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #f0a93b">9 parados há +30 min</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Qualidade da carteira</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">55<span style="font-size: 14px; font-weight: 500; color: #a7abb5">/100</span></span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Reuniões</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">{{booked}}</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{bookedRate}} dos leads abordados</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{breakdown}}</span></div>
+</section>
+
+<div style="display: flex; align-items: center; gap: 16px">
+<div role="group" aria-label="Filtrar chats" style="display: flex; gap: 8px">
+<sc-for list="{{filters}}" as="f" hint-placeholder-count="4">
+<button type="button" onClick="{{f.pick}}" aria-pressed="{{f.pressed}}" style="{{f.style}}">{{f.label}}</button>
+</sc-for>
+</div>
+<div style="flex-grow: 1"></div>
+<label for="q" style="position: relative; display: block; width: 320px">
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Buscar lead</span>
+<input id="q" type="search" value="{{query}}" onChange="{{onQuery}}" placeholder="Buscar lead pelo nome ou telefone..." style="box-sizing: border-box; width: 100%; height: 40px; padding: 0 40px 0 12px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" style="position: absolute; right: 12px; top: 10px"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-4-4"></path></svg>
+</label>
+</div>
+
+<div style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; overflow: hidden">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px">
+<thead>
+<tr style="background: #20203a; text-align: left">
+<th scope="col" style="padding: 12px 16px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f6f7f9">Lead</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f6f7f9">Status</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f6f7f9; text-align: right">Templates</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f6f7f9; text-align: right">1ª resposta</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f6f7f9; text-align: right">Resposta média</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f6f7f9; text-align: right">Mensagens (lead / SDR)</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f6f7f9; text-align: right">Qualidade</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f6f7f9">Última mensagem</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f6f7f9">Reunião</th>
+<th scope="col" style="padding: 12px 16px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f6f7f9"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Ações</span></th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="10">
+<tr style="border-top: 1px solid #252c3c; height: 56px">
+<td style="padding: 8px 16px"><div style="display: flex; flex-direction: column"><span style="font-weight: 600">{{r.lead}}</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{r.phone}}</span></div></td>
+<td style="padding: 8px 12px"><span style="{{r.statusStyle}}">{{r.status}}</span></td>
+<td style="padding: 8px 12px; text-align: right; font-variant-numeric: tabular-nums">{{r.templates}}</td>
+<td style="padding: 8px 12px; text-align: right; font-variant-numeric: tabular-nums">{{r.first}}</td>
+<td style="padding: 8px 12px; text-align: right; font-variant-numeric: tabular-nums">{{r.resp}}</td>
+<td style="padding: 8px 12px; text-align: right; font-variant-numeric: tabular-nums">{{r.msgs}}</td>
+<td style="padding: 8px 12px; text-align: right; font-variant-numeric: tabular-nums">{{r.score}}</td>
+<td style="padding: 8px 12px"><div style="display: flex; flex-direction: column"><span>{{r.lastTime}}</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{r.lastFrom}}</span></div></td>
+<td style="padding: 8px 12px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<select value="{{r.meeting}}" onChange="{{r.onMeeting}}" aria-label="{{r.bookAria}}" style="{{r.selectStyle}}">
+<option value="">Sem reunião</option>
+<option value="agendada">Agendada</option>
+<option value="validada">Validada</option>
+<option value="noshow">No show</option>
+<option value="invalidada">Invalidada</option>
+<option value="cancelada">Cancelada</option>
+</select>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{r.src}}</span>
+</div>
+</td>
+<td style="padding: 8px 16px; text-align: right"><a href="#" aria-label="{{r.openAria}}" style="font-size: 12px; font-weight: 500; white-space: nowrap">Abrir no Poli</a></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+<div style="border-top: 1px solid #252c3c; padding: 12px 16px; display: flex; align-items: center; gap: 12px; font-size: 12px; line-height: 16px; color: #a7abb5">
+<span>{{countLabel}}</span>
+<div style="flex-grow: 1"></div>
+<button type="button" style="height: 32px; padding: 0 12px; border: 1px solid #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; font-size: 12px; cursor: pointer">Anterior</button>
+<button type="button" style="height: 32px; padding: 0 12px; border: 1px solid #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; font-size: 12px; cursor: pointer">Próxima</button>
+</div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1060}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      filter: 'all', query: '',
+      chats: [
+        { id: 1, lead: 'Contabilidade Exata', phone: '(62) 9••••-1187', kind: 'waiting', waitMin: 125, templates: 1, first: '25min 10s', resp: '31min 00s', msgs: '4 / 2', score: '70', lastTime: '12:09', lastFrom: 'Lead', meeting: '', src: '' },
+        { id: 2, lead: 'Mercado Bom Preço', phone: '(62) 9••••-4410', kind: 'waiting', waitMin: 72, templates: 1, first: '14min 20s', resp: '22min 05s', msgs: '6 / 4', score: '58', lastTime: '13:02', lastFrom: 'Lead', meeting: '', src: '' },
+        { id: 3, lead: 'Clínica Sorriso Vivo', phone: '(64) 9••••-2093', kind: 'waiting', waitMin: 48, templates: 1, first: '9min 10s', resp: '15min 00s', msgs: '4 / 3', score: '81', lastTime: '13:26', lastFrom: 'Lead', meeting: '', src: '' },
+        { id: 4, lead: 'Construtora Alicerce', phone: '(62) 9••••-7731', kind: 'waiting', waitMin: 35, templates: 2, first: '11min 00s', resp: '17min 20s', msgs: '5 / 3', score: '49', lastTime: '13:27', lastFrom: 'Lead', meeting: '', src: '' },
+        { id: 5, lead: 'Imobiliária Casa Nova', phone: '(61) 9••••-5528', kind: 'waiting', waitMin: 12, templates: 1, first: '18min 00s', resp: '20min 15s', msgs: '3 / 2', score: '64', lastTime: '13:50', lastFrom: 'Lead', meeting: '', src: '' },
+        { id: 6, lead: 'Auto Peças Central', phone: '(62) 9••••-3302', kind: 'answered', waitMin: 0, templates: 2, first: '3min 05s', resp: '6min 40s', msgs: '8 / 9', score: '72', lastTime: '13:58', lastFrom: 'SDR', meeting: 'agendada', src: 'hubspot' },
+        { id: 7, lead: 'Escola Aprender Mais', phone: '(62) 9••••-9014', kind: 'answered', waitMin: 0, templates: 1, first: '5min 40s', resp: '8min 10s', msgs: '7 / 7', score: '77', lastTime: '12:40', lastFrom: 'SDR', meeting: 'validada', src: 'manual' },
+        { id: 8, lead: 'Farmácia Vida', phone: '(62) 9••••-6645', kind: 'answered', waitMin: 0, templates: 1, first: '7min 00s', resp: '9min 30s', msgs: '5 / 5', score: '66', lastTime: '11:52', lastFrom: 'SDR', meeting: 'noshow', src: 'manual' },
+        { id: 9, lead: 'Pet Shop Amigo Fiel', phone: '(62) 9••••-2256', kind: 'noreply', waitMin: 0, templates: 1, first: '—', resp: '—', msgs: '0 / 1', score: 'Não analisado', lastTime: '09:15', lastFrom: 'SDR (template)', meeting: '', src: '' },
+        { id: 10, lead: 'Loja Moda Bella', phone: '(62) 9••••-8871', kind: 'noreply', waitMin: 0, templates: 1, first: '—', resp: '—', msgs: '0 / 1', score: 'Não analisado', lastTime: '09:40', lastFrom: 'SDR (template)', meeting: '', src: '' }
+      ]
+    };
+  }
+  renderVals() {
+    var self = this, st = this.state;
+    function waitLabel(m) { var h = Math.floor(m / 60), r = m % 60; return h > 0 ? h + 'h ' + String(r).padStart(2, '0') + 'min' : r + 'min'; }
+    var q = st.query.trim().toLowerCase();
+    var visible = st.chats.filter(function (c) {
+      if (st.filter === 'waiting' && c.kind !== 'waiting') return false;
+      if (st.filter === 'booked' && !c.meeting) return false;
+      if (st.filter === 'noreply' && c.kind !== 'noreply') return false;
+      if (q && (c.lead + ' ' + c.phone).toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+    var rows = visible.map(function (c) {
+      var status, color, bg;
+      if (c.kind === 'waiting') {
+        var stale = c.waitMin >= 30;
+        status = 'Aguardando há ' + waitLabel(c.waitMin);
+        color = stale ? '#f0a93b' : '#f6f7f9';
+        bg = stale ? 'rgba(240,169,59,0.12)' : '#20293a';
+      } else if (c.kind === 'answered') { status = 'Respondido'; color = '#f6f7f9'; bg = '#20293a'; }
+      else { status = 'Lead não respondeu'; color = '#a7abb5'; bg = 'transparent'; }
+      var srcLabel = c.meeting ? (c.src === 'hubspot' ? 'Via HubSpot' : 'Marcado à mão') : '';
+      return {
+        lead: c.lead, phone: c.phone, templates: c.templates, first: c.first, resp: c.resp, msgs: c.msgs,
+        score: c.score, lastTime: c.lastTime, lastFrom: c.lastFrom,
+        status: status,
+        statusStyle: 'display: inline-block; border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600; white-space: nowrap; color: ' + color + '; background: ' + bg,
+        meeting: c.meeting, src: srcLabel,
+        selectStyle: 'height: 36px; min-width: 140px; padding: 0 8px; background: #313a4f; border: 1px solid ' + (c.meeting ? '#5757d3' : '#4e5d7f') + '; border-radius: 8px; color: #f6f7f9; font-size: 14px; font-weight: ' + (c.meeting ? '600' : '400'),
+        bookAria: 'Status da reunião: ' + c.lead,
+        openAria: 'Abrir chat de ' + c.lead + ' no Poli',
+        onMeeting: function (e) {
+          var v = e.target.value;
+          self.setState({ chats: self.state.chats.map(function (x) { return x.id === c.id ? Object.assign({}, x, { meeting: v, src: v ? (x.src || 'manual') : '' }) : x; }) });
+        }
+      };
+    });
+    var withMeeting = st.chats.filter(function (c) { return c.meeting; });
+    var booked = withMeeting.length;
+    var NAMES = { agendada: 'agendada', validada: 'validada', noshow: 'no show', invalidada: 'invalidada', cancelada: 'cancelada' };
+    var ORDER = ['agendada', 'validada', 'noshow', 'invalidada', 'cancelada'];
+    var breakdown = ORDER.map(function (k) { var n = withMeeting.filter(function (c) { return c.meeting === k; }).length; return n ? n + ' ' + NAMES[k] : null; }).filter(Boolean).join(' · ') || 'Nenhuma no período';
+    var FILTERS = [
+      { id: 'all', label: 'Todos' },
+      { id: 'waiting', label: 'Aguardando resposta' },
+      { id: 'booked', label: 'Com reunião' },
+      { id: 'noreply', label: 'Lead não respondeu' }
+    ];
+    var filters = FILTERS.map(function (f) {
+      var on = st.filter === f.id;
+      return {
+        label: f.label, pressed: on ? 'true' : 'false',
+        style: 'height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid ' + (on ? '#5757d3' : '#4e5d7f') + '; background: ' + (on ? '#5757d3' : '#313a4f') + '; color: #f6f7f9; font-size: 14px; font-weight: ' + (on ? '600' : '400') + '; cursor: pointer',
+        pick: function () { self.setState({ filter: f.id }); }
+      };
+    });
+    return {
+      rows: rows, filters: filters, query: st.query,
+      onQuery: function (e) { self.setState({ query: e.target.value }); },
+      booked: booked, breakdown: breakdown,
+      bookedRate: Math.round(booked / 22 * 100) + '%',
+      countLabel: 'Mostrando ' + rows.length + ' de 37 chats com atividade no período'
+    };
+  }
+}
+</script>
+</body>
+</html>

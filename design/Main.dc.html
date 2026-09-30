@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Painel SDR</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#1a1a1a;font-family:"Rubik",system-ui,sans-serif;color:#f6f7f9}
+a{color:#f6f7f9}a:hover{color:#cecff0}
+button,input,select{font-family:inherit}
+input[type="datetime-local"]{color-scheme:dark}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #f6f7f9;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1120px; display: flex; flex-direction: column; background: #1a1a1a; font-family: Rubik, system-ui, sans-serif; color: #f6f7f9">
+
+
+<main style="flex-grow: 1; background: #1a1a1a; display: flex; flex-direction: column">
+
+<div style="height: 46px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid #252c3c; font-size: 14px; line-height: 20px">
+<img src="/_blob/836dc846171f77c8e53729b39de898fe" alt="Poli" style="height: 24px; margin-right: 4px">
+<span aria-current="page" style="font-weight: 600">Painel SDR</span>
+</div>
+
+<div style="flex-grow: 1; padding: 20px 16px 16px 16px; display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<h1 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; color: #6868d7">Painel SDR</h1>
+<span style="background: #20293a; border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600">Dados de exemplo</span>
+<div style="flex-grow: 1"></div>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Dados atualizados às 14:02 · Score recalculado às 14:00</span>
+<a href="Configuracoes.dc.html" style="height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border: 1px solid #4e5d7f; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"></path></svg>Configurar painel</a>
+</div>
+
+<div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
+<div role="group" aria-label="Período" style="display: flex; gap: 8px">
+<sc-for list="{{periods}}" as="p" hint-placeholder-count="4">
+<button type="button" onClick="{{p.pick}}" aria-pressed="{{p.pressed}}" style="{{p.style}}">{{p.label}}</button>
+</sc-for>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<label for="from" style="font-size: 12px; font-weight: 500; color: #a7abb5">De</label>
+<input id="from" type="datetime-local" value="{{from}}" onChange="{{onFrom}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<label for="to" style="font-size: 12px; font-weight: 500; color: #a7abb5">Até</label>
+<input id="to" type="datetime-local" value="{{to}}" onChange="{{onTo}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+</div>
+<div style="display: flex; align-items: center; gap: 10px">
+<button type="button" role="switch" aria-checked="{{bizChecked}}" aria-label="Só horário comercial" onClick="{{toggleBiz}}" style="{{switchStyle}}"><span style="{{knobStyle}}"></span></button>
+<div style="display: flex; flex-direction: column">
+<span style="font-size: 14px; line-height: 20px; font-weight: 500">Só horário comercial</span>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Seg a sex, 08:00–18:00 · <a href="Configuracoes.dc.html">editar</a></span>
+</div>
+</div>
+<div style="flex-grow: 1"></div>
+<div style="display: flex; align-items: center; gap: 8px">
+<label for="sort" style="font-size: 12px; font-weight: 500; color: #a7abb5">Ordenar por</label>
+<select id="sort" value="{{sortKey}}" onChange="{{onSort}}" style="height: 40px; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<option value="waiting">Mais leads aguardando</option>
+<option value="first">1ª resposta mais lenta</option>
+<option value="resp">Resposta mais lenta</option>
+<option value="score">Menor qualidade</option>
+<option value="reached">Mais leads abordados</option>
+</select>
+</div>
+</div>
+
+<section aria-label="Resumo do time" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: baseline; gap: 8px">
+<h2 style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Time · {{team.count}} SDRs</h2>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{periodLabel}} · {{timeMode}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Leads abordados</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">{{team.reached}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Templates enviados</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">{{team.templates}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">1ª resposta (média)</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">{{team.first}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Tempo de resposta (média)</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">{{team.resp}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Aguardando resposta</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">{{team.waiting}}</span><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #f0a93b">{{team.stale}} parados há +30 min</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Qualidade média</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">{{team.score}}<span style="font-size: 14px; font-weight: 500; color: #a7abb5">/100</span></span></div>
+</div>
+</section>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+<sc-for list="{{sdrs}}" as="s" hint-placeholder-count="6">
+<a href="SDR.dc.html" aria-label="{{s.openAria}}" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 16px; text-decoration: none; color: #f6f7f9; cursor: pointer">
+<header style="display: flex; align-items: center; gap: 12px">
+<div style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 8px; background: #4b194d; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 500">{{s.ini}}</div>
+<div style="display: flex; flex-direction: column; flex-grow: 1">
+<h3 style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">{{s.name}}</h3>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Carteira: {{s.carteira}} leads</span>
+</div>
+<span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5; display: flex; align-items: center; gap: 4px">Ver chats<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6"></path></svg></span>
+</header>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Leads abordados</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">{{s.reached}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Templates enviados</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">{{s.templates}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">1ª resposta (média)</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">{{s.first}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Tempo de resposta (média)</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">{{s.resp}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Aguardando resposta</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">{{s.waiting}}</span><span style="{{s.staleStyle}}">{{s.staleLabel}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Qualidade da carteira</span><span style="font-size: 24px; line-height: 30px; font-weight: 600">{{s.score}}<span style="font-size: 14px; font-weight: 500; color: #a7abb5">/100</span></span><div role="img" aria-label="{{s.scoreAria}}" style="height: 6px; border-radius: 9999px; background: #20203a; overflow: hidden"><div style="{{s.barStyle}}"></div></div><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{s.analisados}} de {{s.carteira}} leads analisados</span></div>
+</div>
+</a>
+</sc-for>
+</div>
+
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { period: 'today', from: '2026-09-29T00:00', to: '2026-09-29T23:59', biz: true, sortKey: 'waiting' };
+  }
+  renderVals() {
+    var self = this;
+    var st = this.state;
+    var SDRS = [
+      { name: 'Ana Souza', ini: 'AS', carteira: 212, analisados: 198, reached: 48, templates: 61, waiting: 12, stale: 5, first: 250, resp: 450, score: 68 },
+      { name: 'Bruno Lima', ini: 'BL', carteira: 180, analisados: 177, reached: 35, templates: 40, waiting: 3, stale: 0, first: 110, resp: 185, score: 74 },
+      { name: 'Carla Mendes', ini: 'CM', carteira: 240, analisados: 231, reached: 52, templates: 70, waiting: 8, stale: 2, first: 160, resp: 320, score: 61 },
+      { name: 'Diego Rocha', ini: 'DR', carteira: 156, analisados: 150, reached: 22, templates: 25, waiting: 15, stale: 9, first: 665, resp: 1120, score: 55 },
+      { name: 'Elisa Prado', ini: 'EP', carteira: 198, analisados: 190, reached: 41, templates: 55, waiting: 5, stale: 1, first: 195, resp: 290, score: 79 },
+      { name: 'Gustavo Reis', ini: 'GR', carteira: 170, analisados: 162, reached: 30, templates: 38, waiting: 9, stale: 4, first: 380, resp: 550, score: 66 }
+    ];
+    var f1 = st.biz ? 1 : 2.6, f2 = st.biz ? 1 : 3.3;
+    function fmt(sec) {
+      sec = Math.round(sec);
+      var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+      if (h > 0) return h + 'h ' + String(m).padStart(2, '0') + 'min';
+      return m + 'min ' + String(s).padStart(2, '0') + 's';
+    }
+    var sorters = {
+      waiting: function (a, b) { return b.waiting - a.waiting; },
+      first: function (a, b) { return b.first - a.first; },
+      resp: function (a, b) { return b.resp - a.resp; },
+      score: function (a, b) { return a.score - b.score; },
+      reached: function (a, b) { return b.reached - a.reached; }
+    };
+    var list = SDRS.slice().sort(sorters[st.sortKey] || sorters.waiting);
+    var sdrs = list.map(function (d, i) {
+      return {
+        name: d.name, ini: d.ini, carteira: d.carteira, analisados: d.analisados, rank: i + 1,
+        reached: d.reached, templates: d.templates, waiting: d.waiting, score: d.score,
+        first: fmt(d.first * f1), resp: fmt(d.resp * f2),
+        staleLabel: d.stale > 0 ? d.stale + ' parados há +30 min' : 'Nenhum parado há +30 min',
+        staleStyle: 'font-size: 12px; line-height: 16px; font-weight: 500; color: ' + (d.stale > 0 ? '#f0a93b' : '#a7abb5'),
+        barStyle: 'height: 6px; border-radius: 9999px; background: #6868d7; width: ' + d.score + '%',
+        scoreAria: 'Qualidade ' + d.score + ' de 100',
+        openAria: 'Ver chats de ' + d.name
+      };
+    });
+    var sum = function (k) { return SDRS.reduce(function (t, d) { return t + d[k]; }, 0); };
+    var team = {
+      count: SDRS.length, reached: sum('reached'), templates: sum('templates'), waiting: sum('waiting'), stale: sum('stale'),
+      first: fmt(sum('first') / SDRS.length * f1), resp: fmt(sum('resp') / SDRS.length * f2),
+      score: Math.round(sum('score') / SDRS.length)
+    };
+    var PERIODS = [
+      { id: 'today', label: 'Hoje', from: '2026-09-29T00:00', to: '2026-09-29T23:59' },
+      { id: 'yesterday', label: 'Ontem', from: '2026-09-28T00:00', to: '2026-09-28T23:59' },
+      { id: 'week', label: 'Últimos 7 dias', from: '2026-09-23T00:00', to: '2026-09-29T23:59' },
+      { id: 'custom', label: 'Personalizado', from: null, to: null }
+    ];
+    var periods = PERIODS.map(function (p) {
+      var on = st.period === p.id;
+      return {
+        label: p.label, pressed: on ? 'true' : 'false',
+        style: 'height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid ' + (on ? '#5757d3' : '#4e5d7f') + '; background: ' + (on ? '#5757d3' : '#313a4f') + '; color: #f6f7f9; font-size: 14px; font-weight: ' + (on ? '600' : '400') + '; cursor: pointer',
+        pick: function () {
+          if (p.from) self.setState({ period: p.id, from: p.from, to: p.to });
+          else self.setState({ period: p.id });
+        }
+      };
+    });
+    function short(v) { var d = v.split('T'); var p = d[0].split('-'); return p[2] + '/' + p[1] + ' ' + d[1]; }
+    var cur = PERIODS.filter(function (p) { return p.id === st.period; })[0];
+    var periodLabel = st.period === 'custom' ? short(st.from) + ' até ' + short(st.to) : cur.label + ' (' + short(cur.from) + ' até ' + short(cur.to) + ')';
+    return {
+      periods: periods, from: st.from, to: st.to, sortKey: st.sortKey,
+      onFrom: function (e) { self.setState({ from: e.target.value, period: 'custom' }); },
+      onTo: function (e) { self.setState({ to: e.target.value, period: 'custom' }); },
+      onSort: function (e) { self.setState({ sortKey: e.target.value }); },
+      toggleBiz: function () { self.setState({ biz: !st.biz }); },
+      bizChecked: st.biz ? 'true' : 'false',
+      switchStyle: 'width: 44px; height: 24px; flex-shrink: 0; border-radius: 9999px; border: 1px solid ' + (st.biz ? '#5757d3' : '#4e5d7f') + '; background: ' + (st.biz ? '#5757d3' : '#313a4f') + '; padding: 0; position: relative; cursor: pointer',
+      knobStyle: 'position: absolute; top: 3px; left: ' + (st.biz ? '23px' : '3px') + '; width: 16px; height: 16px; border-radius: 9999px; background: #f6f7f9',
+      timeMode: st.biz ? 'Tempos contados só em horário comercial' : 'Tempos contados em 24h',
+      periodLabel: periodLabel, team: team, sdrs: sdrs
+    };
+  }
+}
+</script>
+</body>
+</html>

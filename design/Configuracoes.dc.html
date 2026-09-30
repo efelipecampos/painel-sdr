@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Configurações do Painel SDR</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#1a1a1a;font-family:"Rubik",system-ui,sans-serif;color:#f6f7f9}
+a{color:#f6f7f9}a:hover{color:#cecff0}
+button,input,select,textarea{font-family:inherit}
+input[type="time"]{color-scheme:dark}
+input::placeholder,textarea::placeholder{color:#a7abb5}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #f6f7f9;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1360px; display: flex; flex-direction: column; background: #1a1a1a; font-family: Rubik, system-ui, sans-serif; color: #f6f7f9">
+
+
+<main style="flex-grow: 1; background: #1a1a1a; display: flex; flex-direction: column">
+
+<div style="height: 46px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid #252c3c; font-size: 14px; line-height: 20px">
+<img src="/_blob/836dc846171f77c8e53729b39de898fe" alt="Poli" style="height: 24px; margin-right: 4px">
+<a href="Main.dc.html" style="text-decoration: none">Painel SDR</a>
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6"></path></svg>
+<span aria-current="page" style="font-weight: 600">Configurações</span>
+</div>
+
+<div style="flex-grow: 1; padding: 20px 16px 16px 16px; display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<h1 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; color: #6868d7">Configurações do Painel SDR</h1>
+<div style="flex-grow: 1"></div>
+<a href="Main.dc.html" style="height: 40px; display: flex; align-items: center; padding: 0 14px; border: 1px solid #4e5d7f; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500">Cancelar</a>
+<button type="button" style="height: 40px; padding: 0 16px; border: 1px solid #5757d3; border-radius: 8px; background: #5757d3; color: #f6f7f9; font-size: 14px; font-weight: 600; cursor: pointer">Salvar configurações</button>
+</div>
+
+<div style="display: grid; grid-template-columns: 520px minmax(0, 1fr); gap: 16px; align-items: start">
+
+<div style="display: flex; flex-direction: column; gap: 16px">
+
+<section aria-labelledby="hc" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h2 id="hc" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Horário comercial</h2>
+<p style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 400">Com o filtro "Só horário comercial" ligado, o relógio dos tempos de resposta para fora destes horários.</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="tz" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Fuso horário</label>
+<select id="tz" style="height: 40px; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<option>America/Sao_Paulo (Brasília, UTC-3)</option>
+</select>
+</div>
+<div role="group" aria-label="Dias e horários" style="display: flex; flex-direction: column">
+<sc-for list="{{days}}" as="d" hint-placeholder-count="7">
+<div style="display: flex; align-items: center; gap: 12px; height: 48px; border-top: 1px solid #252c3c">
+<button type="button" role="switch" aria-checked="{{d.checked}}" aria-label="{{d.aria}}" onClick="{{d.toggle}}" style="{{d.switchStyle}}"><span style="{{d.knobStyle}}"></span></button>
+<span style="width: 110px; font-size: 14px; font-weight: 500">{{d.label}}</span>
+<sc-if value="{{d.on}}" hint-placeholder-val="{{d.on}}">
+<input type="time" value="{{d.start}}" onChange="{{d.onStart}}" aria-label="{{d.startAria}}" style="height: 36px; box-sizing: border-box; padding: 0 8px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<span style="font-size: 12px; color: #a7abb5">até</span>
+<input type="time" value="{{d.end}}" onChange="{{d.onEnd}}" aria-label="{{d.endAria}}" style="height: 36px; box-sizing: border-box; padding: 0 8px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+</sc-if>
+<sc-if value="{{d.off}}" hint-placeholder-val="{{d.off}}">
+<span style="font-size: 14px; color: #a7abb5">Fechado</span>
+</sc-if>
+</div>
+</sc-for>
+</div>
+<label style="display: flex; align-items: center; gap: 10px; font-size: 14px; line-height: 20px">
+<input type="checkbox" checked="{{yes}}" style="width: 18px; height: 18px; accent-color: #5757d3">
+Tratar feriados nacionais como fora do expediente
+</label>
+</section>
+
+<section aria-labelledby="ag" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h2 id="ag" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Leads aguardando resposta</h2>
+<p style="margin: 0; font-size: 14px; line-height: 22px">O total conta todo lead cuja última mensagem é dele. Os parados há mais tempo que o limite aparecem em destaque.</p>
+</div>
+<div style="display: flex; align-items: center; gap: 10px">
+<label for="stale" style="font-size: 14px; font-weight: 500">Destacar como parado depois de</label>
+<input id="stale" type="number" min="1" value="{{stale}}" onChange="{{onStale}}" style="width: 80px; height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<span style="font-size: 14px">minutos</span>
+</div>
+<label style="display: flex; align-items: center; gap: 10px; font-size: 14px; line-height: 20px">
+<input type="checkbox" checked="{{yes}}" style="width: 18px; height: 18px; accent-color: #5757d3">
+Contar o tempo parado só em horário comercial
+</label>
+</section>
+
+</div>
+
+<section aria-labelledby="ql" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h2 id="ql" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Qualidade do lead</h2>
+<p style="margin: 0; font-size: 14px; line-height: 22px">A cada 1 hora, o Claude lê as conversas com mensagem nova e dá a cada lead uma nota de 0 a 100 conforme os critérios abaixo. A qualidade da carteira é a média das notas dos leads do SDR.</p>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="ctx" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Contexto para o Claude</label>
+<textarea id="ctx" rows="4" placeholder="Descreva o cliente ideal da Poli, o que a Poli vende e o que torna um lead bom ou ruim. Ex.: empresas que atendem clientes pelo WhatsApp com mais de um atendente..." style="box-sizing: border-box; padding: 10px 12px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px; line-height: 22px; resize: vertical"></textarea>
+</div>
+
+<div style="display: flex; align-items: center; gap: 8px">
+<h3 style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Critérios</h3>
+<span style="background: #20293a; border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600">Exemplos: troque pelos seus</span>
+<div style="flex-grow: 1"></div>
+<span style="{{weightStyle}}">{{weightLabel}}</span>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px">
+<sc-for list="{{criteria}}" as="c" hint-placeholder-count="4">
+<div style="border: 1px solid #252c3c; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 10px; background: #1a1a2c">
+<div style="display: flex; align-items: flex-end; gap: 12px">
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 6px">
+<label for="{{c.nameId}}" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Nome do critério</label>
+<input id="{{c.nameId}}" type="text" value="{{c.name}}" onChange="{{c.onName}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+</div>
+<div style="width: 96px; display: flex; flex-direction: column; gap: 6px">
+<label for="{{c.weightId}}" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Peso (%)</label>
+<input id="{{c.weightId}}" type="number" min="0" max="100" value="{{c.weight}}" onChange="{{c.onWeight}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+</div>
+<button type="button" onClick="{{c.remove}}" aria-label="{{c.removeAria}}" style="width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7h14M10 11v6M14 11v6M6 7l1 12h10l1-12M9 7V4h6v3"></path></svg></button>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="{{c.descId}}" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">O que o Claude deve observar na conversa</label>
+<textarea id="{{c.descId}}" rows="2" value="{{c.desc}}" onChange="{{c.onDesc}}" style="box-sizing: border-box; padding: 8px 12px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px; line-height: 22px; resize: vertical"></textarea>
+</div>
+</div>
+</sc-for>
+</div>
+
+<button type="button" onClick="{{addCriterion}}" style="align-self: flex-start; height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border: 1px dashed #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; font-size: 14px; font-weight: 500; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Adicionar critério</button>
+
+<div style="border-top: 1px solid #252c3c; padding-top: 16px; display: flex; flex-direction: column; gap: 10px">
+<h3 style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Leads que não recebem nota</h3>
+<label style="display: flex; align-items: center; gap: 10px; font-size: 14px; line-height: 20px">
+<input type="checkbox" checked="{{yes}}" style="width: 18px; height: 18px; accent-color: #5757d3">
+Ignorar leads que ainda não responderam nenhuma mensagem
+</label>
+<p style="margin: 0; font-size: 12px; line-height: 16px; color: #a7abb5">Sem resposta do lead não há conversa para avaliar. Esses leads ficam fora da média e aparecem como "não analisados" no card do SDR.</p>
+</div>
+</section>
+
+</div>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1360}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.nextId = 5;
+    this.state = {
+      stale: 30,
+      days: [
+        { id: 'mon', label: 'Segunda', on: true, start: '08:00', end: '18:00' },
+        { id: 'tue', label: 'Terça', on: true, start: '08:00', end: '18:00' },
+        { id: 'wed', label: 'Quarta', on: true, start: '08:00', end: '18:00' },
+        { id: 'thu', label: 'Quinta', on: true, start: '08:00', end: '18:00' },
+        { id: 'fri', label: 'Sexta', on: true, start: '08:00', end: '18:00' },
+        { id: 'sat', label: 'Sábado', on: false, start: '08:00', end: '12:00' },
+        { id: 'sun', label: 'Domingo', on: false, start: '08:00', end: '12:00' }
+      ],
+      criteria: [
+        { id: 1, name: 'Perfil de empresa', weight: 30, desc: 'O lead fala em nome de uma empresa (tem CNPJ, cita o negócio), e não como pessoa física.' },
+        { id: 2, name: 'Volume de atendimento no WhatsApp', weight: 30, desc: 'O lead atende clientes pelo WhatsApp em volume que justifica uma plataforma: mais de um atendente ou muitas conversas por dia.' },
+        { id: 3, name: 'Fala com quem decide', weight: 20, desc: 'A pessoa na conversa decide a compra ou influencia diretamente quem decide.' },
+        { id: 4, name: 'Engajamento', weight: 20, desc: 'O lead responde, faz perguntas e mostra interesse ativo em avançar.' }
+      ]
+    };
+  }
+  renderVals() {
+    var self = this, st = this.state;
+    function setDay(id, patch) {
+      self.setState({ days: st.days.map(function (d) { return d.id === id ? Object.assign({}, d, patch) : d; }) });
+    }
+    function setCrit(id, patch) {
+      self.setState({ criteria: self.state.criteria.map(function (c) { return c.id === id ? Object.assign({}, c, patch) : c; }) });
+    }
+    var days = st.days.map(function (d) {
+      return {
+        label: d.label, on: d.on, off: !d.on, start: d.start, end: d.end,
+        checked: d.on ? 'true' : 'false', aria: 'Expediente na ' + d.label.toLowerCase(),
+        startAria: 'Início na ' + d.label.toLowerCase(), endAria: 'Fim na ' + d.label.toLowerCase(),
+        toggle: function () { setDay(d.id, { on: !d.on }); },
+        onStart: function (e) { setDay(d.id, { start: e.target.value }); },
+        onEnd: function (e) { setDay(d.id, { end: e.target.value }); },
+        switchStyle: 'width: 44px; height: 24px; flex-shrink: 0; border-radius: 9999px; border: 1px solid ' + (d.on ? '#5757d3' : '#4e5d7f') + '; background: ' + (d.on ? '#5757d3' : '#313a4f') + '; padding: 0; position: relative; cursor: pointer',
+        knobStyle: 'position: absolute; top: 3px; left: ' + (d.on ? '23px' : '3px') + '; width: 16px; height: 16px; border-radius: 9999px; background: #f6f7f9'
+      };
+    });
+    var criteria = st.criteria.map(function (c) {
+      return {
+        name: c.name, weight: c.weight, desc: c.desc,
+        nameId: 'cn' + c.id, weightId: 'cw' + c.id, descId: 'cd' + c.id,
+        removeAria: 'Remover critério ' + (c.name || 'sem nome'),
+        onName: function (e) { setCrit(c.id, { name: e.target.value }); },
+        onWeight: function (e) { setCrit(c.id, { weight: Number(e.target.value) || 0 }); },
+        onDesc: function (e) { setCrit(c.id, { desc: e.target.value }); },
+        remove: function () { self.setState({ criteria: self.state.criteria.filter(function (x) { return x.id !== c.id; }) }); }
+      };
+    });
+    var total = st.criteria.reduce(function (t, c) { return t + (Number(c.weight) || 0); }, 0);
+    var ok = total === 100;
+    return {
+      yes: true, days: days, stale: st.stale,
+      onStale: function (e) { self.setState({ stale: e.target.value }); }, criteria: criteria,
+      weightLabel: ok ? 'Soma dos pesos: 100%' : 'Soma dos pesos: ' + total + '% (precisa fechar 100%)',
+      weightStyle: 'font-size: 12px; line-height: 16px; font-weight: 600; color: ' + (ok ? '#a7abb5' : '#f0a93b'),
+      addCriterion: function () {
+        var id = self.nextId++;
+        self.setState({ criteria: self.state.criteria.concat([{ id: id, name: '', weight: 0, desc: '' }]) });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

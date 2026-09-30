@@ -1,0 +1,133 @@
+# COMECE AQUI — guia de condução do Painel SDR
+
+Este documento é para o Claude Code conduzir o projeto inteiro com o Felipe, do estado atual até o painel no ar. Leia até o fim antes de agir. Depois leia `CLAUDE.md`, `docs/spec.md`, `docs/roteiro.md` e `docs/integracao-mudancas.md`.
+
+Mantenha a seção **Estado atual** atualizada: marque o que foi concluído e registre decisões novas em **Decisões**, com a data. Faça commit dessa atualização junto com o trabalho da fase.
+
+---
+
+## 1. Como trabalhar com o Felipe
+
+- Felipe é Head of Revenue da Poli Digital. Entende o negócio a fundo; não é desenvolvedor. Conhece o básico de Supabase, GitHub e VPS, e opera tudo pelo Orca.
+- Comunicação direta e curta, em português. Sem rodeio e sem jargão sem explicação.
+- Quando ele precisar fazer algo fora do Claude Code (painel do Supabase, HubSpot, DNS, VPS), diga exatamente onde clicar, um passo por vez, e o que ele deve ver no final. Nunca "configure o X": diga "abra X → clique em Y → copie Z".
+- Uma fase por vez. No início de cada fase, diga em 2 ou 3 linhas o que vai ser feito e o que ele vai ter no final. No fim, diga o que ficou pronto, o que ele precisa conferir e qual é o próximo passo.
+- Nunca peça para ele colar chave, senha ou token no chat. Segredo vai direto no `.env`, que ele edita no TextEdit (`open -e .env`). Você não lê nem imprime o `.env`.
+- Pergunte antes de decidir qualquer regra de negócio que não esteja no `spec.md`. Nunca invente definição de métrica.
+
+## 2. Pontos de parada obrigatórios
+
+Pare e espere o "ok" do Felipe antes de:
+
+1. Começar a escrever código de uma fase (mostre o plano primeiro).
+2. Aplicar qualquer SQL no Supabase (mostre o SQL completo antes do `supabase db push`).
+3. Fazer merge de um branch na `main`.
+4. Qualquer coisa que toque produção: VPS, integração PoliChat-Hubspot, HubSpot.
+5. Ligar o job de score com IA (mostre o custo estimado antes).
+6. Instalar serviço, linguagem ou ferramenta que não esteja na stack do `CLAUDE.md`.
+
+## 3. Checklist de revisão (use antes de cada ponto de parada)
+
+Antes de pedir aprovação, confira você mesmo e diga ao Felipe o resultado de cada item que se aplica:
+
+**SQL / migrations**
+- [ ] `public.messages` idêntica a `/Users/felipecampos/Desktop/PoliChat-Hubspot/supabase/schema.sql`.
+- [ ] `public.raw_events` idêntica à de `docs/integracao-mudancas.md`.
+- [ ] Todas as tabelas com RLS ligado.
+- [ ] Nenhum GRANT para `anon`.
+- [ ] GRANT para `authenticated` só no que a tela usa (RPCs e tabelas de configuração que o admin edita).
+- [ ] GRANT explícito para `service_role` em tudo que a integração e o worker usam, inclusive sequências.
+- [ ] Nenhuma migration altera ou apaga coluna de `public.messages` ou `public.raw_events`.
+- [ ] Schema `painel` incluído em Exposed schemas (Settings → API) só se a tela precisar via Data API.
+
+**Código**
+- [ ] `service_role` nunca aparece em código que roda no navegador.
+- [ ] Nada de conteúdo de mensagem ou telefone completo em log.
+- [ ] Testes passando (`npm test`), com os casos pedidos na fase.
+- [ ] Nada fora do combinado: tabela, serviço ou dependência que não está no spec.
+
+**Deploy**
+- [ ] Nada usa as portas 80/443 da VPS (quem usa é o Coolify/Traefik).
+- [ ] `docker-compose.yml` segue o padrão do `PoliChat-Hubspot` (rede `coolify`, labels do Traefik, sem `ports:`).
+- [ ] DNS do subdomínio criado e resolvendo antes do deploy.
+
+## 4. Estado atual
+
+Atualize esta lista conforme avança.
+
+**Pronto**
+- [x] Protótipo das telas aprovado (`design/`): painel com cards por SDR, tabela de chats do SDR com status de reunião, configurações.
+- [x] Projeto Supabase criado: `pabbgxaphooftdsdewmq` (São Paulo). "Automatically expose new tables" desligado, "automatic RLS" ligado. Integração com GitHub DESCONECTADA de propósito.
+- [x] Repositório GitHub `efelipecampos/Painel-de-SDR` clonado em `~/orca/Painel-de-SDR` com os arquivos do kit.
+- [x] Integração `PoliChat-Hubspot` lida e analisada (ver seção 5).
+
+**Falta, na ordem**
+- [x] 0.1 Apagar `.git/stale-index.lock.removeme` (sobra de uma trava do git; é seguro apagar).
+- [x] 0.2 Criar `.env` a partir do `.env.example` e abrir no TextEdit para o Felipe preencher. Chaves: aba **Legacy API keys** do Supabase (`anon` e `service_role`) e a senha do banco.
+- [x] 0.3 Commit inicial na `main` com `CLAUDE.md`, `docs/`, `design/`, `.gitignore`, `.env.example`. Confirmar que `.env` NÃO entrou. Push.
+- [ ] Fase 1 — Projeto e banco (roteiro).
+- [ ] Fase 2 — Evento cru na integração (no repositório PoliChat-Hubspot; ver seção 6).
+- [ ] Esperar 1 a 2 dias de eventos reais em `public.raw_events`.
+- [ ] Fase 3 — Parser e backfill.
+- [ ] Fase 4 — Métricas no banco (Felipe confere os números com o Poli).
+- [ ] Fase 5 — Telas, login e deploy do painel.
+- [ ] Fase 6 — Reuniões do HubSpot.
+- [ ] Fase 7 — Score de qualidade.
+- [ ] Fase 8 — Operação (conferência diária, alertas, backup, revisão de segurança).
+
+## 5. O que já se sabe sobre a integração PoliChat-Hubspot
+
+- Pasta: `/Users/felipecampos/Desktop/PoliChat-Hubspot`. Node + TypeScript, Express, zod, vitest. Em produção na VPS da Hostinger (IP `76.13.112.74`), em `/root/poli-hubspot`, domínio `poli-hubspot.camposai.com.br`.
+- A VPS roda **Coolify**; o Traefik dele faz domínio e HTTPS. Deploy da integração: rsync para a VPS + `docker compose up -d --build`.
+- Recebe o webhook de mensagens da Poli, valida a assinatura, registra no HubSpot como Communication, alerta no Google Chat quando o contato não existe.
+- Já tem código para espelhar mensagens em `public.messages` no Supabase, mas NUNCA gravou: `SUPABASE_URL` está vazio.
+- Quando o Supabase for configurado nela, liga sozinha a **nota diária por contato no HubSpot** (`DAILY_NOTES_ENABLED` é `true` por padrão). Decisão atual: `DAILY_NOTES_ENABLED=false` até o Felipe decidir.
+- O papel SDR/Closer vem das listas de e-mail `POLI_SDR_EMAILS` e `POLI_CLOSER_EMAILS` do `.env` dela.
+- Descarta hoje o que o painel precisa: eventos `SYSTEM` (transferência, abertura, encerramento), eventos que não são mensagem, e não guarda `attendance.uuid`, `attendance.status` nem `author.type`. Por isso a Fase 2 existe.
+- Tem script de backfill `npm run backfill:supabase` que preenche `public.messages` com o histórico a partir do HubSpot.
+- Código reaproveitável no painel: `src/poli/types.ts` e `src/poli/parser.ts` (formato do evento), `src/hubspot/phone.ts` (telefone), matching de contato já feito (use `public.messages.hubspot_contact_id`).
+
+## 6. Como conduzir a Fase 2 (integração)
+
+A Fase 2 mexe em produção e em outro repositório. Não edite a integração a partir desta pasta.
+
+1. Confirme que a Fase 1 está aplicada: `public.messages` e `public.raw_events` existem no Supabase.
+2. Diga ao Felipe para abrir no Orca uma sessão do Claude no projeto **PoliChat-Hubspot** e colar o prompt de `docs/integracao-mudancas.md`, com o conteúdo desse arquivo junto.
+3. Avise o Felipe dos dois pontos críticos antes do deploy: `DAILY_NOTES_ENABLED=false` no `.env` da VPS, e usar a chave `service_role` da aba Legacy.
+4. Depois do deploy, peça para ele rodar no SQL Editor do Supabase:
+   `select event_type, count(*) from public.raw_events group by 1;`
+   e conferir no HubSpot que as mensagens continuam chegando.
+5. Marque a Fase 2 como pronta e anote a data de início dos eventos em **Decisões**.
+
+## 7. Pendências para decidir com o Felipe (pergunte na fase indicada)
+
+| Pendência | Quando perguntar |
+|---|---|
+| Subdomínio do painel (sugestão: `painel-sdr.camposai.com.br`) | Fase 5 |
+| Ligar ou não a nota diária no HubSpot (`DAILY_NOTES_ENABLED`) | Depois da Fase 2 |
+| Definição escrita de cada status de reunião (Agendada, Validada, No show, Invalidada, Cancelada) | Fase 6 |
+| Quem pode mudar status de reunião (admin, gestor, closer) | Fase 6 |
+| Critérios reais de qualidade do lead e contexto para o Claude | Fase 7 |
+| Modelo e limite de gasto da API da Anthropic | Fase 7 |
+| Retenção de conteúdo de mensagens (LGPD) | Fase 8 |
+| Lista de feriados | Fase 5 |
+
+## 8. Decisões
+
+Registre aqui toda decisão nova, com data.
+
+- 2026-09-29 — Métricas da V1 conforme `spec.md` seção 2: lead abordado conta uma vez; tempo de resposta começa na primeira mensagem do bloco do lead; "aguardando" só conta chats abertos; dono do lead é o SDR responsável no momento de cada mensagem.
+- 2026-09-29 — Reuniões: 5 status (Agendada, Validada, No show, Invalidada, Cancelada). Conversão para análise = Validada. HubSpot preenche Agendada, No show e Cancelada; Validada e Invalidada são manuais e não são sobrescritas pelo sync. Todo histórico de mudança é guardado.
+- 2026-09-29 — Sem metas na V1 (sem cores de meta). Único destaque: laranja `#f0a93b` para leads parados acima do limite (padrão 30 min).
+- 2026-09-29 — Filtro de período com data e hora + botão "Só horário comercial"; horário comercial configurável.
+- 2026-09-29 — Score de qualidade recalculado de hora em hora, só leads com mensagem nova.
+- 2026-09-29 — Banco único `pabbgxaphooftdsdewmq` para integração e painel. Migrations de todo o banco ficam neste repositório. Integração escreve em `public.messages` e `public.raw_events`; painel só lê essas duas e mantém o resto no schema `painel`.
+- 2026-09-29 — Migrations aplicadas só pelo Supabase CLI (`supabase db push`), depois da aprovação do Felipe. Integração GitHub ↔ Supabase desligada.
+- 2026-09-29 — Deploy no padrão Coolify/Traefik da VPS, igual à integração. Sem Caddy ou Nginx.
+
+## 9. Primeira mensagem ao Felipe
+
+Depois de ler tudo, responda ao Felipe com:
+1. Uma linha confirmando que entendeu o projeto.
+2. O próximo passo (item 0.1 da seção 4) e o que ele vai precisar fazer com as próprias mãos nele.
+Então execute os itens 0.1 a 0.3, parando no 0.2 para ele preencher o `.env`.
