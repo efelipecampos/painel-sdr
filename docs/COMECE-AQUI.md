@@ -65,7 +65,7 @@ Atualize esta lista conforme avança.
 - [x] 0.1 Apagar `.git/stale-index.lock.removeme` (sobra de uma trava do git; é seguro apagar).
 - [x] 0.2 Criar `.env` a partir do `.env.example` e abrir no TextEdit para o Felipe preencher. Chaves: aba **Legacy API keys** do Supabase (`anon` e `service_role`) e a senha do banco.
 - [x] 0.3 Commit inicial na `main` com `CLAUDE.md`, `docs/`, `design/`, `.gitignore`, `.env.example`. Confirmar que `.env` NÃO entrou. Push.
-- [ ] Fase 1 — Projeto e banco (roteiro).
+- [x] Fase 1 — Projeto e banco (roteiro). Aplicada no Supabase e mergeada em 2026-09-29.
 - [ ] Fase 2 — Evento cru na integração (no repositório PoliChat-Hubspot; ver seção 6).
 - [ ] Esperar 1 a 2 dias de eventos reais em `public.raw_events`.
 - [ ] Fase 3 — Parser e backfill.
