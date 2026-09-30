@@ -34,6 +34,12 @@ const schema = z.object({
 
   // Espelho das mensagens pro painel de análise e base da nota diária.
   // Vazio = integração roda normalmente, só sem Supabase e sem nota diária.
+  // Eventos crus da Poli pro painel de SDR (tabela raw_events).
+  RAW_EVENTS_ENABLED: booleanFromEnv(true),
+  // Mensagem enviada com template e sem uuid de autor é disparo do bot pelo
+  // app token — único sinal disponível no payload (não há campo de app/token).
+  POLI_APP_TOKEN_AUTHORLESS_TEMPLATES: booleanFromEnv(false),
+
   SUPABASE_URL: z.string().url().or(z.literal("")).default(""),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional().default(""),
   DAILY_NOTES_ENABLED: booleanFromEnv(true),
