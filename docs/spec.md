@@ -6,7 +6,7 @@
 Poli Chat ──webhook──▶ PoliChat-Hubspot (já em produção) ──▶ HubSpot (como hoje)
                                    │
                                    ├──▶ public.messages   (espelho que já existe)
-                                   └──▶ public.raw_events (NOVO: evento cru, todos os tipos)
+                                   └──▶ public.raw_events (NOVO: evento cru, só da equipe de pré-vendas)
                                                  │
 Painel worker ◀──────────────────────────────────┘ lê e monta o schema painel
 Poli API  ──backfill / conferência diária (worker do painel)──▶ painel.*
@@ -233,7 +233,7 @@ create table meeting_status_history (
 
 ## 4. Ingestão do Poli Chat
 
-A entrada é a integração `PoliChat-Hubspot`, que já recebe o webhook da Poli. A única mudança nela está em `docs/integracao-mudancas.md`: gravar o corpo cru de cada evento em `public.raw_events`.
+A entrada é a integração `PoliChat-Hubspot`, que já recebe o webhook da Poli. A única mudança nela está em `docs/integracao-mudancas.md`: gravar o corpo cru dos eventos da equipe de pré-vendas em `public.raw_events` (dono do chat é SDR ou closer, mensagens do app token e o evento SYSTEM que tira o chat da equipe; regra completa no documento).
 
 No painel:
 
