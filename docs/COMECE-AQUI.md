@@ -126,6 +126,8 @@ Registre aqui toda decisão nova, com data.
 - 2026-09-29 — Deploy no padrão Coolify/Traefik da VPS, igual à integração. Sem Caddy ou Nginx.
 - 2026-09-29 — Testes das funções SQL rodam no PGlite (Postgres em memória, dependência só de desenvolvimento), aplicando as migrations reais. Sem Docker e sem tocar o banco de produção.
 - 2026-09-29 — Horário comercial inicial: segunda a sexta, 08:00–18:00 (protótipo). Configurações iniciais: fuso `America/Sao_Paulo`, parado a partir de 30 min, feriados não contam.
+- 2026-09-29 — Migrations aplicadas com `npm run db:push` (conexão direta pelo pooler `aws-0-sa-east-1`, modo sessão, com a senha do `.env`). Sem `supabase link` e sem token de acesso: o link exigiria permissão de ler as chaves de API. Sempre rodar `npm run db:push -- --dry-run` antes e mostrar ao Felipe.
+- 2026-09-29 — Fase 1 aplicada no Supabase: 4 migrations, 16 tabelas (2 em `public`, 14 em `painel`), com os valores iniciais gravados.
 
 ## 9. Primeira mensagem ao Felipe
 
