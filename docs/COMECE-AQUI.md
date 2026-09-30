@@ -83,7 +83,7 @@ Atualize esta lista conforme avança.
 - Já tem código para espelhar mensagens em `public.messages` no Supabase, mas NUNCA gravou: `SUPABASE_URL` está vazio.
 - Quando o Supabase for configurado nela, liga sozinha a **nota diária por contato no HubSpot** (`DAILY_NOTES_ENABLED` é `true` por padrão). Decisão atual: `DAILY_NOTES_ENABLED=false` até o Felipe decidir.
 - O papel SDR/Closer vem das listas de e-mail `POLI_SDR_EMAILS` e `POLI_CLOSER_EMAILS` do `.env` dela.
-- Descarta hoje o que o painel precisa: eventos `SYSTEM` (transferência, abertura, encerramento), eventos que não são mensagem, e não guarda `attendance.uuid`, `attendance.status` nem `author.type`. Por isso a Fase 2 existe.
+- Descarta hoje o que o painel precisa: eventos `SYSTEM` (transferência, abertura, encerramento), e não guarda `attendance.uuid`, `attendance.status` nem `author.type`. Por isso a Fase 2 existe.
 - Tem script de backfill `npm run backfill:supabase` que preenche `public.messages` com o histórico a partir do HubSpot.
 - Código reaproveitável no painel: `src/poli/types.ts` e `src/poli/parser.ts` (formato do evento), `src/hubspot/phone.ts` (telefone), matching de contato já feito (use `public.messages.hubspot_contact_id`).
 
@@ -128,6 +128,7 @@ Registre aqui toda decisão nova, com data.
 - 2026-09-29 — Horário comercial inicial: segunda a sexta, 08:00–18:00 (protótipo). Configurações iniciais: fuso `America/Sao_Paulo`, parado a partir de 30 min, feriados não contam.
 - 2026-09-29 — Migrations aplicadas com `npm run db:push` (conexão direta pelo pooler `aws-0-sa-east-1`, modo sessão, com a senha do `.env`). Sem `supabase link` e sem token de acesso: o link exigiria permissão de ler as chaves de API. Sempre rodar `npm run db:push -- --dry-run` antes e mostrar ao Felipe.
 - 2026-09-29 — Fase 1 aplicada no Supabase: 4 migrations, 16 tabelas (2 em `public`, 14 em `painel`), com os valores iniciais gravados.
+- 2026-09-30 — `raw_events` guarda só o que é da equipe de pré-vendas: eventos de chats cujo dono (`attendance.attendant.email`) é SDR ou closer, mensagens do app token e o evento SYSTEM que tira o chat da equipe. Mensagens do lead entram enquanto o dono for da equipe. Resposta do lead em chat sem dono da equipe não é gravada (aceito). Regra completa em `docs/integracao-mudancas.md`.
 
 ## 9. Primeira mensagem ao Felipe
 
