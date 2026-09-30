@@ -65,7 +65,7 @@ Atualize esta lista conforme avança.
 - [x] 0.1 Apagar `.git/stale-index.lock.removeme` (sobra de uma trava do git; é seguro apagar).
 - [x] 0.2 Criar `.env` a partir do `.env.example` e abrir no TextEdit para o Felipe preencher. Chaves: aba **Legacy API keys** do Supabase (`anon` e `service_role`) e a senha do banco.
 - [x] 0.3 Commit inicial na `main` com `CLAUDE.md`, `docs/`, `design/`, `.gitignore`, `.env.example`. Confirmar que `.env` NÃO entrou. Push.
-- [ ] Fase 1 — Projeto e banco (roteiro).
+- [x] Fase 1 — Projeto e banco (roteiro). Aplicada no Supabase e mergeada em 2026-09-29.
 - [ ] Fase 2 — Evento cru na integração (no repositório PoliChat-Hubspot; ver seção 6).
 - [ ] Esperar 1 a 2 dias de eventos reais em `public.raw_events`.
 - [ ] Fase 3 — Parser e backfill.
@@ -124,6 +124,10 @@ Registre aqui toda decisão nova, com data.
 - 2026-09-29 — Banco único `pabbgxaphooftdsdewmq` para integração e painel. Migrations de todo o banco ficam neste repositório. Integração escreve em `public.messages` e `public.raw_events`; painel só lê essas duas e mantém o resto no schema `painel`.
 - 2026-09-29 — Migrations aplicadas só pelo Supabase CLI (`supabase db push`), depois da aprovação do Felipe. Integração GitHub ↔ Supabase desligada.
 - 2026-09-29 — Deploy no padrão Coolify/Traefik da VPS, igual à integração. Sem Caddy ou Nginx.
+- 2026-09-29 — Testes das funções SQL rodam no PGlite (Postgres em memória, dependência só de desenvolvimento), aplicando as migrations reais. Sem Docker e sem tocar o banco de produção.
+- 2026-09-29 — Horário comercial inicial: segunda a sexta, 08:00–18:00 (protótipo). Configurações iniciais: fuso `America/Sao_Paulo`, parado a partir de 30 min, feriados não contam.
+- 2026-09-29 — Migrations aplicadas com `npm run db:push` (conexão direta pelo pooler `aws-0-sa-east-1`, modo sessão, com a senha do `.env`). Sem `supabase link` e sem token de acesso: o link exigiria permissão de ler as chaves de API. Sempre rodar `npm run db:push -- --dry-run` antes e mostrar ao Felipe.
+- 2026-09-29 — Fase 1 aplicada no Supabase: 4 migrations, 16 tabelas (2 em `public`, 14 em `painel`), com os valores iniciais gravados.
 
 ## 9. Primeira mensagem ao Felipe
 
