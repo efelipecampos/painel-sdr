@@ -30,7 +30,9 @@ const contactSchema = z
     attributes: z
       .object({
         name: z.string().nullish(),
-        phone: z.string(),
+        // Há contato sem telefone (visto em eventos reais): a mensagem segue,
+        // e o match no HubSpot usa uuid/id legado em vez do número.
+        phone: z.string().nullish(),
       })
       .passthrough(),
   })
@@ -49,12 +51,8 @@ const authorSchema = z
 // Confirmado com eventos reais (2026-09-30): o arquivo fica em
 // `media.url` (CDN público) e o tipo aparece em `type`/`mime_type`, com
 // caixa inconsistente ("AUDIO" e "audio", "IMAGE" e "image").
-const attachmentSchema = z
+const mediaObjectSchema = z
   .object({
-    type: z.string().nullish(),
-    mime_type: z.string().nullish(),
-    media: z
-      .object({
         caption: z.string().nullish(),
         url: z.string().nullish(),
         filename: z.string().nullish(),
@@ -63,8 +61,14 @@ const attachmentSchema = z
         mime_type: z.string().nullish(),
         resource_url: z.string().nullish(),
       })
-      .passthrough()
-      .nullish(),
+  .passthrough();
+
+const attachmentSchema = z
+  .object({
+    type: z.string().nullish(),
+    mime_type: z.string().nullish(),
+    // Às vezes `media` vem só com a URL em texto, em vez do objeto.
+    media: z.union([mediaObjectSchema, z.string()]).nullish(),
   })
   .passthrough();
 
@@ -74,6 +78,10 @@ const componentsSchema = z
     attachments: z.array(attachmentSchema).nullish(),
   })
   .passthrough();
+
+// `components` vem null em mensagem de template (o conteúdo fica em
+// `template.message`), então o objeto inteiro é opcional.
+const componentsOrNull = componentsSchema.nullish();
 
 // Formato de exemplo visto em `context.message.components` (mensagem
 // original de um clique de botão) — `value.template` provavelmente segue a
@@ -113,7 +121,7 @@ const valueSchema = z
     timestamp: z.number(),
     author: authorSchema,
     contact: contactSchema,
-    components: componentsSchema,
+    components: componentsOrNull,
     attendance: attendanceSchema.nullish(),
     metadata: metadataSchema,
     template: templateSchema.nullable().optional(),

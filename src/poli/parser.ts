@@ -38,8 +38,9 @@ export interface MediaAttachment {
 }
 
 export function parseAttachments(value: PoliWebhookBody["value"]): MediaAttachment[] {
-  return (value.components.attachments ?? []).map((a) => {
-    const media = a.media ?? {};
+  return (value.components?.attachments ?? []).map((a) => {
+    // `media` ora vem como objeto, ora só com a URL em texto.
+    const media = typeof a.media === "string" ? { url: a.media } : (a.media ?? {});
     return {
       type: (a.type ?? "").toUpperCase(),
       url: media.url ?? media.resource_url ?? undefined,
@@ -79,8 +80,8 @@ function label(type: string | null | undefined, table: Record<string, string>, f
  * virar um registro vazio no HubSpot — ex.: "[Imagem] legenda (url)".
  */
 export function describeMedia(value: PoliWebhookBody["value"]): string | undefined {
-  const parts = (value.components.attachments ?? []).map((a) => {
-    const media = a.media ?? {};
+  const parts = (value.components?.attachments ?? []).map((a) => {
+    const media = typeof a.media === "string" ? { url: a.media, caption: undefined, filename: undefined, name: undefined } : (a.media ?? {});
     const detail = [media.caption, media.filename ?? media.name].filter(Boolean).join(" — ");
     return [`[${label(a.type, ATTACHMENT_LABELS, "Anexo")}]`, detail, media.url ? `(${media.url})` : ""]
       .filter(Boolean)
@@ -101,10 +102,10 @@ export function parseMessageEvent(body: PoliWebhookBody): MessageEvent {
     poliMessageUuid: value.uuid,
     direction: value.direction,
     timestampMs: value.timestamp * 1000,
-    text: value.components.body?.text ?? "",
+    text: value.components?.body?.text ?? "",
     mediaDescription: describeMedia(value),
     attachments: parseAttachments(value),
-    leadPhone: value.contact.attributes.phone,
+    leadPhone: value.contact.attributes.phone ?? "",
     leadName: value.contact.attributes.name ?? undefined,
     leadUuid: value.contact.uuid,
     attendantEmail: value.attendance?.attendant?.email ?? undefined,

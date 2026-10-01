@@ -5,6 +5,9 @@ import received from "./fixtures/received.json" with { type: "json" };
 import sent from "./fixtures/sent.json" with { type: "json" };
 import receivedNullStatus from "./fixtures/received-null-attendance-status.json" with { type: "json" };
 import sentTemplateNullCategory from "./fixtures/sent-template-null-category.json" with { type: "json" };
+import sentComponentsNull from "./fixtures/sent-components-null.json" with { type: "json" };
+import sentContatoSemTelefone from "./fixtures/sent-contato-sem-telefone.json" with { type: "json" };
+import sentMediaString from "./fixtures/sent-media-string.json" with { type: "json" };
 
 describe("parseMessageEvent com payloads reais da Poli", () => {
   it("interpreta uma mensagem recebida do lead (IN)", () => {
@@ -89,5 +92,31 @@ describe("parseMessageEvent com payloads reais da Poli", () => {
     const message = parseMessageEvent(poliWebhookBodySchema.parse(body));
 
     expect(message.mediaDescription).toBe("[Localização]");
+  });
+
+  // Os três casos abaixo vinham de eventos reais que ficaram presos na fila
+  // de falhas entre 21/09 e 01/10 por não passarem no schema.
+  it("aceita components null (mensagem de template)", () => {
+    const message = parseMessageEvent(poliWebhookBodySchema.parse(sentComponentsNull));
+
+    expect(message.text).toBe("");
+    expect(message.attachments).toEqual([]);
+  });
+
+  it("aceita contato sem telefone", () => {
+    const message = parseMessageEvent(poliWebhookBodySchema.parse(sentContatoSemTelefone));
+
+    expect(message.leadPhone).toBe("");
+    expect(message.leadUuid).toBeTruthy();
+  });
+
+  it("aceita anexo com media em texto no lugar do objeto", () => {
+    const message = parseMessageEvent(poliWebhookBodySchema.parse(sentMediaString));
+
+    expect(message.attachments[0]).toMatchObject({
+      type: "IMAGE",
+      url: "https://cdn.poli.digital/accounts/acc/messages/x-image.png",
+    });
+    expect(message.mediaDescription).toContain("[Imagem]");
   });
 });
