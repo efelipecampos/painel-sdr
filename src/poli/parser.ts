@@ -10,6 +10,8 @@ export interface MessageEvent {
   text: string;
   /** Descrição de mídia/tipo quando a mensagem não é só texto (ex.: "[Áudio]"). */
   mediaDescription?: string;
+  /** Anexos da mensagem (áudio, imagem, documento), quando houver. */
+  attachments: MediaAttachment[];
   leadPhone: string;
   leadName?: string;
   /** contact.uuid da Poli — usado pra montar o link direto do chat (app.poli.digital/chat/{uuid}). */
@@ -24,6 +26,28 @@ export interface MessageEvent {
   templateName?: string;
   /** ID numérico legado (value.metadata.deprecated_contact_id), como string. */
   deprecatedContactId?: string;
+}
+
+export interface MediaAttachment {
+  /** AUDIO, IMAGE, DOCUMENT, STICKER... sempre em caixa alta. */
+  type: string;
+  url?: string;
+  mimeType?: string;
+  fileName?: string;
+  caption?: string;
+}
+
+export function parseAttachments(value: PoliWebhookBody["value"]): MediaAttachment[] {
+  return (value.components.attachments ?? []).map((a) => {
+    const media = a.media ?? {};
+    return {
+      type: (a.type ?? "").toUpperCase(),
+      url: media.url ?? media.resource_url ?? undefined,
+      mimeType: media.mime_type ?? a.mime_type ?? undefined,
+      fileName: media.file_name ?? media.filename ?? media.name ?? undefined,
+      caption: media.caption ?? undefined,
+    };
+  });
 }
 
 const ATTACHMENT_LABELS: Record<string, string> = {
@@ -79,6 +103,7 @@ export function parseMessageEvent(body: PoliWebhookBody): MessageEvent {
     timestampMs: value.timestamp * 1000,
     text: value.components.body?.text ?? "",
     mediaDescription: describeMedia(value),
+    attachments: parseAttachments(value),
     leadPhone: value.contact.attributes.phone,
     leadName: value.contact.attributes.name ?? undefined,
     leadUuid: value.contact.uuid,

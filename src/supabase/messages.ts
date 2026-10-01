@@ -104,3 +104,12 @@ export async function listMessagesBetween(fromIso: string, toIso: string): Promi
   ].join("&");
   return supabaseFetch<DayMessage[]>(`/messages?${query}`);
 }
+
+/** Atualiza só o texto de uma mensagem já gravada (retry da mídia). */
+export async function updateMessageText(externalMessageId: string, text: string): Promise<void> {
+  await supabaseFetch(`/messages?external_message_id=eq.${encodeURIComponent(externalMessageId)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ text }),
+  });
+}

@@ -8,6 +8,8 @@ import { webhookHandler, type RequestWithRawBody } from "./webhookHandler.js";
 import { processMessage } from "./pipeline/processMessage.js";
 import { captureRawEvent } from "./pipeline/captureRawEvent.js";
 import { runPendingDailyNotes } from "./jobs/dailyNotes.js";
+import { extractMediaText, type MediaTarget } from "./media/mediaText.js";
+import { updateMessageText } from "./supabase/messages.js";
 import {
   markProcessed,
   recordFailure,
@@ -15,6 +17,9 @@ import {
   listFailedJobs,
   listRawEventJobs,
   recordRawEventFailure,
+  listMediaTextJobs,
+  recordMediaTextFailure,
+  clearMediaTextJob,
 } from "./queue/store.js";
 
 const app = express();
@@ -74,6 +79,30 @@ async function retryRawEventJobs(): Promise<void> {
 
 setInterval(() => {
   retryRawEventJobs().catch((err) => logger.error({ err }, "Erro no loop de retry de eventos crus"));
+}, RETRY_INTERVAL_MS);
+
+/**
+ * Retry do texto de mídia: a mensagem já está no Supabase sem texto, aqui só
+ * tentamos de novo a transcrição/leitura e atualizamos a linha.
+ */
+async function retryMediaTextJobs(): Promise<void> {
+  for (const job of listMediaTextJobs(MAX_RETRY_ATTEMPTS)) {
+    const target = JSON.parse(job.target) as MediaTarget;
+    try {
+      const extracted = await extractMediaText(target);
+      const text = [job.original_text, extracted].filter(Boolean).join("\n\n");
+      await updateMessageText(job.external_message_id, text);
+      clearMediaTextJob(job.external_message_id);
+      logger.info({ id: job.external_message_id, kind: target.kind }, "Texto da mídia gravado no retry");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      recordMediaTextFailure(job.external_message_id, target, job.original_text ?? "", errorMessage);
+    }
+  }
+}
+
+setInterval(() => {
+  retryMediaTextJobs().catch((err) => logger.error({ err }, "Erro no loop de retry do texto de mídia"));
 }, RETRY_INTERVAL_MS);
 
 // Nota diária por contato (fonte pra IA do HubSpot): a cada hora verifica se
