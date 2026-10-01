@@ -37,8 +37,10 @@ export async function transcribeAudio(audio: Blob, fileName: string): Promise<st
   const form = new FormData();
   form.append("file", audio, fileName);
   form.append("model", env.OPENAI_TRANSCRIPTION_MODEL);
-  // A conversa é em português; informar o idioma melhora a transcrição.
-  form.append("language", "pt");
+  // Sem idioma fixo: há leads em espanhol (LATAM) além dos em português, e
+  // forçar "pt" num áudio em espanhol piora ou traduz a transcrição. Dá pra
+  // fixar via OPENAI_TRANSCRIPTION_LANGUAGE quando fizer sentido.
+  if (env.OPENAI_TRANSCRIPTION_LANGUAGE) form.append("language", env.OPENAI_TRANSCRIPTION_LANGUAGE);
 
   const res = await openAiFetch<{ text?: string }>("/audio/transcriptions", { method: "POST", body: form });
   return (res.text ?? "").trim();

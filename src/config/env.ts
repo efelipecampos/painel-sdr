@@ -49,7 +49,9 @@ const schema = z.object({
   MEDIA_UNDERSTANDING_ENABLED: booleanFromEnv(true),
   // Nomes de modelo em env porque o catálogo da OpenAI muda com frequência.
   OPENAI_TRANSCRIPTION_MODEL: z.string().default("gpt-4o-mini-transcribe"),
-  OPENAI_VISION_MODEL: z.string().default("gpt-4o-mini"),
+  // Vazio = a OpenAI detecta o idioma (há leads em português e em espanhol).
+  OPENAI_TRANSCRIPTION_LANGUAGE: z.string().optional().default(""),
+  OPENAI_VISION_MODEL: z.string().default("gpt-5.4-mini"),
   OPENAI_TIMEOUT_MS: z.coerce.number().default(120_000),
   MEDIA_DOWNLOAD_TIMEOUT_MS: z.coerce.number().default(30_000),
   MEDIA_MAX_MB: z.coerce.number().default(20),
