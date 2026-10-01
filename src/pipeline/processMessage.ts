@@ -10,7 +10,7 @@ import { sendLeadNotInHubSpotAlert } from "../alerts/googleChat.js";
 import { recordDryRunResult } from "../queue/store.js";
 import { isSupabaseConfigured } from "../supabase/client.js";
 import { buildMessageRow, upsertMessages } from "../supabase/messages.js";
-import { extractMediaText, isMediaUnderstandingEnabled, mergeText, pickMediaTarget } from "../media/mediaText.js";
+import { extractMediaText, mergeText, pickMediaTarget, shouldExtractMediaFor } from "../media/mediaText.js";
 import { recordMediaTextFailure, clearMediaTextJob } from "../queue/store.js";
 import { logger } from "../logger.js";
 
@@ -34,9 +34,9 @@ export async function processMessage(message: MessageEvent): Promise<ProcessResu
     // Só mídia de chat da pré-venda vai pra OpenAI. O espelho em `messages`
     // pega todos os times (suporte, CS), e transcrever tudo seria pagar por
     // conversa que o painel não analisa.
-    const ehPreVenda = getAttendantRole(message.attendantEmail) !== null;
-    const vaiPraOpenAi = isMediaUnderstandingEnabled() && (!env.MEDIA_ONLY_PRESALES || ehPreVenda);
-    const target = vaiPraOpenAi ? pickMediaTarget(message.attachments) : undefined;
+    const target = shouldExtractMediaFor(getAttendantRole(message.attendantEmail))
+      ? pickMediaTarget(message.attachments)
+      : undefined;
     if (target) {
       try {
         text = mergeText(message.text, await extractMediaText(target));

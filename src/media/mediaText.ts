@@ -1,5 +1,6 @@
 import { env } from "../config/env.js";
 import { describeImage, isOpenAiConfigured, transcribeAudio } from "../openai/client.js";
+import type { AttendantRole } from "../config/team.js";
 import type { MediaAttachment } from "../poli/parser.js";
 import { logger } from "../logger.js";
 
@@ -79,6 +80,22 @@ export async function extractMediaText(target: MediaTarget): Promise<string> {
 
 export function isMediaUnderstandingEnabled(): boolean {
   return env.MEDIA_UNDERSTANDING_ENABLED && isOpenAiConfigured();
+}
+
+const mediaRoles = new Set(
+  env.MEDIA_OPENAI_ROLES.split(",")
+    .map((role) => role.trim().toUpperCase())
+    .filter(Boolean),
+);
+
+/**
+ * Mídia de quem vai pra OpenAI. Lista vazia = todo mundo; hoje só SDR, pra
+ * não pagar por áudio de chat que o painel não analisa.
+ */
+export function shouldExtractMediaFor(role: AttendantRole | null): boolean {
+  if (!isMediaUnderstandingEnabled()) return false;
+  if (mediaRoles.size === 0) return true;
+  return role !== null && mediaRoles.has(role);
 }
 
 /**

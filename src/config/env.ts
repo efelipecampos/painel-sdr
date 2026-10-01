@@ -47,9 +47,10 @@ const schema = z.object({
   // --- OpenAI: transcrição de áudio e leitura de imagem (só pro Supabase) ---
   OPENAI_API_KEY: z.string().optional().default(""),
   MEDIA_UNDERSTANDING_ENABLED: booleanFromEnv(true),
-  // Só transcreve/lê mídia de chat da pré-venda — o espelho em `messages`
-  // pega todos os times, e pagar pela mídia deles não traz nada pro painel.
-  MEDIA_ONLY_PRESALES: booleanFromEnv(true),
+  // Papéis cujo chat tem a mídia enviada pra OpenAI. Hoje só SDR, porque o
+  // painel é de SDR; quando existir o de closer, é só acrescentar CLOSER
+  // aqui. Vazio = todos os chats, inclusive fora da pré-venda.
+  MEDIA_OPENAI_ROLES: z.string().default("SDR"),
   // "low" não mudou a contagem de tokens nos modelos 5.4 (medido em
   // 2026-10-01), mas respondeu mais rápido. Mantido como padrão.
   OPENAI_IMAGE_DETAIL: z.enum(["low", "high", "auto"]).default("low"),

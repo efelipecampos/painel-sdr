@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeText, pickMediaTarget } from "../src/media/mediaText.js";
+import { mergeText, pickMediaTarget, shouldExtractMediaFor } from "../src/media/mediaText.js";
 import { parseAttachments } from "../src/poli/parser.js";
 import { poliWebhookBodySchema } from "../src/poli/types.js";
 import received from "./fixtures/received.json" with { type: "json" };
@@ -94,5 +94,16 @@ describe("mergeText", () => {
   it("não duplica quando são iguais e não inventa texto quando a extração falhou", () => {
     expect(mergeText("igual", "igual")).toBe("igual");
     expect(mergeText("só a legenda", undefined)).toBe("só a legenda");
+  });
+});
+
+describe("shouldExtractMediaFor", () => {
+  it("manda pra OpenAI só o que é de SDR (MEDIA_OPENAI_ROLES=SDR nos testes)", () => {
+    expect(shouldExtractMediaFor("SDR")).toBe(true);
+  });
+
+  it("não manda mídia de closer nem de chat fora da pré-venda", () => {
+    expect(shouldExtractMediaFor("CLOSER")).toBe(false);
+    expect(shouldExtractMediaFor(null)).toBe(false);
   });
 });
