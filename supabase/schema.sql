@@ -1,6 +1,8 @@
--- Esquema do espelho de mensagens no Supabase.
--- Rode uma vez no SQL Editor do projeto (Supabase → SQL Editor → New query).
--- Pode ser rodado de novo sem problema: tudo é "if not exists".
+-- Esquema das tabelas que esta integração usa no Supabase.
+--
+-- ATENÇÃO (2026-09-30): o banco passou a ser versionado pelas migrations do
+-- repositório do painel de SDR. Este arquivo virou DOCUMENTAÇÃO: não rode no
+-- SQL Editor, não crie nem altere tabela por aqui.
 
 create table if not exists public.messages (
   id bigint generated always as identity primary key,
@@ -50,3 +52,26 @@ create index if not exists messages_lead_uuid_idx on public.messages (lead_uuid)
 -- Só a service role (usada pelo serviço) escreve e lê por padrão. Para o
 -- painel, crie depois uma policy de leitura conforme a necessidade.
 alter table public.messages enable row level security;
+
+-- ---------------------------------------------------------------------------
+-- public.raw_events — evento cru da Poli, como chega no webhook.
+--
+-- O painel de SDR reconstrói chats, donos, status e tempos de resposta a
+-- partir daqui, inclusive dos eventos SYSTEM (transferência, encerramento)
+-- que o fluxo do HubSpot descarta. A integração grava só o que é da equipe
+-- de pré-vendas (ver src/poli/rawEventFilter.ts).
+--
+-- Criada pelas migrations do repositório do painel. Reproduzida aqui só como
+-- documentação do que a integração espera encontrar.
+-- ---------------------------------------------------------------------------
+-- create table if not exists public.raw_events (
+--   id bigint generated always as identity primary key,
+--   source text not null default 'poli_webhook',
+--   event_type text,              -- header x-webhook-event, ou object + event do corpo
+--   external_id text not null,    -- uuid do evento (raiz do corpo)
+--   payload jsonb not null,
+--   received_at timestamptz not null default now(),
+--   unique (source, external_id)  -- reentrega da Poli não duplica
+-- );
+-- create index if not exists raw_events_received_at_idx on public.raw_events (received_at);
+-- alter table public.raw_events enable row level security;

@@ -29,6 +29,26 @@ db.exec(`
     last_attempt_at INTEGER NOT NULL
   );
 
+  -- Eventos crus que falharam ao gravar no Supabase (painel de SDR), com
+  -- retry próprio — a fila failed_jobs reprocessa no HubSpot, que não é o
+  -- caso aqui.
+  CREATE TABLE IF NOT EXISTS raw_event_jobs (
+    external_id TEXT PRIMARY KEY,
+    event_type TEXT,
+    payload TEXT NOT NULL,
+    last_error TEXT,
+    attempts INTEGER NOT NULL DEFAULT 1,
+    created_at INTEGER NOT NULL,
+    last_attempt_at INTEGER NOT NULL
+  );
+
+  -- Índice local dos atendimentos que já têm evento gravado, pra decidir a
+  -- regra de saída do chat sem consultar o Supabase toda vez.
+  CREATE TABLE IF NOT EXISTS raw_event_attendances (
+    attendance_uuid TEXT PRIMARY KEY,
+    first_seen_at INTEGER NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS daily_notes (
     contact_id TEXT NOT NULL,
     day TEXT NOT NULL,
@@ -196,4 +216,57 @@ export function markDailyNoteDone(contactId: string, day: string, noteId: string
   db.prepare(
     "INSERT OR REPLACE INTO daily_notes (contact_id, day, note_id, created_at) VALUES (?, ?, ?, ?)",
   ).run(contactId, day, noteId, Date.now());
+}
+
+export function isRawEventAttendanceKnown(attendanceUuid: string): boolean {
+  const row = db
+    .prepare("SELECT 1 FROM raw_event_attendances WHERE attendance_uuid = ?")
+    .get(attendanceUuid);
+  return row !== undefined;
+}
+
+export function markRawEventAttendance(attendanceUuid: string): void {
+  db.prepare(
+    "INSERT OR IGNORE INTO raw_event_attendances (attendance_uuid, first_seen_at) VALUES (?, ?)",
+  ).run(attendanceUuid, Date.now());
+}
+
+export function recordRawEventFailure(
+  externalId: string,
+  eventType: string | undefined,
+  payload: unknown,
+  error: string,
+): void {
+  const existing = db
+    .prepare("SELECT attempts FROM raw_event_jobs WHERE external_id = ?")
+    .get(externalId) as { attempts: number } | undefined;
+
+  if (existing) {
+    db.prepare(
+      "UPDATE raw_event_jobs SET attempts = ?, last_error = ?, last_attempt_at = ? WHERE external_id = ?",
+    ).run(existing.attempts + 1, error, Date.now(), externalId);
+    return;
+  }
+
+  db.prepare(
+    `INSERT INTO raw_event_jobs (external_id, event_type, payload, last_error, attempts, created_at, last_attempt_at)
+     VALUES (?, ?, ?, ?, 1, ?, ?)`,
+  ).run(externalId, eventType ?? null, JSON.stringify(payload), error, Date.now(), Date.now());
+}
+
+export function clearRawEventJob(externalId: string): void {
+  db.prepare("DELETE FROM raw_event_jobs WHERE external_id = ?").run(externalId);
+}
+
+export interface RawEventJob {
+  external_id: string;
+  event_type: string | null;
+  payload: string;
+  attempts: number;
+}
+
+export function listRawEventJobs(maxAttempts: number): RawEventJob[] {
+  return db
+    .prepare("SELECT external_id, event_type, payload, attempts FROM raw_event_jobs WHERE attempts <= ?")
+    .all(maxAttempts) as RawEventJob[];
 }
