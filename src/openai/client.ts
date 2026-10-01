@@ -64,7 +64,7 @@ export async function describeImage(image: Buffer, mimeType: string): Promise<st
           role: "user",
           content: [
             { type: "text", text: IMAGE_PROMPT },
-            { type: "image_url", image_url: { url: dataUrl } },
+            { type: "image_url", image_url: { url: dataUrl, detail: env.OPENAI_IMAGE_DETAIL } },
           ],
         },
       ],

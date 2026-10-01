@@ -31,7 +31,12 @@ export async function processMessage(message: MessageEvent): Promise<ProcessResu
     // HubSpot continua com rótulo e link. Falha não impede a gravação da
     // mensagem: ela entra sem texto e o retry atualiza a linha depois.
     let text = message.text;
-    const target = isMediaUnderstandingEnabled() ? pickMediaTarget(message.attachments) : undefined;
+    // Só mídia de chat da pré-venda vai pra OpenAI. O espelho em `messages`
+    // pega todos os times (suporte, CS), e transcrever tudo seria pagar por
+    // conversa que o painel não analisa.
+    const ehPreVenda = getAttendantRole(message.attendantEmail) !== null;
+    const vaiPraOpenAi = isMediaUnderstandingEnabled() && (!env.MEDIA_ONLY_PRESALES || ehPreVenda);
+    const target = vaiPraOpenAi ? pickMediaTarget(message.attachments) : undefined;
     if (target) {
       try {
         text = mergeText(message.text, await extractMediaText(target));

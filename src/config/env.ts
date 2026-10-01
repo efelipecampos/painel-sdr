@@ -47,11 +47,17 @@ const schema = z.object({
   // --- OpenAI: transcrição de áudio e leitura de imagem (só pro Supabase) ---
   OPENAI_API_KEY: z.string().optional().default(""),
   MEDIA_UNDERSTANDING_ENABLED: booleanFromEnv(true),
+  // Só transcreve/lê mídia de chat da pré-venda — o espelho em `messages`
+  // pega todos os times, e pagar pela mídia deles não traz nada pro painel.
+  MEDIA_ONLY_PRESALES: booleanFromEnv(true),
+  // "low" não mudou a contagem de tokens nos modelos 5.4 (medido em
+  // 2026-10-01), mas respondeu mais rápido. Mantido como padrão.
+  OPENAI_IMAGE_DETAIL: z.enum(["low", "high", "auto"]).default("low"),
   // Nomes de modelo em env porque o catálogo da OpenAI muda com frequência.
   OPENAI_TRANSCRIPTION_MODEL: z.string().default("gpt-4o-mini-transcribe"),
   // Vazio = a OpenAI detecta o idioma (há leads em português e em espanhol).
   OPENAI_TRANSCRIPTION_LANGUAGE: z.string().optional().default(""),
-  OPENAI_VISION_MODEL: z.string().default("gpt-5.4-mini"),
+  OPENAI_VISION_MODEL: z.string().default("gpt-5.4-nano"),
   OPENAI_TIMEOUT_MS: z.coerce.number().default(120_000),
   MEDIA_DOWNLOAD_TIMEOUT_MS: z.coerce.number().default(30_000),
   MEDIA_MAX_MB: z.coerce.number().default(20),
