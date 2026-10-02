@@ -28,4 +28,9 @@ describe("extractCompanyFromLeadName", () => {
     expect(extractCompanyFromLeadName(undefined)).toBeNull();
     expect(extractCompanyFromLeadName("")).toBeNull();
   });
+
+  it("normaliza letras estilizadas, que o HubSpot recusa na busca", () => {
+    expect(extractCompanyFromLeadName("Maria - 𝐏𝐫𝐨𝐝𝐮𝐭𝐨𝐬 𝐍𝐚𝐭𝐮𝐫𝐚𝐢𝐬")).toBe("Produtos Naturais");
+    expect(extractCompanyFromLeadName("𝐀𝐜𝐦𝐞 𝐋𝐭𝐝𝐚")).toBe("Acme Ltda");
+  });
 });
