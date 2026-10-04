@@ -11,7 +11,8 @@ alter table painel.chats
   add column attendance_type text,        -- INITIATED_BY_BUSINESS | INITIATED_BY_FORWARDING | INITIATED_BY_CONTACT
   add column poli_status text,            -- último attendance.status visto (IN_PROGRESS, BOT, QUEUE, CLOSED...)
   add column closed_reason text,          -- closed_reason da Poli, ou SUBSTITUIDO (outro atendimento do lead seguiu)
-  add column last_activity_at timestamptz; -- última mensagem do lead ou da equipe (para "Aguardando")
+  add column last_activity_at timestamptz, -- última mensagem do lead ou da equipe (para "Aguardando")
+  add column initiated_by text check (initiated_by in ('lead', 'poli')); -- quem mandou a 1ª mensagem (sem contar eventos de sistema)
 create index chats_lead_activity_idx on painel.chats (lead_id, last_activity_at);
 
 -- Fotografia de cada evento, para o recálculo não depender da ordem de chegada.
@@ -104,6 +105,8 @@ begin
            (array_agg(m.sent_at order by m.sent_at desc, m.id desc) filter (where m.sender <> 'system'))[1] as last_message_at,
            (array_agg(m.sender::text order by m.sent_at desc, m.id desc) filter (where m.sender <> 'system'))[1] as last_message_from,
            (array_agg(m.attendance_type order by m.sent_at, m.id) filter (where m.attendance_type is not null))[1] as attendance_type,
+           (array_agg(case when m.sender = 'lead' then 'lead' else 'poli' end order by m.sent_at, m.id)
+              filter (where m.sender <> 'system'))[1] as initiated_by,
            (array_agg(m.attendance_status order by m.sent_at desc, m.id desc) filter (where m.attendance_status is not null))[1] as poli_status,
            min(m.sent_at) filter (where m.system_type = 'ATTENDANCE_CLOSED' or m.attendance_status = 'CLOSED') as closed_evt_at,
            (array_agg(m.closed_reason order by m.sent_at, m.id)
@@ -132,6 +135,7 @@ begin
          last_message_from = st.last_message_from,
          last_activity_at = st.last_activity_at,
          attendance_type = st.attendance_type,
+         initiated_by = st.initiated_by,
          poli_status = st.poli_status,
          status = case when st.closed_evt_at is not null or st.superseded_at is not null
                        then 'closed'::painel.chat_status else 'open'::painel.chat_status end,

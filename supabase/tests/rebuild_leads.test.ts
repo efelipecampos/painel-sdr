@@ -203,6 +203,16 @@ describe("rebuild_leads: estado do chat", () => {
     expect((await chat(s.chats.get("B")!)).status).toBe("open");
   });
 
+  it("quem iniciou: primeira mensagem do lead ou da Poli, ignorando eventos de sistema", async () => {
+    const s = await scenario([
+      ["system:ATTENDANCE_REDIRECTED", 0, "A"], ["lead", 10, "A"], ["sdr", 20, "A"],
+      ["template_bot", 100, "B"], ["lead", 200, "B"],
+      ["sdr", 300, "C"],
+    ]);
+    const by = async (k: string) => (await db.query<{ v: string }>("select initiated_by as v from painel.chats where id = $1", [s.chats.get(k)])).rows[0].v;
+    expect([await by("A"), await by("B"), await by("C")]).toEqual(["lead", "poli", "poli"]);
+  });
+
   it("registra a troca de dono no histórico", async () => {
     const s = await scenario([["lead", 0, "A", "X"], ["sdr", 60, "A", "X"], ["lead", 120, "A", "Y"], ["sdr", 180, "A", "Y"]]);
     const h = await db.query<{ sdr: string; to_at: string | null }>(

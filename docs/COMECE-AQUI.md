@@ -135,6 +135,7 @@ Registre aqui toda decisão nova, com data.
 - 2026-10-04 — Tempo de resposta e tempo de primeira resposta usam **mediana**, não média. Resposta = mensagem escrita por pessoa da equipe ou template enviado manualmente; template do app token e bot não contam. A resposta pode vir em qualquer atendimento do mesmo lead. Primeira resposta = primeira mensagem do lead em cada atendimento.
 - 2026-10-04 — Chat aberto = sem encerramento da Poli e sem atividade (lead ou equipe) em outro atendimento do mesmo lead depois da última atividade dele.
 - 2026-10-04 — Papéis: SDRs = 8 e-mails (inclui Lia); closers = 11; gestores = Iago, Felipe, Hugo, Marcos. Listas em `POLI_SDR_EMAILS`, `POLI_CLOSER_EMAILS`, `POLI_MANAGER_EMAILS`. Tifany e Poliana são de outros departamentos. Cards mostram só SDRs.
+- 2026-10-04 — Quem iniciou a conversa (`painel.chats.initiated_by`): por atendimento, pela primeira mensagem sem contar eventos de sistema. Do lead = "lead"; de pessoa da equipe, template ou bot = "poli".
 - 2026-10-04 — Histórico: o painel começa em 25/09/2026 00:00 (Brasília). Fonte do histórico de 25/09 a 01/10 ainda a decidir (API da Poli ou `public.messages`).
 
 ## 9. Primeira mensagem ao Felipe
