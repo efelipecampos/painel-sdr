@@ -66,8 +66,8 @@ Atualize esta lista conforme avança.
 - [x] 0.2 Criar `.env` a partir do `.env.example` e abrir no TextEdit para o Felipe preencher. Chaves: aba **Legacy API keys** do Supabase (`anon` e `service_role`) e a senha do banco.
 - [x] 0.3 Commit inicial na `main` com `CLAUDE.md`, `docs/`, `design/`, `.gitignore`, `.env.example`. Confirmar que `.env` NÃO entrou. Push.
 - [x] Fase 1 — Projeto e banco (roteiro). Aplicada no Supabase e mergeada em 2026-09-29.
-- [ ] Fase 2 — Evento cru na integração (no repositório PoliChat-Hubspot; ver seção 6).
-- [ ] Esperar 1 a 2 dias de eventos reais em `public.raw_events`.
+- [x] Fase 2 — Evento cru na integração (no repositório PoliChat-Hubspot; ver seção 6). No ar desde 01/10/2026.
+- [x] Esperar 1 a 2 dias de eventos reais em `public.raw_events`.
 - [ ] Fase 3 — Parser e backfill.
 - [ ] Fase 4 — Métricas no banco (Felipe confere os números com o Poli).
 - [ ] Fase 5 — Telas, login e deploy do painel.
@@ -129,6 +129,13 @@ Registre aqui toda decisão nova, com data.
 - 2026-09-29 — Migrations aplicadas com `npm run db:push` (conexão direta pelo pooler `aws-0-sa-east-1`, modo sessão, com a senha do `.env`). Sem `supabase link` e sem token de acesso: o link exigiria permissão de ler as chaves de API. Sempre rodar `npm run db:push -- --dry-run` antes e mostrar ao Felipe.
 - 2026-09-29 — Fase 1 aplicada no Supabase: 4 migrations, 16 tabelas (2 em `public`, 14 em `painel`), com os valores iniciais gravados.
 - 2026-09-30 — `raw_events` guarda só o que é da equipe de pré-vendas: eventos de chats cujo dono (`attendance.attendant.email`) é SDR ou closer, mensagens do app token e o evento SYSTEM que tira o chat da equipe. Mensagens do lead entram enquanto o dono for da equipe. Resposta do lead em chat sem dono da equipe não é gravada (aceito). Regra completa em `docs/integracao-mudancas.md`.
+- 2026-10-01 — Fase 2 no ar: primeiro evento em `public.raw_events` em 01/10/2026 às 07:08 (Brasília).
+- 2026-10-04 — Mapeamento dos eventos da Poli (Fase 3): lead = `author.type CONTACT`; pessoa da equipe = autor `USER` com `uuid`; app token/bot = autor `USER` sem `uuid` (com template = template do app token); SYSTEM `ATTENDANCE_REDIRECTED` = transferência (abre atendimento novo), `ATTENDANCE_CLOSED` = encerramento; `NOTE`, `SUMMARY`, `CONTACT_UPDATED` ficam guardados mas não entram nas métricas.
+- 2026-10-04 — Resposta de outra pessoa da equipe no chat de um SDR conta como resposta, creditada ao SDR dono do chat. Templates do app token contam como template/lead abordado do SDR dono do chat.
+- 2026-10-04 — Tempo de resposta e tempo de primeira resposta usam **mediana**, não média. Resposta = mensagem escrita por pessoa da equipe ou template enviado manualmente; template do app token e bot não contam. A resposta pode vir em qualquer atendimento do mesmo lead. Primeira resposta = primeira mensagem do lead em cada atendimento.
+- 2026-10-04 — Chat aberto = sem encerramento da Poli e sem atividade (lead ou equipe) em outro atendimento do mesmo lead depois da última atividade dele.
+- 2026-10-04 — Papéis: SDRs = 8 e-mails (inclui Lia); closers = 11; gestores = Iago, Felipe, Hugo, Marcos. Listas em `POLI_SDR_EMAILS`, `POLI_CLOSER_EMAILS`, `POLI_MANAGER_EMAILS`. Tifany e Poliana são de outros departamentos. Cards mostram só SDRs.
+- 2026-10-04 — Histórico: o painel começa em 25/09/2026 00:00 (Brasília). Fonte do histórico de 25/09 a 01/10 ainda a decidir (API da Poli ou `public.messages`).
 
 ## 9. Primeira mensagem ao Felipe
 
