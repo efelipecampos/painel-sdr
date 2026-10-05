@@ -273,7 +273,8 @@ describe("sdr_chats", () => {
     await lead("X", [["lead", ago(20)], ["sdr", ago(18)]], { name: "Mercado" });
     await lead("Y", [["lead", ago(10)]], { name: "De outro SDR" });
     const rows = (await db.query<Record<string, unknown>>(
-      "select * from painel.sdr_chats($1, now() - interval '1 day', now() + interval '1 minute')", [sdr.X],
+      // false: 24h, para o teste não depender da hora do dia em que roda
+      "select * from painel.sdr_chats($1, now() - interval '1 day', now() + interval '1 minute', false)", [sdr.X],
     )).rows;
     expect(rows.map((r) => [r.lead_name, r.situacao, r.parado])).toEqual([
       ["Clínica Sorriso", "aguardando", true],
