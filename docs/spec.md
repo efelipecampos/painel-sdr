@@ -44,15 +44,15 @@ Estas definições foram fechadas como padrão da V1. Qualquer mudança é decis
 
 **Dono do lead (SDR)**: o atendente responsável pelo chat no Poli **no momento de cada evento**. Cada mensagem guarda o SDR responsável naquele instante. Se o chat for transferido para um closer, o que acontece depois disso não conta para o SDR.
 
-**Chat**: a conversa identificada pelo ID de chat/atendimento da Poli. Se a Poli abrir um novo atendimento com novo ID, é um novo chat.
+**Chat**: a conversa identificada pelo ID de chat/atendimento da Poli. Se a Poli abrir um novo atendimento com novo ID, é um novo chat. Transferência na Poli encerra o atendimento e abre outro (`INITIATED_BY_FORWARDING`), então cada transferência gera um chat novo.
 
 | Métrica | Definição |
 |---|---|
 | Leads abordados | Leads distintos que receberam ao menos 1 template enviado pelo SDR dentro do período. Um lead abordado duas vezes conta uma vez. |
 | Templates enviados | Total de mensagens de template enviadas pelo SDR no período (conta repetidos). |
-| Tempo de resposta (média) | Média, no período, do tempo entre o **início de um bloco de mensagens do lead** e a **próxima mensagem humana do SDR** no mesmo chat. Bloco = sequência de mensagens do lead sem mensagem humana do SDR no meio; o relógio começa na primeira mensagem do bloco. Templates, mensagens de bot e automações NÃO contam como resposta. Entra no período pelo horário da resposta. Blocos ainda sem resposta não entram na média (entram em "Aguardando"). |
-| 1ª resposta (média) | Mesmo cálculo, mas só para o **primeiro bloco do lead em cada chat**. |
-| Aguardando resposta | Chats **abertos**, com o SDR como responsável agora, cuja última mensagem é do lead. Estado atual (não depende do período). |
+| Tempo de resposta (mediana) | **Mediana**, no período, do tempo entre o **início de um bloco de mensagens do lead** e a **próxima mensagem da equipe para o mesmo lead**, em qualquer atendimento dele. Mensagem da equipe = mensagem escrita por uma pessoa (SDR, closer ou gestor; não precisa ser o dono do chat) ou template enviado manualmente por uma pessoa. Template do app token, mensagens de bot, automações e eventos de sistema (nota interna, resumo, transferência) NÃO contam como resposta e não interrompem o bloco. Bloco = sequência de mensagens do lead sem mensagem da equipe no meio; o relógio começa na primeira mensagem do bloco. O tempo é creditado ao SDR dono do atendimento onde o lead escreveu, no momento da primeira mensagem do bloco. Entra no período pelo horário da resposta. Blocos ainda sem resposta não entram (entram em "Aguardando"). |
+| Tempo de primeira resposta (mediana) | Mesmo cálculo, mas só para o bloco que começa na **primeira mensagem do lead em cada atendimento**. Caso típico: o app token dispara o template no cadastro, o lead responde quando quiser, e mede-se da resposta do lead até a primeira mensagem da equipe. |
+| Aguardando resposta | Chats **abertos**, com o SDR como responsável agora, cuja última mensagem do lead ou da equipe é do lead. Estado atual (não depende do período). Aberto = sem evento de encerramento da Poli e sem mensagem do lead ou da equipe em outro atendimento do mesmo lead depois da última atividade deste (a Poli às vezes mantém mais de um atendimento do mesmo lead sem encerrar o antigo). |
 | Parados há +X min | Subconjunto de "Aguardando" em que o tempo desde o início do bloco sem resposta passa do limite configurado (padrão 30 min). Se "contar só horário comercial" estiver ligado nas configurações, esse tempo é contado em horário comercial. |
 | Qualidade da carteira | Média do score mais recente de cada lead da carteira atual do SDR. Leads sem nenhuma mensagem do lead ficam fora e aparecem como "não analisados". |
 | Reuniões | Chats com status de reunião preenchido no período (pela data da última mudança de status). Taxa = reuniões ÷ leads abordados. Conversão para análise de padrão = status **Validada**. |
@@ -242,7 +242,7 @@ No painel:
    `leads.hubspot_contact_id`: pegue de `public.messages` pelo `external_message_id` (a integração já resolve o contato no HubSpot com matching em 4 camadas). Não refaça esse matching.
 3. A cada mensagem humana do SDR, fecha o bloco do lead em aberto naquele chat e grava um `response_events`.
 4. Status do chat: pelo `attendance.status`, `closed_reason` e pelos eventos SYSTEM. Os valores exatos de status e os tipos de evento SYSTEM saem da análise dos eventos reais em `raw_events` (Fase 3).
-5. Histórico anterior ao `raw_events`: `public.messages` já tem o histórico espelhado, mas sem ID de atendimento nem tipo de autor. Use a API da Poli para o backfill completo; `public.messages` serve de conferência.
+5. Histórico anterior ao `raw_events`: não há backfill na V1 (decisão de 2026-10-05). O painel começa no primeiro evento de `raw_events` (01/10/2026). A API da Poli fica para depois.
 6. Conferência diária (madrugada): compara a API da Poli com o banco nas últimas 48 h e completa o que faltar.
 
 ## 5. HubSpot (reuniões)
