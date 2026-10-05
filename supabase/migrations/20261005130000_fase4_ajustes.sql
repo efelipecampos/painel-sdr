@@ -8,9 +8,12 @@
 -- 3) Horário comercial: segunda a sexta, 08:20–17:45 (decisão do Felipe, 2026-10-05).
 -- 4) Os contadores ao lado das medianas passam a ser LEADS distintos (não respostas):
 --    leads_primeira_resposta e leads_resposta.
--- 5) A escolha vem da configuração metrics_business_only; o parâmetro p_business_only, se informado,
+-- 5) Lead cujo Lead mais recente no HubSpot está numa etapa de settings.hubspot_excluded_stages sai de
+--    "Aguardando" e "Parados"; na tabela do SDR aparece como "fora_do_funil", com o nome da etapa.
+--    (tabelas e função em 20261005140000_hubspot_leads.sql)
+-- 6) A escolha vem da configuração metrics_business_only; o parâmetro p_business_only, se informado,
 --    sobrepõe a configuração (útil para comparar).
--- 6) sdr_chats: nova situação "encerrado_sem_resposta" e as mesmas regras de mediana (abaixo).
+-- 7) sdr_chats: nova situação "encerrado_sem_resposta" e as mesmas regras de mediana (abaixo).
 
 update painel.business_hours
    set start_time = '08:20', end_time = '17:45'
@@ -99,7 +102,9 @@ begin
            count(*) filter (where case when v_stale_biz then painel.business_seconds(c.waiting_since, now())
                                        else extract(epoch from now() - c.waiting_since) end > v_stale_min * 60) as stale
     from painel.chats c
+    join painel.leads l on l.id = c.lead_id
     where c.status = 'open' and c.waiting_since is not null and c.sdr_id in (select team.id from team)
+      and painel.hubspot_excluded_stage(l.hubspot_contact_id) is null  -- descartado/qualificado no HubSpot não conta
     group by c.sdr_id
   )
   select team.id,
@@ -183,7 +188,9 @@ begin
            count(*) filter (where case when v_stale_biz then painel.business_seconds(c.waiting_since, now())
                                        else extract(epoch from now() - c.waiting_since) end > v_stale_min * 60) as stale
     from painel.chats c
+    join painel.leads l on l.id = c.lead_id
     where c.status = 'open' and c.waiting_since is not null and c.sdr_id in (select team.id from team)
+      and painel.hubspot_excluded_stage(l.hubspot_contact_id) is null  -- descartado/qualificado no HubSpot não conta
   ) w;
 end;
 $$;
@@ -206,7 +213,7 @@ returns table (
   poli_contact_uuid text,
   lead_name text,
   phone_masked text,
-  situacao text,              -- aguardando | respondido | lead_nao_respondeu | encerrado_sem_resposta
+  situacao text,              -- aguardando | respondido | lead_nao_respondeu | encerrado_sem_resposta | fora_do_funil
   waiting_since timestamptz,
   parado boolean,
   templates integer,
@@ -217,6 +224,7 @@ returns table (
   last_message_at timestamptz,
   last_message_from text,     -- lead | sdr | template | bot
   origem text,                -- lead | poli (quem iniciou a relação com o lead)
+  hubspot_etapa text,         -- etapa do HubSpot que tirou o lead de "Aguardando" (Descartado, DSQ - BR, Qualificado)
   total bigint                -- total de linhas do filtro, para a paginação
 )
 language plpgsql
@@ -241,7 +249,8 @@ begin
   return query
   with base as (
     select c.id, c.lead_id, c.status, c.waiting_since, c.last_message_at, c.last_message_from,
-           l.poli_contact_uuid, l.name as lead_name, l.phone_e164, l.initiated_by
+           l.poli_contact_uuid, l.name as lead_name, l.phone_e164, l.initiated_by,
+           painel.hubspot_excluded_stage(l.hubspot_contact_id) as hubspot_etapa
     from painel.chats c
     join painel.leads l on l.id = c.lead_id
     where c.sdr_id = p_sdr
@@ -277,7 +286,8 @@ begin
   ),
   linhas as (
     select b.*,
-           case when b.status = 'open' and b.waiting_since is not null then 'aguardando'
+           case when b.status = 'open' and b.waiting_since is not null and b.hubspot_etapa is not null then 'fora_do_funil'
+                when b.status = 'open' and b.waiting_since is not null then 'aguardando'
                 when coalesce(st.msgs_lead, 0) = 0 then 'lead_nao_respondeu'
                 when st.last_lead_at > coalesce(lt.at, '-infinity'::timestamptz) then 'encerrado_sem_resposta'
                 else 'respondido' end as situacao,
@@ -311,6 +321,7 @@ begin
          linhas.last_message_at,
          linhas.last_message_from,
          linhas.initiated_by,
+         linhas.hubspot_etapa,
          count(*) over ()
   from linhas
   where coalesce(p_filter, 'all') = 'all'

@@ -26,6 +26,7 @@ beforeEach(async () => {
     select set_config('request.jwt.claim.sub', '', false);
     delete from painel.response_events; delete from painel.chat_owner_history; delete from painel.chat_messages;
     delete from painel.chats; delete from painel.leads; delete from painel.profiles; delete from auth.users; delete from painel.sdrs;
+    delete from painel.hubspot_leads; delete from painel.hubspot_stages;
   `);
   for (const [k, role] of [["X", "sdr"], ["Y", "sdr"], ["G", "gestor"]] as const) {
     sdr[k] = (await db.query<{ id: string }>(
@@ -130,6 +131,46 @@ describe("sdr_metrics", () => {
     const m = await metrics();
     expect(Object.keys(m)).toEqual(["SDR X", "SDR Y"]);
     expect(m["SDR Y"]).toMatchObject({ leads_abordados: 0, leads_resposta: 0, resposta_s: null, aguardando: 0 });
+  });
+});
+
+describe("HubSpot: descartado e qualificado saem de Aguardando e Parados", () => {
+  it("vale a etapa do Lead mais recente do contato; a tabela mostra fora_do_funil com o nome da etapa", async () => {
+    await db.exec(`
+      insert into painel.hubspot_stages (stage_id, pipeline_id, label, state) values
+        ('1250901141', '841793591', 'Descartado', 'UNQUALIFIED'),
+        ('1250901139', '841793591', 'Garantir Agendamento', 'IN_PROGRESS'),
+        ('1358962969', '841793591', 'Qualificado', 'QUALIFIED');
+    `);
+    const a = await lead("X", [["lead", ago(60)]], { name: "Descartado" });
+    const b = await lead("X", [["lead", ago(60)]], { name: "Garantir" });
+    const c = await lead("X", [["lead", ago(60)]], { name: "Voltou" });
+    const d = await lead("X", [["lead", ago(60)]], { name: "Qualificado" });
+    const link = async (leadId: string, contact: string) => db.query("update painel.leads set hubspot_contact_id = $2 where id = $1", [leadId, contact]);
+    await link(a.leadId, "h1"); await link(b.leadId, "h2"); await link(c.leadId, "h3"); await link(d.leadId, "h4");
+    await db.exec(`
+      insert into painel.hubspot_leads (hubspot_lead_id, hubspot_contact_id, pipeline_id, stage_id, created_at) values
+        ('L1', 'h1', '841793591', '1250901141', '2026-09-01'),
+        ('L2', 'h2', '841793591', '1250901139', '2026-09-01'),
+        ('L3a', 'h3', '841793591', '1250901141', '2026-08-01'),  -- descartado antigo
+        ('L3b', 'h3', '841793591', '1250901139', '2026-10-01'),  -- Lead novo, em aberto: volta a contar
+        ('L4', 'h4', '841793591', '1358962969', '2026-09-01');
+    `);
+    const m = (await db.query<{ aguardando: number; parados: number }>(
+      "select aguardando, parados from painel.sdr_metrics(now() - interval '1 day', now() + interval '1 minute') where name = 'SDR X'",
+    )).rows[0];
+    expect(m).toEqual({ aguardando: 2, parados: 2 });
+    const t = (await db.query<{ aguardando: number }>("select aguardando from painel.team_metrics(now() - interval '1 day', now() + interval '1 minute')")).rows[0];
+    expect(t.aguardando).toBe(2);
+    const rows = (await db.query<{ lead_name: string; situacao: string; hubspot_etapa: string | null }>(
+      "select lead_name, situacao, hubspot_etapa from painel.sdr_chats($1, now() - interval '1 day', now() + interval '1 minute') order by lead_name", [sdr.X],
+    )).rows;
+    expect(rows).toEqual([
+      { lead_name: "Descartado", situacao: "fora_do_funil", hubspot_etapa: "Descartado" },
+      { lead_name: "Garantir", situacao: "aguardando", hubspot_etapa: null },
+      { lead_name: "Qualificado", situacao: "fora_do_funil", hubspot_etapa: "Qualificado" },
+      { lead_name: "Voltou", situacao: "aguardando", hubspot_etapa: null },
+    ]);
   });
 });
 
