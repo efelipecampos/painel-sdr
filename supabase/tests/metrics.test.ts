@@ -86,7 +86,7 @@ describe("sdr_metrics", () => {
     await lead("X", [["lead", day("10:00")], ["sdr", day("10:02")]]); // 120s (1ª)
     await lead("X", [["lead", day("17:30", "04")], ["sdr", day("08:30")]]); // lead escreveu ontem: fora da mediana de hoje
     const m = (await metrics())["SDR X"];
-    expect(m).toMatchObject({ primeiras_respostas: 2, primeira_resposta_s: 90, respostas: 3, resposta_s: 120 });
+    expect(m).toMatchObject({ leads_primeira_resposta: 2, primeira_resposta_s: 90, leads_resposta: 2, resposta_s: 120 }); // 3 respostas, 2 leads
   });
 
   it("só horário comercial: só leads que escreveram no expediente (08:20–17:45), com o tempo real", async () => {
@@ -94,9 +94,9 @@ describe("sdr_metrics", () => {
     await lead("X", [["lead", day("19:00")], ["sdr", day("08:30", "06")]]); // escreveu 19:00 (fora do expediente): 13,5h
     const m = await db.query<{ c: number; nc: number; b: number; nb: number }>(
       `select (select resposta_s from painel.sdr_metrics($1, $2, false) where name = 'SDR X') as c,
-              (select respostas from painel.sdr_metrics($1, $2, false) where name = 'SDR X') as nc,
+              (select leads_resposta from painel.sdr_metrics($1, $2, false) where name = 'SDR X') as nc,
               (select resposta_s from painel.sdr_metrics($1, $2, true) where name = 'SDR X') as b,
-              (select respostas from painel.sdr_metrics($1, $2, true) where name = 'SDR X') as nb`,
+              (select leads_resposta from painel.sdr_metrics($1, $2, true) where name = 'SDR X') as nb`,
       [FROM, TO],
     );
     expect(m.rows[0]).toEqual({ c: (16 + 13.5) / 2 * 3600, nc: 2, b: 16 * 3600, nb: 1 });
@@ -117,7 +117,7 @@ describe("sdr_metrics", () => {
     await lead("G", [["lead", day("09:00")], ["sdr", day("09:01")]]);
     const m = await metrics();
     expect(Object.keys(m)).toEqual(["SDR X", "SDR Y"]);
-    expect(m["SDR Y"]).toMatchObject({ leads_abordados: 0, respostas: 0, resposta_s: null, aguardando: 0 });
+    expect(m["SDR Y"]).toMatchObject({ leads_abordados: 0, leads_resposta: 0, resposta_s: null, aguardando: 0 });
   });
 });
 
@@ -127,7 +127,7 @@ describe("team_metrics", () => {
     await lead("Y", [["lead", day("09:00")], ["sdr", day("09:50")]]); // 3000
     const t = (await db.query<Record<string, number>>("select * from painel.team_metrics($1, $2, false)", [FROM, TO])).rows[0];
     // Medianas por SDR: X = 90, Y = 3000 (média 1545). Mediana do time = mediana de [60, 120, 3000] = 120.
-    expect(t).toMatchObject({ sdrs: 2, respostas: 3, resposta_s: 120, primeiras_respostas: 2, primeira_resposta_s: 1530 });
+    expect(t).toMatchObject({ sdrs: 2, leads_resposta: 2, resposta_s: 120, leads_primeira_resposta: 2, primeira_resposta_s: 1530 });
   });
 });
 

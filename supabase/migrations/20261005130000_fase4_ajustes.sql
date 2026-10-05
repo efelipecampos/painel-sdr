@@ -6,7 +6,9 @@
 --    do expediente (conforme as configurações, sem feriados). O tempo é sempre o real (relógio):
 --    o que importa é se quem escreveu no horário de trabalho foi atendido rápido. Desligado: entra tudo.
 -- 3) Horário comercial: segunda a sexta, 08:20–17:45 (decisão do Felipe, 2026-10-05).
--- 4) sdr_chats: nova situação "encerrado_sem_resposta" e as mesmas regras de mediana (abaixo).
+-- 4) Os contadores ao lado das medianas passam a ser LEADS distintos (não respostas):
+--    leads_primeira_resposta e leads_resposta.
+-- 5) sdr_chats: nova situação "encerrado_sem_resposta" e as mesmas regras de mediana (abaixo).
 
 update painel.business_hours
    set start_time = '08:20', end_time = '17:45'
@@ -26,7 +28,8 @@ $$;
 revoke execute on function painel.is_business_time(timestamptz) from public, anon;
 grant execute on function painel.is_business_time(timestamptz) to authenticated, service_role;
 
-create or replace function painel.sdr_metrics(p_from timestamptz, p_to timestamptz, p_business_only boolean default false)
+drop function painel.sdr_metrics(timestamptz, timestamptz, boolean);
+create function painel.sdr_metrics(p_from timestamptz, p_to timestamptz, p_business_only boolean default false)
 returns table (
   sdr_id uuid,
   name text,
@@ -34,9 +37,9 @@ returns table (
   templates_enviados integer,
   leads_responderam integer,
   primeira_resposta_s integer,
-  primeiras_respostas integer,
+  leads_primeira_resposta integer, -- leads distintos que entraram na mediana da 1ª resposta
   resposta_s integer,
-  respostas integer,
+  leads_resposta integer,          -- leads distintos que entraram na mediana de resposta
   aguardando integer,
   parados integer
 )
@@ -71,10 +74,11 @@ begin
     select r.sdr_id,
            percentile_cont(0.5) within group (order by r.seconds_24h)
              filter (where r.is_first_response) as p_first,
-           count(*) filter (where r.is_first_response) as n_first,
+           count(distinct c.lead_id) filter (where r.is_first_response) as n_first,
            percentile_cont(0.5) within group (order by r.seconds_24h) as p_all,
-           count(*) as n_all
+           count(distinct c.lead_id) as n_all
     from painel.response_events r
+    join painel.chats c on c.id = r.chat_id
     where r.lead_block_started_at >= p_from and r.lead_block_started_at < p_to
       and (not p_business_only or painel.is_business_time(r.lead_block_started_at)) and r.sdr_id in (select team.id from team)
     group by r.sdr_id
@@ -107,16 +111,17 @@ begin
 end;
 $$;
 
-create or replace function painel.team_metrics(p_from timestamptz, p_to timestamptz, p_business_only boolean default false)
+drop function painel.team_metrics(timestamptz, timestamptz, boolean);
+create function painel.team_metrics(p_from timestamptz, p_to timestamptz, p_business_only boolean default false)
 returns table (
   sdrs integer,
   leads_abordados integer,
   templates_enviados integer,
   leads_responderam integer,
   primeira_resposta_s integer,
-  primeiras_respostas integer,
+  leads_primeira_resposta integer, -- leads distintos que entraram na mediana da 1ª resposta
   resposta_s integer,
-  respostas integer,
+  leads_resposta integer,          -- leads distintos que entraram na mediana de resposta
   aguardando integer,
   parados integer
 )
@@ -152,10 +157,11 @@ begin
   (
     select percentile_cont(0.5) within group (order by y.seconds_24h)
              filter (where y.is_first_response) as p_first,
-           count(*) filter (where y.is_first_response) as n_first,
+           count(distinct yc.lead_id) filter (where y.is_first_response) as n_first,
            percentile_cont(0.5) within group (order by y.seconds_24h) as p_all,
-           count(*) as n_all
+           count(distinct yc.lead_id) as n_all
     from painel.response_events y
+    join painel.chats yc on yc.id = y.chat_id
     where y.lead_block_started_at >= p_from and y.lead_block_started_at < p_to
       and (not p_business_only or painel.is_business_time(y.lead_block_started_at)) and y.sdr_id in (select team.id from team)
   ) r,
@@ -298,3 +304,8 @@ begin
   offset greatest(coalesce(p_offset, 0), 0);
 end;
 $$;
+
+revoke execute on function painel.sdr_metrics(timestamptz, timestamptz, boolean) from public, anon;
+revoke execute on function painel.team_metrics(timestamptz, timestamptz, boolean) from public, anon;
+grant execute on function painel.sdr_metrics(timestamptz, timestamptz, boolean) to authenticated, service_role;
+grant execute on function painel.team_metrics(timestamptz, timestamptz, boolean) to authenticated, service_role;
