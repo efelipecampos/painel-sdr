@@ -224,6 +224,38 @@ describe("Descartados e DSQ (HubSpot)", () => {
   });
 });
 
+describe("Descartados e DSQ: nota primeiro, HubSpot se não houver nota", () => {
+  it("nota conta para o dono do chat; HubSpot só sem nota; o mesmo lead conta uma vez; Finalizado não conta", async () => {
+    await db.exec("insert into painel.hubspot_owners (owner_id, email) values ('o-x', 'x@x'), ('o-y', 'y@x')");
+    const note = async (owner: string, tag: string, contact: string | null) => {
+      const l = await lead(owner, [["lead", day("09:00")]]);
+      if (contact) await db.query("update painel.leads set hubspot_contact_id = $2 where id = $1", [l.leadId, contact]);
+      if (tag) await db.query(
+        `insert into painel.chat_messages (poli_message_id, chat_id, lead_id, sdr_id, sender, sent_at, system_type, note_tag)
+         values ($1, $2, $3, $4, 'system', $5, 'NOTE', $6)`,
+        [`n-${l.leadId}`, l.chats.get("A"), l.leadId, sdr[owner], day("10:00"), tag],
+      );
+      return l;
+    };
+    await note("X", "descartado", "c1");     // nota de X; HubSpot também descartou, com dono Y: conta só para X
+    await note("X", "descartado", null);     // só nota
+    await note("Y", "", "c3");               // sem nota; HubSpot descartou com dono Y
+    await note("X", "finalizado", "c4");     // finalizado: não conta
+    await note("X", "dsq", "c5");            // nota DSQ; HubSpot também DSQ: conta 1
+    await db.exec(`
+      insert into painel.hubspot_leads (hubspot_lead_id, hubspot_contact_id, owner_id, entered_descartado_at, entered_dsq_at) values
+        ('h1', 'c1', 'o-y', '${day("11:00")}', null),
+        ('h3', 'c3', 'o-y', '${day("11:00")}', null),
+        ('h5', 'c5', 'o-x', null, '${day("11:00")}'),
+        ('h6', 'c6', 'o-y', null, '${day("12:00")}');   -- DSQ de contato que nunca falou com a Poli
+    `);
+    const m = await metrics();
+    expect([m["SDR X"].descartados, m["SDR Y"].descartados]).toEqual([2, 1]);
+    const t = (await db.query<{ descartados: number; dsq: number }>("select descartados, dsq from painel.team_metrics($1, $2)", [FROM, TO])).rows[0];
+    expect(t).toEqual({ descartados: 3, dsq: 2 });
+  });
+});
+
 describe("team_metrics", () => {
   it("mediana do time sobre todas as respostas, não média das medianas", async () => {
     await lead("X", [["lead", day("09:00")], ["sdr", day("09:01")], ["lead", day("09:10")], ["sdr", day("09:12")]]); // 60, 120
