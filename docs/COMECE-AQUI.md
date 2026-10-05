@@ -68,7 +68,7 @@ Atualize esta lista conforme avança.
 - [x] Fase 1 — Projeto e banco (roteiro). Aplicada no Supabase e mergeada em 2026-09-29.
 - [x] Fase 2 — Evento cru na integração (no repositório PoliChat-Hubspot; ver seção 6). No ar desde 01/10/2026.
 - [x] Esperar 1 a 2 dias de eventos reais em `public.raw_events`.
-- [ ] Fase 3 — Parser e backfill.
+- [x] Fase 3 — Parser e worker (sem backfill: dados a partir de 01/10/2026). Worker roda manualmente (`npm run once -w @painel/worker`) até o deploy da Fase 5.
 - [ ] Fase 4 — Métricas no banco (Felipe confere os números com o Poli).
 - [ ] Fase 5 — Telas, login e deploy do painel.
 - [ ] Fase 6 — Reuniões do HubSpot.
@@ -110,6 +110,7 @@ A Fase 2 mexe em produção e em outro repositório. Não edite a integração a
 | Critérios reais de qualidade do lead e contexto para o Claude | Fase 7 |
 | Modelo e limite de gasto da API da Anthropic | Fase 7 |
 | Retenção de conteúdo de mensagens (LGPD) | Fase 8 |
+| Quem iniciou: por atendimento (atual) ou pelo primeiro atendimento do lead | Fase 4 |
 | Lista de feriados | Fase 5 |
 
 ## 8. Decisões
@@ -136,7 +137,9 @@ Registre aqui toda decisão nova, com data.
 - 2026-10-04 — Chat aberto = sem encerramento da Poli e sem atividade (lead ou equipe) em outro atendimento do mesmo lead depois da última atividade dele.
 - 2026-10-04 — Papéis: SDRs = 8 e-mails (inclui Lia); closers = 11; gestores = Iago, Felipe, Hugo, Marcos. Listas em `POLI_SDR_EMAILS`, `POLI_CLOSER_EMAILS`, `POLI_MANAGER_EMAILS`. Tifany e Poliana são de outros departamentos. Cards mostram só SDRs.
 - 2026-10-04 — Quem iniciou a conversa (`painel.chats.initiated_by`): por atendimento, pela primeira mensagem sem contar eventos de sistema. Do lead = "lead"; de pessoa da equipe, template ou bot = "poli".
-- 2026-10-04 — Histórico: o painel começa em 25/09/2026 00:00 (Brasília). Fonte do histórico de 25/09 a 01/10 ainda a decidir (API da Poli ou `public.messages`).
+- 2026-10-05 — Sem histórico anterior e sem API da Poli por enquanto: o painel começa em 01/10/2026 07:08 (primeiro evento em `raw_events`). Chats que já existiam antes disso podem ter "quem iniciou" e a primeira resposta imprecisos. A ideia de backfill desde 25/09 foi abandonada.
+- 2026-10-05 — Felipe conferiu 3 chats reais no Poli (linha do tempo e tempos de resposta): tudo certo.
+- 2026-10-05 — Lia passa a ser SDR também na integração (`POLI_SDR_EMAILS` do `.env` da VPS). Efeito colateral aceito: as mensagens dela passam a ser registradas no HubSpot, como as dos outros SDRs.
 
 ## 9. Primeira mensagem ao Felipe
 

@@ -242,7 +242,7 @@ No painel:
    `leads.hubspot_contact_id`: pegue de `public.messages` pelo `external_message_id` (a integração já resolve o contato no HubSpot com matching em 4 camadas). Não refaça esse matching.
 3. A cada mensagem humana do SDR, fecha o bloco do lead em aberto naquele chat e grava um `response_events`.
 4. Status do chat: pelo `attendance.status`, `closed_reason` e pelos eventos SYSTEM. Os valores exatos de status e os tipos de evento SYSTEM saem da análise dos eventos reais em `raw_events` (Fase 3).
-5. Histórico anterior ao `raw_events`: `public.messages` já tem o histórico espelhado, mas sem ID de atendimento nem tipo de autor. Use a API da Poli para o backfill completo; `public.messages` serve de conferência.
+5. Histórico anterior ao `raw_events`: não há backfill na V1 (decisão de 2026-10-05). O painel começa no primeiro evento de `raw_events` (01/10/2026). A API da Poli fica para depois.
 6. Conferência diária (madrugada): compara a API da Poli com o banco nas últimas 48 h e completa o que faltar.
 
 ## 5. HubSpot (reuniões)
