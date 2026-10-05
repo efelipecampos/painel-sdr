@@ -4,6 +4,7 @@
 // que o schema da integração rejeita.
 
 export type Sender = "lead" | "sdr" | "bot" | "template" | "system";
+export type NoteTag = "finalizado" | "dsq" | "descartado";
 
 export interface Attendant {
   uuid: string;
@@ -29,6 +30,7 @@ export interface PoliEvent {
   systemType: string | null;
   templateName: string | null;
   body: string | null;
+  noteTag: NoteTag | null;         // marcação de descarte em nota interna (o texto da nota não é guardado)
 }
 
 type Json = Record<string, unknown>;
@@ -89,6 +91,7 @@ export function parsePoliEvent(payload: unknown): PoliEvent | null {
     messageType,
     systemType: isSystem ? messageType : null,
     templateName,
+    noteTag: messageType === "NOTE" ? noteTagOf(str(obj(value.note)?.notes_body)) : null,
     // Nota interna, resumo e outros eventos de sistema não guardam texto.
     body: isSystem ? null : (str(obj(obj(value.components)?.body)?.text) ?? str(template?.message) ?? (messageType ? `[${messageType}]` : null)),
   };
@@ -100,4 +103,21 @@ export function toE164(phone: string | null): string | null {
   if (!digits) return null;
   if (digits.length <= 11) return `+55${digits}`;
   return `+${digits}`;
+}
+
+/**
+ * Marcação de descarte numa nota interna da Poli (decisão de 2026-10-05):
+ * "Finalizado" ou 0, "DSQ" ou 1, "Descartado" ou 2. Sem diferenciar maiúscula, minúscula ou acento.
+ * O código numérico só vale quando a nota é só o número.
+ */
+export function noteTagOf(text: string | null): NoteTag | null {
+  if (!text) return null;
+  const t = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  if (t === "0") return "finalizado";
+  if (t === "1") return "dsq";
+  if (t === "2") return "descartado";
+  if (/\bdescartado\b/.test(t)) return "descartado";
+  if (/\bdsq\b/.test(t)) return "dsq";
+  if (/\bfinalizado\b/.test(t)) return "finalizado";
+  return null;
 }

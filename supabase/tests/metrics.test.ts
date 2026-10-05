@@ -162,15 +162,45 @@ describe("HubSpot: descartado e qualificado saem de Aguardando e Parados", () =>
     expect(m).toEqual({ aguardando: 2, parados: 2 });
     const t = (await db.query<{ aguardando: number }>("select aguardando from painel.team_metrics(now() - interval '1 day', now() + interval '1 minute')")).rows[0];
     expect(t.aguardando).toBe(2);
-    const rows = (await db.query<{ lead_name: string; situacao: string; hubspot_etapa: string | null }>(
-      "select lead_name, situacao, hubspot_etapa from painel.sdr_chats($1, now() - interval '1 day', now() + interval '1 minute') order by lead_name", [sdr.X],
+    const rows = (await db.query<{ lead_name: string; situacao: string; fora_motivo: string | null }>(
+      "select lead_name, situacao, fora_motivo from painel.sdr_chats($1, now() - interval '1 day', now() + interval '1 minute') order by lead_name", [sdr.X],
     )).rows;
     expect(rows).toEqual([
-      { lead_name: "Descartado", situacao: "fora_do_funil", hubspot_etapa: "Descartado" },
-      { lead_name: "Garantir", situacao: "aguardando", hubspot_etapa: null },
-      { lead_name: "Qualificado", situacao: "fora_do_funil", hubspot_etapa: "Qualificado" },
-      { lead_name: "Voltou", situacao: "aguardando", hubspot_etapa: null },
+      { lead_name: "Descartado", situacao: "fora_do_funil", fora_motivo: "Descartado" },
+      { lead_name: "Garantir", situacao: "aguardando", fora_motivo: null },
+      { lead_name: "Qualificado", situacao: "fora_do_funil", fora_motivo: "Qualificado" },
+      { lead_name: "Voltou", situacao: "aguardando", fora_motivo: null },
     ]);
+  });
+});
+
+describe("nota interna de descarte", () => {
+  it("tira o lead de Aguardando até existir no HubSpot um Lead novo, criado depois da nota e fora do descarte", async () => {
+    await db.exec(`insert into painel.hubspot_stages (stage_id, pipeline_id, label, state) values
+      ('1250901141', '841793591', 'Descartado', 'UNQUALIFIED'), ('1250901139', '841793591', 'Garantir Agendamento', 'IN_PROGRESS')`);
+    const a = await lead("X", [["lead", ago(120)]], { name: "Nota" });
+    await db.query("update painel.leads set hubspot_contact_id = 'hn' where id = $1", [a.leadId]);
+    await db.query(
+      `insert into painel.chat_messages (poli_message_id, chat_id, lead_id, sdr_id, sender, sent_at, system_type, note_tag)
+       values ('nota-1', $1, $2, $3, 'system', $4, 'NOTE', 'descartado')`,
+      [a.chats.get("A"), a.leadId, sdr.X, ago(100)],
+    );
+    // lead escreve de novo depois da nota: continua fora
+    await db.query(
+      "insert into painel.chat_messages (poli_message_id, chat_id, lead_id, sdr_id, sender, sent_at) values ('depois', $1, $2, $3, 'lead', $4)",
+      [a.chats.get("A"), a.leadId, sdr.X, ago(50)],
+    );
+    await db.query("select painel.rebuild_leads($1::uuid[])", [[a.leadId]]);
+    const q = async () => (await db.query<{ situacao: string; fora_motivo: string | null }>(
+      "select situacao, fora_motivo from painel.sdr_chats($1, now() - interval '1 day', now() + interval '1 minute')", [sdr.X],
+    )).rows[0];
+    expect(await q()).toEqual({ situacao: "fora_do_funil", fora_motivo: "Descartado (nota)" });
+    // Lead antigo no HubSpot (antes da nota) não traz de volta
+    await db.query("insert into painel.hubspot_leads (hubspot_lead_id, hubspot_contact_id, stage_id, created_at) values ('old', 'hn', '1250901139', $1)", [ago(300)]);
+    expect((await q()).situacao).toBe("fora_do_funil");
+    // Lead novo, criado depois da nota, em etapa aberta: volta a contar
+    await db.query("insert into painel.hubspot_leads (hubspot_lead_id, hubspot_contact_id, stage_id, created_at) values ('new', 'hn', '1250901139', $1)", [ago(10)]);
+    expect(await q()).toEqual({ situacao: "aguardando", fora_motivo: null });
   });
 });
 
