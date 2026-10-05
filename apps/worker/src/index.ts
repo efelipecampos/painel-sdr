@@ -2,7 +2,7 @@
 // Uso: npm start (fica rodando) | npm run once (processa o que estiver pendente e sai)
 //      | npm run rebuild-all (recalcula todos os leads; usar depois de migration que muda o cálculo).
 import { config } from "./config.js";
-import { HubspotClient, syncLeads, syncStages } from "./hubspot/leads.js";
+import { HubspotClient, syncLeads, syncOwners, syncStages } from "./hubspot/leads.js";
 import { createDb, processBatch, rebuildAll, syncRoles } from "./processor.js";
 
 const once = process.argv.includes("--once");
@@ -15,9 +15,10 @@ async function syncHubspot(force: boolean): Promise<void> {
   if (!hubspot) return;
   if (!force && Date.now() - lastHubspotSync < config.hubspotEveryMinutes * 60_000) return;
   const stages = await syncStages(db, hubspot);
+  const owners = await syncOwners(db, hubspot);
   const leads = await syncLeads(db, hubspot);
   lastHubspotSync = Date.now();
-  console.log(`[worker] HubSpot: ${stages} etapas, ${leads} Leads atualizados`);
+  console.log(`[worker] HubSpot: ${stages} etapas, ${owners} donos, ${leads} Leads atualizados`);
 }
 
 async function drain(): Promise<void> {

@@ -11,9 +11,11 @@
 -- 5) Lead fora do funil sai de "Aguardando" e "Parados": Lead mais recente no HubSpot numa etapa de
 --    settings.hubspot_excluded_stages, ou nota interna de descarte (Finalizado/DSQ/Descartado). Na tabela do
 --    SDR aparece como "fora_do_funil", com o motivo. (tabelas e funções em 20261005140000_hubspot_e_notas.sql)
--- 6) A escolha vem da configuração metrics_business_only; o parâmetro p_business_only, se informado,
+-- 6) Novas métricas: "descartados" (card do SDR e Time; Leads que entraram em Descartado no período,
+--    pelo dono do Lead no HubSpot) e "dsq" (só Time; Leads que entraram em DSQ - BR no período).
+-- 7) A escolha vem da configuração metrics_business_only; o parâmetro p_business_only, se informado,
 --    sobrepõe a configuração (útil para comparar).
--- 7) sdr_chats: nova situação "encerrado_sem_resposta" e as mesmas regras de mediana (abaixo).
+-- 8) sdr_chats: nova situação "encerrado_sem_resposta" e as mesmas regras de mediana (abaixo).
 
 update painel.business_hours
    set start_time = '08:20', end_time = '17:45'
@@ -51,7 +53,8 @@ returns table (
   resposta_s integer,
   leads_resposta integer,          -- leads distintos que entraram na mediana de resposta
   aguardando integer,
-  parados integer
+  parados integer,
+  descartados integer        -- Leads do HubSpot que entraram em "Descartado" no período, pelo dono do Lead
 )
 language plpgsql
 stable
@@ -107,6 +110,15 @@ begin
       and painel.fora_do_funil(l.id, l.hubspot_contact_id) is null  -- descartado/qualificado no HubSpot ou por nota não conta
     group by c.sdr_id
   )
+  , disc as (
+    select t2.id as sdr_id, count(*) as n
+    from team t2
+    join painel.sdrs sd on sd.id = t2.id
+    join painel.hubspot_owners o on lower(o.email) = lower(sd.poli_email)
+    join painel.hubspot_leads h on h.owner_id = o.owner_id
+    where h.entered_descartado_at >= p_from and h.entered_descartado_at < p_to
+    group by t2.id
+  )
   select team.id,
          team.name,
          coalesce(msg.abordados, 0)::integer,
@@ -117,11 +129,13 @@ begin
          round(resp.p_all)::integer,
          coalesce(resp.n_all, 0)::integer,
          coalesce(wait.n, 0)::integer,
-         coalesce(wait.stale, 0)::integer
+         coalesce(wait.stale, 0)::integer,
+         coalesce(disc.n, 0)::integer
   from team
   left join msg on msg.sdr_id = team.id
   left join resp on resp.sdr_id = team.id
   left join wait on wait.sdr_id = team.id
+  left join disc on disc.sdr_id = team.id
   order by team.name;
 end;
 $$;
@@ -138,7 +152,9 @@ returns table (
   resposta_s integer,
   leads_resposta integer,          -- leads distintos que entraram na mediana de resposta
   aguardando integer,
-  parados integer
+  parados integer,
+  descartados integer,       -- Leads que entraram em "Descartado" no período (donos SDR)
+  dsq integer                -- Leads que entraram em "DSQ - BR" no período (qualquer dono)
 )
 language plpgsql
 stable
@@ -164,7 +180,15 @@ begin
   select (select count(*) from team)::integer,
          m.abordados::integer, m.templates::integer, m.responderam::integer,
          round(r.p_first)::integer, r.n_first::integer, round(r.p_all)::integer, r.n_all::integer,
-         w.n::integer, w.stale::integer
+         w.n::integer, w.stale::integer,
+         (select count(*)
+            from painel.hubspot_leads h
+            join painel.hubspot_owners o on o.owner_id = h.owner_id
+            join painel.sdrs sd on lower(sd.poli_email) = lower(o.email)
+           where sd.id in (select team.id from team)
+             and h.entered_descartado_at >= p_from and h.entered_descartado_at < p_to)::integer,
+         (select count(*) from painel.hubspot_leads h
+           where h.entered_dsq_at >= p_from and h.entered_dsq_at < p_to)::integer
   from (
     select count(distinct x.lead_id) filter (where x.sender = 'template') as abordados,
            count(*) filter (where x.sender = 'template') as templates,

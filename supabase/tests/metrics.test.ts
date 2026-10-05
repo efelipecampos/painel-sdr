@@ -26,7 +26,7 @@ beforeEach(async () => {
     select set_config('request.jwt.claim.sub', '', false);
     delete from painel.response_events; delete from painel.chat_owner_history; delete from painel.chat_messages;
     delete from painel.chats; delete from painel.leads; delete from painel.profiles; delete from auth.users; delete from painel.sdrs;
-    delete from painel.hubspot_leads; delete from painel.hubspot_stages;
+    delete from painel.hubspot_leads; delete from painel.hubspot_stages; delete from painel.hubspot_owners;
   `);
   for (const [k, role] of [["X", "sdr"], ["Y", "sdr"], ["G", "gestor"]] as const) {
     sdr[k] = (await db.query<{ id: string }>(
@@ -201,6 +201,26 @@ describe("nota interna de descarte", () => {
     // Lead novo, criado depois da nota, em etapa aberta: volta a contar
     await db.query("insert into painel.hubspot_leads (hubspot_lead_id, hubspot_contact_id, stage_id, created_at) values ('new', 'hn', '1250901139', $1)", [ago(10)]);
     expect(await q()).toEqual({ situacao: "aguardando", fora_motivo: null });
+  });
+});
+
+describe("Descartados e DSQ (HubSpot)", () => {
+  it("Descartados no card do SDR pelo dono do Lead; DSQ só no Time, de qualquer dono", async () => {
+    await db.exec(`
+      insert into painel.hubspot_owners (owner_id, email) values ('o-x', 'x@x'), ('o-g', 'g@x');
+      insert into painel.hubspot_leads (hubspot_lead_id, owner_id, entered_descartado_at, entered_dsq_at) values
+        ('d1', 'o-x', '${day("10:00")}', null),
+        ('d2', 'o-x', '${day("16:00")}', null),
+        ('d3', 'o-x', '${day("10:00", "04")}', null),   -- ontem: fora do período
+        ('d4', 'o-g', '${day("11:00")}', null),          -- dono gestor: não é SDR
+        ('q1', 'o-g', null, '${day("09:00")}'),
+        ('q2', 'o-x', null, '${day("12:00")}');
+    `);
+    const m = await metrics();
+    expect(m["SDR X"].descartados).toBe(2);
+    expect(m["SDR Y"].descartados).toBe(0);
+    const t = (await db.query<{ descartados: number; dsq: number }>("select descartados, dsq from painel.team_metrics($1, $2)", [FROM, TO])).rows[0];
+    expect(t).toEqual({ descartados: 2, dsq: 2 });
   });
 });
 

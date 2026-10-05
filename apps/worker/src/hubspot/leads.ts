@@ -38,9 +38,16 @@ export class HubspotClient {
   }
 }
 
+/** Etapas cujas datas de entrada viram métricas ("Descartados" e "DSQ"), vindas de painel.settings. */
+export interface MetricStages {
+  descartado: string | null;
+  dsq: string | null;
+}
+
 /** Converte um Lead da API na linha de painel.hubspot_leads. */
-export function toRow(lead: HubspotLead, contactId: string | null) {
+export function toRow(lead: HubspotLead, contactId: string | null, stages: MetricStages = { descartado: null, dsq: null }) {
   const p = lead.properties;
+  const entered = (stage: string | null) => (stage ? (p[`hs_v2_date_entered_${stage}`] ?? null) : null);
   return {
     hubspot_lead_id: lead.id,
     hubspot_contact_id: contactId,
@@ -49,6 +56,8 @@ export function toRow(lead: HubspotLead, contactId: string | null) {
     owner_id: p.hubspot_owner_id ?? null,
     created_at: p.hs_createdate ?? null,
     updated_at: p.hs_lastmodifieddate ?? null,
+    entered_descartado_at: entered(stages.descartado),
+    entered_dsq_at: entered(stages.dsq),
     synced_at: new Date().toISOString(),
   };
 }
@@ -72,9 +81,33 @@ export async function syncStages(db: SupabaseClient, hs: HubspotClient): Promise
   return rows.length;
 }
 
+/** Atualiza os donos do HubSpot (id → e-mail), para ligar o dono do Lead ao SDR. */
+export async function syncOwners(db: SupabaseClient, hs: HubspotClient): Promise<number> {
+  type Owner = { id: string; email?: string; firstName?: string; lastName?: string };
+  const rows: Record<string, string | null>[] = [];
+  let after: string | undefined;
+  do {
+    const page = await hs.call<{ results: Owner[]; paging?: { next?: { after: string } } }>(`/crm/v3/owners?limit=100${after ? `&after=${after}` : ""}`);
+    for (const o of page.results) {
+      rows.push({ owner_id: String(o.id), email: o.email?.toLowerCase() ?? null, name: [o.firstName, o.lastName].filter(Boolean).join(" ") || null, synced_at: new Date().toISOString() });
+    }
+    after = page.paging?.next?.after;
+  } while (after);
+  check(await db.schema("painel").from("hubspot_owners").upsert(rows), "gravar donos do HubSpot");
+  return rows.length;
+}
+
+async function metricStages(db: SupabaseClient): Promise<MetricStages> {
+  const rows = check(await db.schema("painel").from("settings").select("key, value").in("key", ["hubspot_stage_descartado", "hubspot_stage_dsq"]), "ler etapas das métricas");
+  const get = (k: string) => { const r = rows.find((x: { key: string }) => x.key === k); return r ? String(r.value) : null; };
+  return { descartado: get("hubspot_stage_descartado"), dsq: get("hubspot_stage_dsq") };
+}
+
 /** Busca e grava os Leads modificados desde o cursor. Devolve quantos foram gravados. */
 export async function syncLeads(db: SupabaseClient, hs: HubspotClient): Promise<number> {
   const p = db.schema("painel");
+  const stages = await metricStages(db);
+  const extra = [stages.descartado, stages.dsq].filter(Boolean).map((id) => `hs_v2_date_entered_${id}`);
   const cur = check(await p.from("settings").select("value").eq("key", CURSOR_KEY), "ler cursor do HubSpot");
   let since = Date.parse(cur.length ? String(cur[0].value) : INITIAL_SINCE);
   let total = 0;
@@ -89,7 +122,7 @@ export async function syncLeads(db: SupabaseClient, hs: HubspotClient): Promise<
         {
           filterGroups: [{ filters: [{ propertyName: "hs_lastmodifieddate", operator: "GTE", value: String(since) }] }],
           sorts: [{ propertyName: "hs_lastmodifieddate", direction: "ASCENDING" }],
-          properties: ["hs_pipeline", "hs_pipeline_stage", "hubspot_owner_id", "hs_createdate", "hs_lastmodifieddate"],
+          properties: ["hs_pipeline", "hs_pipeline_stage", "hubspot_owner_id", "hs_createdate", "hs_lastmodifieddate", ...extra],
           limit: PAGE,
           after,
         },
@@ -101,7 +134,7 @@ export async function syncLeads(db: SupabaseClient, hs: HubspotClient): Promise<
         { inputs: page.results.map((l) => ({ id: l.id })) },
       );
       const contactOf = new Map(assoc.results.map((a) => [a.from.id, a.to[0] ? String(a.to[0].toObjectId) : null]));
-      check(await p.from("hubspot_leads").upsert(page.results.map((l) => toRow(l, contactOf.get(l.id) ?? null))), "gravar Leads do HubSpot");
+      check(await p.from("hubspot_leads").upsert(page.results.map((l) => toRow(l, contactOf.get(l.id) ?? null, stages))), "gravar Leads do HubSpot");
 
       total += page.results.length;
       fetched += page.results.length;

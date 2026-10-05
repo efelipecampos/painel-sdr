@@ -22,13 +22,27 @@ create table painel.hubspot_leads (
   owner_id text,
   created_at timestamptz,
   updated_at timestamptz,     -- hs_lastmodifieddate
+  entered_descartado_at timestamptz, -- quando entrou na etapa "Descartado" (settings.hubspot_stage_descartado)
+  entered_dsq_at timestamptz,        -- quando entrou na etapa "DSQ - BR" (settings.hubspot_stage_dsq)
   synced_at timestamptz not null default now()
 );
+create index hubspot_leads_descartado_idx on painel.hubspot_leads (entered_descartado_at) where entered_descartado_at is not null;
+create index hubspot_leads_dsq_idx on painel.hubspot_leads (entered_dsq_at) where entered_dsq_at is not null;
+
+-- Donos do HubSpot (para ligar o dono do Lead ao SDR pelo e-mail).
+create table painel.hubspot_owners (
+  owner_id text primary key,
+  email text,
+  name text,
+  synced_at timestamptz not null default now()
+);
+create index hubspot_owners_email_idx on painel.hubspot_owners (lower(email));
 create index hubspot_leads_contact_idx on painel.hubspot_leads (hubspot_contact_id, created_at desc);
 
 alter table painel.hubspot_stages enable row level security;
 alter table painel.hubspot_leads enable row level security;
-grant all on painel.hubspot_stages, painel.hubspot_leads to service_role;
+alter table painel.hubspot_owners enable row level security;
+grant all on painel.hubspot_stages, painel.hubspot_leads, painel.hubspot_owners to service_role;
 
 -- Lead mais recente de cada contato no HubSpot.
 create view painel.contact_hubspot_stage
@@ -44,7 +58,10 @@ grant select on painel.contact_hubspot_stage to service_role;
 
 -- Etapas que tiram o lead de "Aguardando" e "Parados" ([New] Pipeline SDR: Descartado, DSQ - BR, Qualificado).
 insert into painel.settings (key, value) values
-  ('hubspot_excluded_stages', '["1250901141", "1250901142", "1358962969"]')
+  ('hubspot_excluded_stages', '["1250901141", "1250901142", "1358962969"]'),
+  -- Métricas "Descartados" (card do SDR, pelo dono do Lead) e "DSQ" (só no Time). Decisão de 2026-10-05.
+  ('hubspot_stage_descartado', '"1250901141"'),
+  ('hubspot_stage_dsq', '"1250901142"')
 on conflict (key) do nothing;
 
 -- O lead (painel.leads) está numa etapa excluída no HubSpot? Devolve o nome da etapa, ou null.
