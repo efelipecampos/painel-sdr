@@ -3,9 +3,14 @@
 --    (início do bloco), não pelo momento da resposta. Lead que escreveu no período e ainda não foi
 --    respondido fica fora da mediana (aparece em "Aguardando").
 -- 2) Com "Só horário comercial" ligado, só entram nas medianas os blocos em que o lead escreveu dentro
---    do expediente (seg–sex 08:00–18:00, sem feriados, conforme as configurações), e o tempo conta só
---    o expediente. Com o botão desligado, entra tudo em tempo corrido.
--- 3) sdr_chats: nova situação "encerrado_sem_resposta" (abaixo).
+--    do expediente (conforme as configurações, sem feriados). O tempo é sempre o real (relógio):
+--    o que importa é se quem escreveu no horário de trabalho foi atendido rápido. Desligado: entra tudo.
+-- 3) Horário comercial: segunda a sexta, 08:20–17:45 (decisão do Felipe, 2026-10-05).
+-- 4) sdr_chats: nova situação "encerrado_sem_resposta" e as mesmas regras de mediana (abaixo).
+
+update painel.business_hours
+   set start_time = '08:20', end_time = '17:45'
+ where weekday between 1 and 5;
 
 create index response_events_sdr_block_idx on painel.response_events (sdr_id, lead_block_started_at);
 
@@ -64,10 +69,10 @@ begin
   ),
   resp as (
     select r.sdr_id,
-           percentile_cont(0.5) within group (order by case when p_business_only then r.seconds_business else r.seconds_24h end)
+           percentile_cont(0.5) within group (order by r.seconds_24h)
              filter (where r.is_first_response) as p_first,
            count(*) filter (where r.is_first_response) as n_first,
-           percentile_cont(0.5) within group (order by case when p_business_only then r.seconds_business else r.seconds_24h end) as p_all,
+           percentile_cont(0.5) within group (order by r.seconds_24h) as p_all,
            count(*) as n_all
     from painel.response_events r
     where r.lead_block_started_at >= p_from and r.lead_block_started_at < p_to
@@ -145,10 +150,10 @@ begin
     where x.sent_at >= p_from and x.sent_at < p_to and x.sdr_id in (select team.id from team)
   ) m,
   (
-    select percentile_cont(0.5) within group (order by case when p_business_only then y.seconds_business else y.seconds_24h end)
+    select percentile_cont(0.5) within group (order by y.seconds_24h)
              filter (where y.is_first_response) as p_first,
            count(*) filter (where y.is_first_response) as n_first,
-           percentile_cont(0.5) within group (order by case when p_business_only then y.seconds_business else y.seconds_24h end) as p_all,
+           percentile_cont(0.5) within group (order by y.seconds_24h) as p_all,
            count(*) as n_all
     from painel.response_events y
     where y.lead_block_started_at >= p_from and y.lead_block_started_at < p_to
@@ -240,10 +245,11 @@ begin
   ),
   resp as (
     select r.chat_id,
-           min(case when p_business_only then r.seconds_business else r.seconds_24h end) filter (where r.is_first_response) as first_s,
-           percentile_cont(0.5) within group (order by case when p_business_only then r.seconds_business else r.seconds_24h end) as med_s
+           min(r.seconds_24h) filter (where r.is_first_response) as first_s,
+           percentile_cont(0.5) within group (order by r.seconds_24h) as med_s
     from painel.response_events r
     where r.chat_id in (select base.id from base)
+      and (not p_business_only or painel.is_business_time(r.lead_block_started_at))
     group by r.chat_id
   ),
   linhas as (

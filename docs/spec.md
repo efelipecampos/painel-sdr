@@ -59,7 +59,7 @@ Estas definições foram fechadas como padrão da V1. Qualquer mudança é decis
 | Qualidade da carteira | Média do score mais recente de cada lead da carteira atual do SDR. Leads sem nenhuma mensagem do lead ficam fora e aparecem como "não analisados". |
 | Reuniões | Chats com status de reunião preenchido no período (pela data da última mudança de status). Taxa = reuniões ÷ leads abordados. Conversão para análise de padrão = status **Validada**. |
 
-**Horário comercial**: quando o filtro "Só horário comercial" está ligado, cada intervalo de tempo conta apenas os segundos dentro dos horários configurados por dia da semana, excluindo feriados cadastrados. Além disso, as medianas de 1ª resposta e de resposta só consideram os blocos em que o lead escreveu dentro do expediente. O filtro vem ligado por padrão na tela. Com o filtro desligado, conta 24h corrido. Os dois valores são gravados em cada evento de resposta, para o filtro não precisar recalcular nada.
+**Horário comercial**: quando o filtro "Só horário comercial" está ligado, cada intervalo de tempo conta apenas os segundos dentro dos horários configurados por dia da semana, excluindo feriados cadastrados. Nas medianas de 1ª resposta e de resposta, o filtro faz outra coisa: só considera os blocos em que o lead escreveu dentro do expediente, e o tempo é sempre o real (de relógio). O filtro vem ligado por padrão na tela. Horário padrão: segunda a sexta, 08:20–17:45. Com o filtro desligado, conta 24h corrido. Os dois valores são gravados em cada evento de resposta, para o filtro não precisar recalcular nada.
 
 ## 3. Schema (Postgres / Supabase)
 

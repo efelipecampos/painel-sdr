@@ -89,9 +89,9 @@ describe("sdr_metrics", () => {
     expect(m).toMatchObject({ primeiras_respostas: 2, primeira_resposta_s: 90, respostas: 3, resposta_s: 120 });
   });
 
-  it("só horário comercial: só leads que escreveram no expediente, e o relógio só corre no expediente", async () => {
-    await lead("X", [["lead", day("17:00")], ["sdr", day("09:00", "06")]]); // escreveu 17:00: 16h corridas, 2h comerciais
-    await lead("X", [["lead", day("19:00")], ["sdr", day("08:30", "06")]]); // escreveu 19:00 (fora do expediente): 13,5h corridas
+  it("só horário comercial: só leads que escreveram no expediente (08:20–17:45), com o tempo real", async () => {
+    await lead("X", [["lead", day("17:00")], ["sdr", day("09:00", "06")]]); // escreveu 17:00 (no expediente): 16h reais
+    await lead("X", [["lead", day("19:00")], ["sdr", day("08:30", "06")]]); // escreveu 19:00 (fora do expediente): 13,5h
     const m = await db.query<{ c: number; nc: number; b: number; nb: number }>(
       `select (select resposta_s from painel.sdr_metrics($1, $2, false) where name = 'SDR X') as c,
               (select respostas from painel.sdr_metrics($1, $2, false) where name = 'SDR X') as nc,
@@ -99,7 +99,7 @@ describe("sdr_metrics", () => {
               (select respostas from painel.sdr_metrics($1, $2, true) where name = 'SDR X') as nb`,
       [FROM, TO],
     );
-    expect(m.rows[0]).toEqual({ c: (16 + 13.5) / 2 * 3600, nc: 2, b: 2 * 3600, nb: 1 });
+    expect(m.rows[0]).toEqual({ c: (16 + 13.5) / 2 * 3600, nc: 2, b: 16 * 3600, nb: 1 });
   });
 
   it("aguardando e parados: estado de agora, com o limite de 30 min", async () => {

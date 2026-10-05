@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { PGlite } from "@electric-sql/pglite";
 import { createTestDb } from "./db";
 
-// Horário padrão das migrations: seg–sex 08:00–18:00, fuso America/Sao_Paulo (-03).
+// Horário dos testes: seg–sex 08:00–18:00 (definido no beforeEach), fuso America/Sao_Paulo (-03).
 // Datas de referência: 02/10/2026 é sexta; 05/10/2026 é segunda; 12/10/2026 é segunda.
 
 let db: PGlite;
@@ -16,7 +16,9 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  // Horário fixo dos testes (independe do valor configurado em produção): seg–sex 08:00–18:00.
   await db.exec(`
+    update painel.business_hours set enabled = weekday between 1 and 5, start_time = '08:00', end_time = '18:00';
     delete from painel.holidays;
     update painel.settings set value = 'true' where key = 'holidays_off';
   `);

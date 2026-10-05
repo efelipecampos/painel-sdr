@@ -164,11 +164,11 @@ describe("rebuild_leads: tempo de resposta", () => {
   });
 
   it("guarda também o tempo em horário comercial", async () => {
-    // Segunda 17:30 → terça 08:30: 15h corridas, 1h em horário comercial (17:30–18:00 + 08:00–08:30).
+    // Segunda 17:30 → terça 08:30: 15h corridas; 25 min no horário configurado (17:30–17:45 + 08:20–08:30).
     const s = await scenario([["lead", 8.5 * 3600], ["sdr", 23.5 * 3600]]);
     const r = await responses(s.lead);
     expect(r[0].secs).toBe(15 * 3600);
-    expect(r[0].biz).toBe(3600);
+    expect(r[0].biz).toBe(25 * 60);
   });
 
   it("é idempotente e não depende da ordem em que as mensagens chegaram", async () => {
