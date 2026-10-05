@@ -156,6 +156,17 @@ describe("sdr_chats", () => {
     expect(rows[1]).toMatchObject({ origem: "lead", primeira_resposta_s: 120 });
   });
 
+  it("chat fechado com o lead sem resposta aparece como encerrado sem resposta", async () => {
+    const { chats } = await lead("X", [["lead", ago(20)], ["lead", ago(15)]], { name: "Transferido" });
+    await db.query("update painel.chat_messages set attendance_status = 'CLOSED' where chat_id = $1", [chats.get("A")]);
+    const leadId = (await db.query<{ id: string }>("select lead_id as id from painel.chats where id = $1", [chats.get("A")])).rows[0].id;
+    await db.query("select painel.rebuild_leads($1::uuid[])", [[leadId]]);
+    const rows = (await db.query<{ situacao: string }>(
+      "select situacao from painel.sdr_chats($1, now() - interval '1 day', now() + interval '1 minute')", [sdr.X],
+    )).rows;
+    expect(rows.map((r) => r.situacao)).toEqual(["encerrado_sem_resposta"]);
+  });
+
   it("filtros, busca por nome ou telefone e paginação", async () => {
     await lead("X", [["lead", ago(40)]], { name: "Clínica Sorriso", phone: "+5562912341187" });
     await lead("X", [["template", ago(30)]], { name: "Pet Shop", phone: "+5511988887777" });
