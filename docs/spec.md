@@ -40,7 +40,7 @@ O papel do atendente (SDR ou Closer) vem das listas `POLI_SDR_EMAILS` / `POLI_CL
 
 Estas definições foram fechadas como padrão da V1. Qualquer mudança é decisão do Felipe.
 
-**Período**: sempre `[de, até]` escolhido na tela, no fuso `America/Sao_Paulo`. Padrão: hoje, 00:00 a 23:59.
+**Período**: sempre `[de, até]` escolhido na tela, no fuso `America/Sao_Paulo`. Padrão: hoje, 00:00 a 23:59. Nas funções, o intervalo é semiaberto: `[de, até)`.
 
 **Dono do lead (SDR)**: o atendente responsável pelo chat no Poli **no momento de cada evento**. Cada mensagem guarda o SDR responsável naquele instante. Se o chat for transferido para um closer, o que acontece depois disso não conta para o SDR.
 
@@ -50,10 +50,12 @@ Estas definições foram fechadas como padrão da V1. Qualquer mudança é decis
 |---|---|
 | Leads abordados | Leads distintos que receberam ao menos 1 template enviado pelo SDR dentro do período. Um lead abordado duas vezes conta uma vez. |
 | Templates enviados | Total de mensagens de template enviadas pelo SDR no período (conta repetidos). |
+| Leads que responderam | Leads distintos que mandaram pelo menos 1 mensagem em chat do SDR (dono no momento da mensagem) dentro do período. |
 | Tempo de resposta (mediana) | **Mediana**, no período, do tempo entre o **início de um bloco de mensagens do lead** e a **próxima mensagem da equipe para o mesmo lead**, em qualquer atendimento dele. Mensagem da equipe = mensagem escrita por uma pessoa (SDR, closer ou gestor; não precisa ser o dono do chat) ou template enviado manualmente por uma pessoa. Template do app token, mensagens de bot, automações e eventos de sistema (nota interna, resumo, transferência) NÃO contam como resposta e não interrompem o bloco. Bloco = sequência de mensagens do lead sem mensagem da equipe no meio; o relógio começa na primeira mensagem do bloco. O tempo é creditado ao SDR dono do atendimento onde o lead escreveu, no momento da primeira mensagem do bloco. Entra no período pelo horário da resposta. Blocos ainda sem resposta não entram (entram em "Aguardando"). |
 | Tempo de primeira resposta (mediana) | Mesmo cálculo, mas só para o bloco que começa na **primeira mensagem do lead em cada atendimento**. Caso típico: o app token dispara o template no cadastro, o lead responde quando quiser, e mede-se da resposta do lead até a primeira mensagem da equipe. |
 | Aguardando resposta | Chats **abertos**, com o SDR como responsável agora, cuja última mensagem do lead ou da equipe é do lead. Estado atual (não depende do período). Aberto = sem evento de encerramento da Poli e sem mensagem do lead ou da equipe em outro atendimento do mesmo lead depois da última atividade deste (a Poli às vezes mantém mais de um atendimento do mesmo lead sem encerrar o antigo). |
 | Parados há +X min | Subconjunto de "Aguardando" em que o tempo desde o início do bloco sem resposta passa do limite configurado (padrão 30 min). Se "contar só horário comercial" estiver ligado nas configurações, esse tempo é contado em horário comercial. |
+| Carteira | Leads em aberto no funil do SDR no HubSpot (carteira protegida por 30 dias: lead que converte de novo no site nesse prazo volta para o mesmo SDR). Vem do HubSpot, entra na Fase 6. |
 | Qualidade da carteira | Média do score mais recente de cada lead da carteira atual do SDR. Leads sem nenhuma mensagem do lead ficam fora e aparecem como "não analisados". |
 | Reuniões | Chats com status de reunião preenchido no período (pela data da última mudança de status). Taxa = reuniões ÷ leads abordados. Conversão para análise de padrão = status **Validada**. |
 

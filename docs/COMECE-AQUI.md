@@ -106,11 +106,11 @@ A Fase 2 mexe em produção e em outro repositório. Não edite a integração a
 | Subdomínio do painel (sugestão: `painel-sdr.camposai.com.br`) | Fase 5 |
 | Ligar ou não a nota diária no HubSpot (`DAILY_NOTES_ENABLED`) | Depois da Fase 2 |
 | Definição escrita de cada status de reunião (Agendada, Validada, No show, Invalidada, Cancelada) | Fase 6 |
+| Carteira: qual objeto/campo do HubSpot define "lead em aberto no funil do SDR" | Fase 6 |
 | Quem pode mudar status de reunião (admin, gestor, closer) | Fase 6 |
 | Critérios reais de qualidade do lead e contexto para o Claude | Fase 7 |
 | Modelo e limite de gasto da API da Anthropic | Fase 7 |
 | Retenção de conteúdo de mensagens (LGPD) | Fase 8 |
-| Quem iniciou: por atendimento (atual) ou pelo primeiro atendimento do lead | Fase 4 |
 | Lista de feriados | Fase 5 |
 
 ## 8. Decisões
@@ -136,7 +136,10 @@ Registre aqui toda decisão nova, com data.
 - 2026-10-04 — Tempo de resposta e tempo de primeira resposta usam **mediana**, não média. Resposta = mensagem escrita por pessoa da equipe ou template enviado manualmente; template do app token e bot não contam. A resposta pode vir em qualquer atendimento do mesmo lead. Primeira resposta = primeira mensagem do lead em cada atendimento.
 - 2026-10-04 — Chat aberto = sem encerramento da Poli e sem atividade (lead ou equipe) em outro atendimento do mesmo lead depois da última atividade dele.
 - 2026-10-04 — Papéis: SDRs = 8 e-mails (inclui Lia); closers = 11; gestores = Iago, Felipe, Hugo, Marcos. Listas em `POLI_SDR_EMAILS`, `POLI_CLOSER_EMAILS`, `POLI_MANAGER_EMAILS`. Tifany e Poliana são de outros departamentos. Cards mostram só SDRs.
-- 2026-10-04 — Quem iniciou a conversa (`painel.chats.initiated_by`): por atendimento, pela primeira mensagem sem contar eventos de sistema. Do lead = "lead"; de pessoa da equipe, template ou bot = "poli".
+- 2026-10-05 — Quem iniciou é por **lead** (`painel.leads.initiated_by`): primeira mensagem, sem eventos de sistema, do primeiro atendimento do lead. Responde "o lead veio por iniciativa dele ou fomos atrás?". Aparece só como coluna "Origem" na tabela de chats do SDR. (`painel.chats.initiated_by`, por atendimento, continua calculado mas não é usado na tela.)
+- 2026-10-05 — Nova métrica no card: **Leads que responderam** = leads distintos que mandaram pelo menos 1 mensagem em chat do SDR no período.
+- 2026-10-05 — **Carteira** = leads em aberto no funil do SDR no HubSpot (proteção de 30 dias já existe no HubSpot). Entra na Fase 6, junto com a qualidade da carteira. Até lá o card mostra vazio.
+- 2026-10-05 — Tabela do SDR mostra os chats em que ele é o dono e que tiveram mensagem no período. Contagens e tempos de cada linha são do chat inteiro.
 - 2026-10-05 — Sem histórico anterior e sem API da Poli por enquanto: o painel começa em 01/10/2026 07:08 (primeiro evento em `raw_events`). Chats que já existiam antes disso podem ter "quem iniciou" e a primeira resposta imprecisos. A ideia de backfill desde 25/09 foi abandonada.
 - 2026-10-05 — Felipe conferiu 3 chats reais no Poli (linha do tempo e tempos de resposta): tudo certo.
 - 2026-10-05 — Lia passa a ser SDR também na integração (`POLI_SDR_EMAILS` do `.env` da VPS). Efeito colateral aceito: as mensagens dela passam a ser registradas no HubSpot, como as dos outros SDRs.
