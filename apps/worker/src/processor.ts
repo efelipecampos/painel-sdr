@@ -139,6 +139,18 @@ export async function rebuildLeads(db: SupabaseClient, leadIds: string[]): Promi
   }
 }
 
+/** Recalcula todos os leads (usar depois de uma migration que muda o cálculo). */
+export async function rebuildAll(db: SupabaseClient): Promise<number> {
+  const ids: string[] = [];
+  for (let from = 0; ; from += 1000) {
+    const rows = check(await db.schema("painel").from("leads").select("id").order("id").range(from, from + 999), "listar leads");
+    ids.push(...rows.map((r: { id: string }) => r.id));
+    if (rows.length < 1000) break;
+  }
+  await rebuildLeads(db, ids);
+  return ids.length;
+}
+
 /** Processa um lote a partir do cursor. Devolve quantos eventos crus foram lidos. */
 export async function processBatch(db: SupabaseClient): Promise<{ read: number; ignored: number; leads: number; cursor: number }> {
   const cursor = await getCursor(db);

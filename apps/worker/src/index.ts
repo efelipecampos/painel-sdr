@@ -1,9 +1,11 @@
 // Worker do painel: lê public.raw_events e monta o schema painel.
-// Uso: npm start (fica rodando) | npm run once (processa o que estiver pendente e sai).
+// Uso: npm start (fica rodando) | npm run once (processa o que estiver pendente e sai)
+//      | npm run rebuild-all (recalcula todos os leads; usar depois de migration que muda o cálculo).
 import { config } from "./config.js";
-import { createDb, processBatch, syncRoles } from "./processor.js";
+import { createDb, processBatch, rebuildAll, syncRoles } from "./processor.js";
 
 const once = process.argv.includes("--once");
+const rebuild = process.argv.includes("--rebuild-all");
 const db = createDb();
 
 async function drain(): Promise<void> {
@@ -15,7 +17,9 @@ async function drain(): Promise<void> {
   }
 }
 
-if (once) {
+if (rebuild) {
+  console.log(`[worker] ${await rebuildAll(db)} leads recalculados`);
+} else if (once) {
   await drain();
 } else {
   console.log(`[worker] iniciado; lendo raw_events a cada ${config.pollSeconds}s`);
