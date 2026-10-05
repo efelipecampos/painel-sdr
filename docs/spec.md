@@ -59,7 +59,7 @@ Estas definições foram fechadas como padrão da V1. Qualquer mudança é decis
 | Qualidade da carteira | Média do score mais recente de cada lead da carteira atual do SDR. Leads sem nenhuma mensagem do lead ficam fora e aparecem como "não analisados". |
 | Reuniões | Chats com status de reunião preenchido no período (pela data da última mudança de status). Taxa = reuniões ÷ leads abordados. Conversão para análise de padrão = status **Validada**. |
 
-**Horário comercial**: quando o filtro "Só horário comercial" está ligado, cada intervalo de tempo conta apenas os segundos dentro dos horários configurados por dia da semana, excluindo feriados cadastrados. Nas medianas de 1ª resposta e de resposta, o filtro faz outra coisa: só considera os blocos em que o lead escreveu dentro do expediente, e o tempo é sempre o real (de relógio). O filtro vem ligado por padrão na tela. Horário padrão: segunda a sexta, 08:20–17:45. Com o filtro desligado, conta 24h corrido. Os dois valores são gravados em cada evento de resposta, para o filtro não precisar recalcular nada.
+**Horário comercial**: quando o filtro "Só horário comercial" está ligado, cada intervalo de tempo conta apenas os segundos dentro dos horários configurados por dia da semana, excluindo feriados cadastrados. Nas medianas de 1ª resposta e de resposta, o filtro faz outra coisa: só considera os blocos em que o lead escreveu dentro do expediente, e o tempo é sempre o real (de relógio). A escolha é uma opção das Configurações (`metrics_business_only`, padrão marcada), não um botão na tela principal. Horário padrão: segunda a sexta, 08:20–17:45. Com o filtro desligado, conta 24h corrido. Os dois valores são gravados em cada evento de resposta, para o filtro não precisar recalcular nada.
 
 ## 3. Schema (Postgres / Supabase)
 
@@ -270,9 +270,9 @@ No painel:
 Reproduzir `design/Main.dc.html`, `design/SDR.dc.html` e `design/Configuracoes.dc.html` com as cores e fontes de `design/tokens.json` (tema escuro, fonte Rubik). A cor laranja `#f0a93b` de "parado" é uma adição ao design system.
 
 - `/login`: e-mail (link mágico ou senha).
-- `/`: painel com filtros de período, "Só horário comercial", ordenação, linha do time e cards por SDR. Atualiza sozinho a cada 60 s.
+- `/`: painel com filtro de período, ordenação, linha do time e cards por SDR. Atualiza sozinho a cada 60 s. O "Só horário comercial" NÃO fica nesta tela (decisão de 2026-10-05): é uma opção das Configurações.
 - `/sdr/[id]`: indicadores do SDR, tabela de chats com filtros, busca, paginação e seletor de status de reunião.
-- `/configuracoes` (só admin): horário comercial, feriados, limite de "parado", contexto e critérios de qualidade.
+- `/configuracoes` (só admin): horário comercial, feriados, opção "Medir tempos só em horário comercial" (`settings.metrics_business_only`, padrão marcada), limite de "parado", contexto e critérios de qualidade.
 
 ## 8. Deploy
 

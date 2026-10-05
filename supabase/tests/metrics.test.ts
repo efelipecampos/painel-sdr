@@ -102,6 +102,18 @@ describe("sdr_metrics", () => {
     expect(m.rows[0]).toEqual({ c: (16 + 13.5) / 2 * 3600, nc: 2, b: 16 * 3600, nb: 1 });
   });
 
+  it("sem parâmetro, segue a configuração metrics_business_only (padrão: marcada)", async () => {
+    await lead("X", [["lead", day("09:00")], ["sdr", day("09:10")]]);  // no expediente: 600s
+    await lead("X", [["lead", day("20:00")], ["sdr", day("20:01")]]);  // fora do expediente: 60s
+    const q = async () => (await db.query<{ n: number }>(
+      "select leads_resposta as n from painel.sdr_metrics($1, $2) where name = 'SDR X'", [FROM, TO],
+    )).rows[0].n;
+    expect(await q()).toBe(1);
+    await db.exec("update painel.settings set value = 'false' where key = 'metrics_business_only'");
+    expect(await q()).toBe(2);
+    await db.exec("update painel.settings set value = 'true' where key = 'metrics_business_only'");
+  });
+
   it("aguardando e parados: estado de agora, com o limite de 30 min", async () => {
     await lead("X", [["sdr", ago(120)], ["lead", ago(40)]]);                // parado
     await lead("X", [["lead", ago(5)]]);                                    // aguardando, não parado

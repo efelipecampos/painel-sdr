@@ -8,11 +8,18 @@
 -- 3) Horário comercial: segunda a sexta, 08:20–17:45 (decisão do Felipe, 2026-10-05).
 -- 4) Os contadores ao lado das medianas passam a ser LEADS distintos (não respostas):
 --    leads_primeira_resposta e leads_resposta.
--- 5) sdr_chats: nova situação "encerrado_sem_resposta" e as mesmas regras de mediana (abaixo).
+-- 5) A escolha vem da configuração metrics_business_only; o parâmetro p_business_only, se informado,
+--    sobrepõe a configuração (útil para comparar).
+-- 6) sdr_chats: nova situação "encerrado_sem_resposta" e as mesmas regras de mediana (abaixo).
 
 update painel.business_hours
    set start_time = '08:20', end_time = '17:45'
  where weekday between 1 and 5;
+
+-- "Só horário comercial" vira uma opção das Configurações (não é mais botão na tela principal).
+-- Marcada: medianas só com leads que escreveram no expediente. Desmarcada: qualquer mensagem do lead.
+insert into painel.settings (key, value) values ('metrics_business_only', 'true')
+on conflict (key) do nothing;
 
 create index response_events_sdr_block_idx on painel.response_events (sdr_id, lead_block_started_at);
 
@@ -29,7 +36,7 @@ revoke execute on function painel.is_business_time(timestamptz) from public, ano
 grant execute on function painel.is_business_time(timestamptz) to authenticated, service_role;
 
 drop function painel.sdr_metrics(timestamptz, timestamptz, boolean);
-create function painel.sdr_metrics(p_from timestamptz, p_to timestamptz, p_business_only boolean default false)
+create function painel.sdr_metrics(p_from timestamptz, p_to timestamptz, p_business_only boolean default null)
 returns table (
   sdr_id uuid,
   name text,
@@ -50,6 +57,9 @@ set search_path = ''
 as $$
 #variable_conflict use_column
 declare
+  v_biz boolean := coalesce(p_business_only,
+                            (select (s.value #>> '{}')::boolean from painel.settings s where s.key = 'metrics_business_only'),
+                            true);
   v_stale_min integer := coalesce((select (s.value #>> '{}')::integer from painel.settings s where s.key = 'stale_minutes'), 30);
   v_stale_biz boolean := coalesce((select (s.value #>> '{}')::boolean from painel.settings s where s.key = 'stale_business_only'), false);
 begin
@@ -80,7 +90,7 @@ begin
     from painel.response_events r
     join painel.chats c on c.id = r.chat_id
     where r.lead_block_started_at >= p_from and r.lead_block_started_at < p_to
-      and (not p_business_only or painel.is_business_time(r.lead_block_started_at)) and r.sdr_id in (select team.id from team)
+      and (not v_biz or painel.is_business_time(r.lead_block_started_at)) and r.sdr_id in (select team.id from team)
     group by r.sdr_id
   ),
   wait as (
@@ -112,7 +122,7 @@ end;
 $$;
 
 drop function painel.team_metrics(timestamptz, timestamptz, boolean);
-create function painel.team_metrics(p_from timestamptz, p_to timestamptz, p_business_only boolean default false)
+create function painel.team_metrics(p_from timestamptz, p_to timestamptz, p_business_only boolean default null)
 returns table (
   sdrs integer,
   leads_abordados integer,
@@ -132,6 +142,9 @@ set search_path = ''
 as $$
 #variable_conflict use_column
 declare
+  v_biz boolean := coalesce(p_business_only,
+                            (select (s.value #>> '{}')::boolean from painel.settings s where s.key = 'metrics_business_only'),
+                            true);
   v_stale_min integer := coalesce((select (s.value #>> '{}')::integer from painel.settings s where s.key = 'stale_minutes'), 30);
   v_stale_biz boolean := coalesce((select (s.value #>> '{}')::boolean from painel.settings s where s.key = 'stale_business_only'), false);
 begin
@@ -163,7 +176,7 @@ begin
     from painel.response_events y
     join painel.chats yc on yc.id = y.chat_id
     where y.lead_block_started_at >= p_from and y.lead_block_started_at < p_to
-      and (not p_business_only or painel.is_business_time(y.lead_block_started_at)) and y.sdr_id in (select team.id from team)
+      and (not v_biz or painel.is_business_time(y.lead_block_started_at)) and y.sdr_id in (select team.id from team)
   ) r,
   (
     select count(*) as n,
@@ -177,11 +190,12 @@ $$;
 
 -- sdr_chats: nova situação "encerrado_sem_resposta" — chat fechado (encerrado, transferido ou substituído)
 -- em que a última mensagem do lead ficou sem resposta da equipe. Antes aparecia como "respondido".
-create or replace function painel.sdr_chats(
+drop function painel.sdr_chats(uuid, timestamptz, timestamptz, boolean, text, text, integer, integer);
+create function painel.sdr_chats(
   p_sdr uuid,
   p_from timestamptz,
   p_to timestamptz,
-  p_business_only boolean default false,
+  p_business_only boolean default null,
   p_filter text default 'all',
   p_search text default null,
   p_limit integer default 50,
@@ -212,6 +226,9 @@ set search_path = ''
 as $$
 #variable_conflict use_column
 declare
+  v_biz boolean := coalesce(p_business_only,
+                            (select (s.value #>> '{}')::boolean from painel.settings s where s.key = 'metrics_business_only'),
+                            true);
   v_stale_min integer := coalesce((select (s.value #>> '{}')::integer from painel.settings s where s.key = 'stale_minutes'), 30);
   v_stale_biz boolean := coalesce((select (s.value #>> '{}')::boolean from painel.settings s where s.key = 'stale_business_only'), false);
   v_search text := nullif(trim(coalesce(p_search, '')), '');
@@ -255,7 +272,7 @@ begin
            percentile_cont(0.5) within group (order by r.seconds_24h) as med_s
     from painel.response_events r
     where r.chat_id in (select base.id from base)
-      and (not p_business_only or painel.is_business_time(r.lead_block_started_at))
+      and (not v_biz or painel.is_business_time(r.lead_block_started_at))
     group by r.chat_id
   ),
   linhas as (
@@ -309,3 +326,5 @@ revoke execute on function painel.sdr_metrics(timestamptz, timestamptz, boolean)
 revoke execute on function painel.team_metrics(timestamptz, timestamptz, boolean) from public, anon;
 grant execute on function painel.sdr_metrics(timestamptz, timestamptz, boolean) to authenticated, service_role;
 grant execute on function painel.team_metrics(timestamptz, timestamptz, boolean) to authenticated, service_role;
+revoke execute on function painel.sdr_chats(uuid, timestamptz, timestamptz, boolean, text, text, integer, integer) from public, anon;
+grant execute on function painel.sdr_chats(uuid, timestamptz, timestamptz, boolean, text, text, integer, integer) to authenticated, service_role;
