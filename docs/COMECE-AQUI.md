@@ -140,6 +140,8 @@ Registre aqui toda decisão nova, com data.
 - 2026-10-05 — Nova métrica no card: **Leads que responderam** = leads distintos que mandaram pelo menos 1 mensagem em chat do SDR no período.
 - 2026-10-05 — **Carteira** = leads em aberto no funil do SDR no HubSpot (proteção de 30 dias já existe no HubSpot). Entra na Fase 6, junto com a qualidade da carteira. Até lá o card mostra vazio.
 - 2026-10-05 — Tabela do SDR mostra os chats em que ele é o dono e que tiveram mensagem no período. Contagens e tempos de cada linha são do chat inteiro.
+- 2026-10-05 — Correção: as medianas de 1ª resposta e de resposta entram no período pelo momento em que o **lead escreveu**, não pelo da resposta. Motivo: na segunda-feira, respostas a leads do fim de semana e da semana anterior inflavam a mediana do dia (ex.: 37h para quem atendeu os leads do dia em 14min).
+- 2026-10-05 — Horário comercial = segunda a sexta, 08:00–18:00 (configurável). Com "Só horário comercial" ligado (padrão da tela), as medianas usam só os leads que escreveram dentro do expediente, e o tempo conta só o expediente. Desligado: tudo, em tempo corrido.
 - 2026-10-05 — Sem histórico anterior e sem API da Poli por enquanto: o painel começa em 01/10/2026 07:08 (primeiro evento em `raw_events`). Chats que já existiam antes disso podem ter "quem iniciou" e a primeira resposta imprecisos. A ideia de backfill desde 25/09 foi abandonada.
 - 2026-10-05 — Felipe conferiu 3 chats reais no Poli (linha do tempo e tempos de resposta): tudo certo.
 - 2026-10-05 — Lia passa a ser SDR também na integração (`POLI_SDR_EMAILS` do `.env` da VPS). Efeito colateral aceito: as mensagens dela passam a ser registradas no HubSpot, como as dos outros SDRs.

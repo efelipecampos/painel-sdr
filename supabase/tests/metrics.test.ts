@@ -81,29 +81,25 @@ describe("sdr_metrics", () => {
     expect(m).toMatchObject({ leads_abordados: 2, templates_enviados: 3, leads_responderam: 2 });
   });
 
-  it("medianas de 1ª resposta e de resposta, com a opção de horário comercial", async () => {
+  it("medianas entram no período pelo momento em que o lead escreveu", async () => {
     await lead("X", [["lead", day("09:00")], ["sdr", day("09:01")], ["lead", day("09:10")], ["sdr", day("09:20")]]); // 60s (1ª), 600s
     await lead("X", [["lead", day("10:00")], ["sdr", day("10:02")]]); // 120s (1ª)
-    await lead("X", [["lead", day("17:30", "04")], ["sdr", day("08:30")]]); // dom 17:30 → seg 08:30: 54000s, 1800s comerciais
+    await lead("X", [["lead", day("17:30", "04")], ["sdr", day("08:30")]]); // lead escreveu ontem: fora da mediana de hoje
     const m = (await metrics())["SDR X"];
-    expect(m).toMatchObject({ primeiras_respostas: 3, primeira_resposta_s: 120, respostas: 4, resposta_s: 360 });
-    const b = (await metrics(true))["SDR X"];
-    expect(b).toMatchObject({ primeira_resposta_s: 120, resposta_s: 360 });
-    // Mediana de [60, 120, 1800] com horário comercial = 120; corrido = mediana de [60, 120, 54000] = 120.
-    const res = await db.query<{ s: number }>(
-      "select primeira_resposta_s as s from painel.sdr_metrics($1, $2, true) where name = 'SDR X'", [FROM, TO],
-    );
-    expect(res.rows[0].s).toBe(120);
+    expect(m).toMatchObject({ primeiras_respostas: 2, primeira_resposta_s: 90, respostas: 3, resposta_s: 120 });
   });
 
-  it("horário comercial muda a mediana quando a resposta atravessa a noite", async () => {
-    await lead("X", [["lead", day("17:00")], ["sdr", day("09:00", "06")]]); // 16h corridas, 2h comerciais
-    const m = await db.query<{ c: number; b: number }>(
+  it("só horário comercial: só leads que escreveram no expediente, e o relógio só corre no expediente", async () => {
+    await lead("X", [["lead", day("17:00")], ["sdr", day("09:00", "06")]]); // escreveu 17:00: 16h corridas, 2h comerciais
+    await lead("X", [["lead", day("19:00")], ["sdr", day("08:30", "06")]]); // escreveu 19:00 (fora do expediente): 13,5h corridas
+    const m = await db.query<{ c: number; nc: number; b: number; nb: number }>(
       `select (select resposta_s from painel.sdr_metrics($1, $2, false) where name = 'SDR X') as c,
-              (select resposta_s from painel.sdr_metrics($1, $2, true) where name = 'SDR X') as b`,
-      [FROM, day("00:00", "07")],
+              (select respostas from painel.sdr_metrics($1, $2, false) where name = 'SDR X') as nc,
+              (select resposta_s from painel.sdr_metrics($1, $2, true) where name = 'SDR X') as b,
+              (select respostas from painel.sdr_metrics($1, $2, true) where name = 'SDR X') as nb`,
+      [FROM, TO],
     );
-    expect(m.rows[0]).toEqual({ c: 16 * 3600, b: 2 * 3600 });
+    expect(m.rows[0]).toEqual({ c: (16 + 13.5) / 2 * 3600, nc: 2, b: 2 * 3600, nb: 1 });
   });
 
   it("aguardando e parados: estado de agora, com o limite de 30 min", async () => {
