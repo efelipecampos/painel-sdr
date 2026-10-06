@@ -256,6 +256,32 @@ describe("Descartados e DSQ: nota primeiro, HubSpot se não houver nota", () => 
   });
 });
 
+describe("Cadastro → disparo do app token (Time)", () => {
+  it("mediana do cadastro até o 1º template do app token; sem disparo = fora de DSQ e sem template em 30 min", async () => {
+    const mk = async (contact: string, steps: Step[]) => {
+      const l = await lead("X", steps);
+      await db.query("update painel.leads set hubspot_contact_id = $2 where id = $1", [l.leadId, contact]);
+    };
+    await mk("k1", [["template_bot", day("09:04")]]);                 // 4 min
+    await mk("k2", [["template_bot", day("10:06")]]);                 // 6 min
+    await mk("k3", [["template", day("11:01")]]);                     // template manual: não é disparo do app token
+    await mk("k4", [["template_bot", day("12:45")]]);                 // 45 min: atrasado
+    await db.exec(`
+      insert into painel.hubspot_leads (hubspot_lead_id, hubspot_contact_id, pipeline_id, stage_id, created_at) values
+        ('a', 'k1', '841793591', 's', '${day("09:00")}'),
+        ('b', 'k2', '841793591', 's', '${day("10:00")}'),
+        ('c', 'k3', '841793591', 's', '${day("11:00")}'),
+        ('d', 'k4', '841793591', 's', '${day("12:00")}'),
+        ('e', 'k5', '841793591', '1250901142', '${day("13:00")}'),  -- DSQ: não conta como sem disparo
+        ('f', 'k6', '999', 's', '${day("13:00")}');                 -- outro pipeline: fora
+    `);
+    const t = (await db.query<{ disparo_mediana_s: number; cadastros: number; cadastros_sem_disparo: number }>(
+      "select disparo_mediana_s, cadastros, cadastros_sem_disparo from painel.team_metrics($1, $2)", [FROM, TO],
+    )).rows[0];
+    expect(t).toEqual({ disparo_mediana_s: 360, cadastros: 5, cadastros_sem_disparo: 2 });
+  });
+});
+
 describe("team_metrics", () => {
   it("mediana do time sobre todas as respostas, não média das medianas", async () => {
     await lead("X", [["lead", day("09:00")], ["sdr", day("09:01")], ["lead", day("09:10")], ["sdr", day("09:12")]]); // 60, 120
