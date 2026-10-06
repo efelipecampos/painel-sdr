@@ -106,6 +106,7 @@ A Fase 2 mexe em produção e em outro repositório. Não edite a integração a
 |---|---|
 | Ligar ou não a nota diária no HubSpot (`DAILY_NOTES_ENABLED`) | Depois da Fase 2 |
 | Definição escrita de cada status de reunião (Agendada, Validada, No show, Invalidada, Cancelada) | Fase 6 |
+| Coluna "agendou" (ideia do Felipe, 2026-10-06): 1º pelo HubSpot — Lead passou pela etapa "Garantir Agendamento" ou "Qualificado" (datas hs_v2_date_entered_*); 2º por nota interna do SDR com a palavra "agendado". Detalhar regras na Fase 6. | Fase 6 |
 | Carteira: qual objeto/campo do HubSpot define "lead em aberto no funil do SDR" | Fase 6 |
 | Quem pode mudar status de reunião (admin, gestor, closer) | Fase 6 |
 | Critérios reais de qualidade do lead e contexto para o Claude | Fase 7 |
