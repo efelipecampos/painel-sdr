@@ -5,12 +5,14 @@ import { Metric, staleLabel } from "@/components/Metric";
 import { PeriodFilter } from "@/components/PeriodFilter";
 import { getSdrChats, getSdrMetrics, getSettings, initials, type ChatRow } from "@/lib/data";
 import { formatDateTime, formatDuration, resolvePeriod } from "@/lib/time";
+import { MeetingSelect } from "./MeetingSelect";
 
 const PAGE = 50;
 const FILTERS = [
   { key: "all", label: "Todos" },
   { key: "waiting", label: "Aguardando resposta" },
   { key: "noreply", label: "Lead não respondeu" },
+  { key: "booked", label: "Com reunião" },
 ];
 const FROM_LABEL: Record<string, string> = { lead: "Lead", sdr: "Equipe", template: "Template", bot: "Automação" };
 
@@ -78,6 +80,8 @@ export default async function SdrPage({ params, searchParams }: {
           <Metric label="1ª resposta (mediana)" value={formatDuration(s.primeira_resposta_s)} count={s.leads_primeira_resposta} />
           <Metric label="Tempo de resposta (mediana)" value={formatDuration(s.resposta_s)} count={s.leads_resposta} />
           <Metric label="Aguardando resposta" value={s.aguardando} sub={staleLabel(s.parados, settings.stale_minutes)} stale={s.parados > 0} />
+          <Metric label="Agendados" value={s.agendados}
+            sub={s.leads_abordados > 0 ? `${Math.round((s.agendados / s.leads_abordados) * 100)}% dos abordados` : "—"} />
           <Metric label="Descartados" value={s.descartados} />
         </div>
       </section>
@@ -111,12 +115,13 @@ export default async function SdrPage({ params, searchParams }: {
               <th scope="col">Resposta (mediana)</th>
               <th scope="col">Mensagens (lead / equipe)</th>
               <th scope="col">Última mensagem</th>
+              <th scope="col">Reunião</th>
               <th scope="col"><span className="muted">Ações</span></th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={9} className="muted">Nenhum lead com mensagem neste período.</td></tr>
+              <tr><td colSpan={10} className="muted">Nenhum lead com mensagem neste período.</td></tr>
             )}
             {rows.map((r) => (
               <tr key={r.lead_id}>
@@ -128,6 +133,7 @@ export default async function SdrPage({ params, searchParams }: {
                 <td>{formatDuration(r.resposta_s)}</td>
                 <td>{r.msgs_lead} / {r.msgs_equipe}</td>
                 <td><div className="cell-stack"><span>{formatDateTime(r.last_message_at)}</span><span className="muted">{FROM_LABEL[r.last_message_from ?? ""] ?? ""}</span></div></td>
+                <td><MeetingSelect leadId={r.lead_id} leadName={r.lead_name ?? "lead"} status={r.reuniao_status} origem={r.reuniao_origem} /></td>
                 <td><a href={`https://app.poli.digital/chat/${r.poli_contact_uuid}`} target="_blank" rel="noreferrer" aria-label={`Abrir chat de ${r.lead_name ?? "lead"} no Poli`}>Abrir no Poli</a></td>
               </tr>
             ))}

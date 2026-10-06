@@ -1,5 +1,6 @@
 // Leitura dos dados da tela. Tudo vem das funções do banco (RPC) com a sessão do usuário.
 import { createClient } from "@/lib/supabase/server";
+import type { MeetingStatus } from "@painel/shared";
 import type { Period } from "@/lib/time";
 
 export interface SdrMetrics {
@@ -15,6 +16,7 @@ export interface SdrMetrics {
   aguardando: number;
   parados: number;
   descartados: number;
+  agendados: number;
 }
 
 export interface TeamMetrics {
@@ -33,6 +35,7 @@ export interface TeamMetrics {
   disparo_mediana_s: number | null;
   cadastros: number;
   cadastros_sem_disparo: number;
+  agendados: number;
 }
 
 export interface ChatRow {
@@ -52,6 +55,8 @@ export interface ChatRow {
   last_message_from: string | null;
   origem: "lead" | "poli" | null;
   fora_motivo: string | null;
+  reuniao_status: MeetingStatus | null;
+  reuniao_origem: "hubspot" | "manual" | null;
   total: number;
 }
 

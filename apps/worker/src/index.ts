@@ -1,12 +1,14 @@
 // Worker do painel: lê public.raw_events e monta o schema painel.
 // Uso: npm start (fica rodando) | npm run once (processa o que estiver pendente e sai)
+//      | --hubspot-desde AAAA-MM-DD (relê os Leads do HubSpot modificados desde a data e sai)
 //      | npm run rebuild-all (recalcula todos os leads; usar depois de migration que muda o cálculo).
 import { config } from "./config.js";
-import { HubspotClient, syncLeads, syncOwners, syncStages } from "./hubspot/leads.js";
+import { HubspotClient, resetLeadsCursor, syncLeads, syncOwners, syncStages } from "./hubspot/leads.js";
 import { createDb, processBatch, rebuildAll, syncRoles } from "./processor.js";
 
 const once = process.argv.includes("--once");
 const rebuild = process.argv.includes("--rebuild-all");
+const hubspotSince = (() => { const i = process.argv.indexOf("--hubspot-desde"); return i > 0 ? process.argv[i + 1] : null; })();
 const db = createDb();
 const hubspot = config.hubspotToken ? new HubspotClient(config.hubspotToken) : null;
 let lastHubspotSync = 0;
@@ -30,7 +32,11 @@ async function drain(): Promise<void> {
   }
 }
 
-if (rebuild) {
+if (hubspotSince) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(hubspotSince)) throw new Error("Use --hubspot-desde AAAA-MM-DD");
+  await resetLeadsCursor(db, hubspotSince);
+  await syncHubspot(true);
+} else if (rebuild) {
   console.log(`[worker] ${await rebuildAll(db)} leads recalculados`);
 } else if (once) {
   await drain();

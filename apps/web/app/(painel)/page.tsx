@@ -12,7 +12,12 @@ const SORTS: Record<string, (a: SdrMetrics, b: SdrMetrics) => number> = {
   resposta: (a, b) => (b.resposta_s ?? -1) - (a.resposta_s ?? -1),
   abordados: (a, b) => b.leads_abordados - a.leads_abordados,
   descartados: (a, b) => b.descartados - a.descartados,
+  agendados: (a, b) => b.agendados - a.agendados,
 };
+
+function pct(n: number, base: number): string {
+  return base > 0 ? `${Math.round((n / base) * 100)}% dos abordados` : "—";
+}
 
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
@@ -52,6 +57,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
           <Metric label="1ª resposta (mediana)" value={formatDuration(team.primeira_resposta_s)} count={team.leads_primeira_resposta} />
           <Metric label="Tempo de resposta (mediana)" value={formatDuration(team.resposta_s)} count={team.leads_resposta} />
           <Metric label="Aguardando resposta" value={team.aguardando} sub={staleLabel(team.parados, settings.stale_minutes)} stale={team.parados > 0} />
+          <Metric label="Agendados" value={team.agendados} sub={pct(team.agendados, team.leads_abordados)} />
           <Metric label="Descartados" value={team.descartados} />
           <Metric label="DSQ" value={team.dsq} />
           <Metric label="Cadastro → disparo (mediana)" value={formatDuration(team.disparo_mediana_s)} sub={`${team.cadastros} cadastros`} />
@@ -72,6 +78,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
               <Metric label="Leads abordados" value={s.leads_abordados} />
               <Metric label="Templates enviados" value={s.templates_enviados} />
               <Metric label="Leads que responderam" value={s.leads_responderam} />
+              <Metric label="Agendados" value={s.agendados} sub={pct(s.agendados, s.leads_abordados)} />
               <Metric label="Descartados" value={s.descartados} />
               <Metric label="1ª resposta (mediana)" value={formatDuration(s.primeira_resposta_s)} count={s.leads_primeira_resposta} />
               <Metric label="Tempo de resposta (mediana)" value={formatDuration(s.resposta_s)} count={s.leads_resposta} />
