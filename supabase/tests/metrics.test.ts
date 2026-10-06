@@ -325,6 +325,33 @@ describe("sdr_chats", () => {
     expect(rows.map((r) => r.situacao)).toEqual(["encerrado_sem_resposta"]);
   });
 
+  it("uma linha por lead: atendimento novo aberto pela Poli não duplica o lead nem vira 'lead não respondeu'", async () => {
+    // Caso real (Marco): lead escreve no atendimento A; o app token abre o atendimento B com um template.
+    await lead("X", [["sdr", ago(900), "A"], ["lead", ago(200), "A"], ["template_bot", ago(60), "B"]], { name: "Marco" });
+    const rows = (await db.query<{ lead_name: string; situacao: string; parado: boolean }>(
+      "select lead_name, situacao, parado from painel.sdr_chats($1, now() - interval '1 day', now() + interval '1 minute', false)", [sdr.X],
+    )).rows;
+    expect(rows).toEqual([{ lead_name: "Marco", situacao: "aguardando", parado: true }]);
+  });
+
+  it("mensagem de robô (Lia) não é resposta: o lead continua aguardando", async () => {
+    await db.exec("update painel.sdrs set is_bot = true, poli_attendant_uuid = 'lia-uuid' where name = 'SDR Y'");
+    const l = await lead("X", [["lead", ago(40)]], { name: "Com robô" });
+    await db.query(
+      `insert into painel.chat_messages (poli_message_id, chat_id, lead_id, sdr_id, sender, sent_at, by_human, author_poli_uuid)
+       values ('bot-1', $1, $2, $3, 'sdr', $4, true, 'lia-uuid')`,
+      [l.chats.get("A"), l.leadId, sdr.X, ago(39)],
+    );
+    await db.query("select painel.rebuild_leads($1::uuid[])", [[l.leadId]]);
+    const m = (await db.query<{ sender: string; by_human: boolean }>("select sender, by_human from painel.chat_messages where poli_message_id = 'bot-1'")).rows[0];
+    expect(m).toEqual({ sender: "bot", by_human: false });
+    const rows = (await db.query<{ situacao: string }>(
+      "select situacao from painel.sdr_chats($1, now() - interval '1 day', now() + interval '1 minute', false)", [sdr.X],
+    )).rows;
+    expect(rows.map((r) => r.situacao)).toEqual(["aguardando"]);
+    expect((await db.query("select 1 from painel.response_events r join painel.chats c on c.id = r.chat_id where c.lead_id = $1", [l.leadId])).rows).toHaveLength(0);
+  });
+
   it("filtros, busca por nome ou telefone e paginação", async () => {
     await lead("X", [["lead", ago(40)]], { name: "Clínica Sorriso", phone: "+5562912341187" });
     await lead("X", [["template", ago(30)]], { name: "Pet Shop", phone: "+5511988887777" });

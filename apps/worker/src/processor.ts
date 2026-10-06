@@ -3,7 +3,7 @@
 // é refeito do zero por lead em painel.rebuild_leads. Pode ser reexecutado a partir de qualquer cursor.
 // LGPD: nunca loga texto de mensagem nem telefone.
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { config, roleFor } from "./config.js";
+import { config, isBot, roleFor } from "./config.js";
 import { parsePoliEvent, toE164, type PoliEvent } from "./poli/event.js";
 
 const CURSOR_KEY = "raw_events_cursor";
@@ -42,12 +42,15 @@ export async function setCursor(db: SupabaseClient, id: number): Promise<void> {
   check(await db.schema("painel").from("settings").upsert({ key: CURSOR_KEY, value: id, updated_at: new Date().toISOString() }), "gravar cursor");
 }
 
-/** Mantém o papel de cada atendente igual às listas do .env. */
+/** Mantém o papel de cada atendente (e quem é robô) igual às listas do .env. */
 export async function syncRoles(db: SupabaseClient): Promise<void> {
-  const rows = check(await db.schema("painel").from("sdrs").select("id, poli_email, role"), "ler sdrs");
+  const rows = check(await db.schema("painel").from("sdrs").select("id, poli_email, role, is_bot"), "ler sdrs");
   for (const r of rows) {
     const role = roleFor(r.poli_email);
-    if (role !== r.role) check(await db.schema("painel").from("sdrs").update({ role }).eq("id", r.id), "atualizar papel");
+    const bot = isBot(r.poli_email);
+    if (role !== r.role || bot !== r.is_bot) {
+      check(await db.schema("painel").from("sdrs").update({ role, is_bot: bot }).eq("id", r.id), "atualizar papel");
+    }
   }
 }
 
@@ -61,7 +64,7 @@ export async function upsertEvents(db: SupabaseClient, events: (PoliEvent & { ra
   for (const e of events) if (e.owner?.email) owners.set(e.owner.uuid, e.owner);
   if (owners.size) {
     check(await p.from("sdrs").upsert(
-      [...owners.values()].map((o) => ({ poli_attendant_uuid: o.uuid, poli_email: o.email, email: o.email, name: o.name ?? o.email, role: roleFor(o.email) })),
+      [...owners.values()].map((o) => ({ poli_attendant_uuid: o.uuid, poli_email: o.email, email: o.email, name: o.name ?? o.email, role: roleFor(o.email), is_bot: isBot(o.email) })),
       { onConflict: "poli_email", ignoreDuplicates: true },
     ), "gravar sdrs");
   }
@@ -155,6 +158,7 @@ export async function reprocessNotes(db: SupabaseClient): Promise<number> {
 
 /** Recalcula todos os leads (usar depois de uma migration que muda o cálculo). */
 export async function rebuildAll(db: SupabaseClient): Promise<number> {
+  await syncRoles(db);
   await reprocessNotes(db);
   const ids: string[] = [];
   for (let from = 0; ; from += 1000) {

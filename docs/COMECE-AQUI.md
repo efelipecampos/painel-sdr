@@ -70,10 +70,11 @@ Atualize esta lista conforme avança.
 - [x] Esperar 1 a 2 dias de eventos reais em `public.raw_events`.
 - [x] Fase 3 — Parser e worker (sem backfill: dados a partir de 01/10/2026). Worker roda manualmente (`npm run once -w @painel/worker`) até o deploy da Fase 5.
 - [x] Fase 4 — Métricas no banco (Felipe confere os números com o Poli). Concluída em 05/10/2026, com sync de Leads do HubSpot (descarte, Descartados, DSQ) adiantado da Fase 6.
-- [ ] Fase 5 — Telas, login e deploy do painel.
+- [x] Fase 5 — Telas, login e deploy do painel. No ar em https://painel-sdr.camposai.com.br desde 06/10/2026.
 - [ ] Fase 6 — Reuniões do HubSpot.
 - [ ] Fase 7 — Score de qualidade.
 - [ ] Fase 8 — Operação (conferência diária, alertas, backup, revisão de segurança).
+- [ ] Fase 9 — SDR Modelo (ideia do Felipe, 2026-10-06): o gestor configura o SDR Ideal (faixas e pesos por comportamento: volume, 1ª resposta, tempo de resposta, taxa de resposta, descartes, reuniões validadas); a IA analisa periodicamente os melhores atendimentos (reunião validada / lead de alta qualidade) e sugere ajustes ao SDR Ideal com dados reais, que o gestor aprova ou não; cada SDR ganha uma aderência ao SDR Modelo com o detalhe de onde está dentro e fora. Depende das Fases 6 e 7.
 
 ## 5. O que já se sabe sobre a integração PoliChat-Hubspot
 
@@ -105,12 +106,12 @@ A Fase 2 mexe em produção e em outro repositório. Não edite a integração a
 |---|---|
 | Ligar ou não a nota diária no HubSpot (`DAILY_NOTES_ENABLED`) | Depois da Fase 2 |
 | Definição escrita de cada status de reunião (Agendada, Validada, No show, Invalidada, Cancelada) | Fase 6 |
+| Coluna "agendou" (ideia do Felipe, 2026-10-06): 1º pelo HubSpot — Lead passou pela etapa "Garantir Agendamento" ou "Qualificado" (datas hs_v2_date_entered_*); 2º por nota interna do SDR com a palavra "agendado". Detalhar regras na Fase 6. | Fase 6 |
 | Carteira: qual objeto/campo do HubSpot define "lead em aberto no funil do SDR" | Fase 6 |
 | Quem pode mudar status de reunião (admin, gestor, closer) | Fase 6 |
 | Critérios reais de qualidade do lead e contexto para o Claude | Fase 7 |
 | Modelo e limite de gasto da API da Anthropic | Fase 7 |
 | Retenção de conteúdo de mensagens (LGPD) | Fase 8 |
-| Lista de feriados | Fase 5 |
 
 ## 8. Decisões
 
@@ -151,6 +152,12 @@ Registre aqui toda decisão nova, com data.
 - 2026-10-05 — **1ª resposta por ciclo do lead com cada SDR** (substitui "por atendimento"): conta o primeiro bloco do lead com aquele SDR; o ciclo recomeça quando o lead volta depois de nota interna (Descartado/DSQ/Finalizado) ou de entrar em Descartado/DSQ - BR no HubSpot. Transferência conta como 1ª resposta de quem recebeu. Atendimento novo aberto pela Poli no meio da conversa (ex.: template de cadência) não reinicia.
 - 2026-10-06 — Subdomínio do painel: `painel-sdr.camposai.com.br` (registro A para 76.13.112.74, criado pelo Felipe na Hostinger).
 - 2026-10-06 — Métricas da automação de disparo (app token / n8n), **só na linha do Time**: **Cadastro → disparo** = mediana do tempo entre a criação do Lead no [New] Pipeline SDR e o 1º template do app token para o contato (até 24 h); **Cadastros sem disparo** = Leads criados no período, fora de DSQ, sem template do app token em até 30 min. Em 05/10: mediana 4,1 min; 3 cadastros sem disparo fora de DSQ.
+- 2026-10-06 — Login por **e-mail e senha** (Supabase Auth), sem cadastro aberto: o Felipe cria o usuário no Supabase (Authentication → Users → Add user) e o acesso é liberado com `npm run usuarios -w @painel/worker -- email:papel:Nome`. Usuários da V1: Felipe (admin), Iago Leal e Timóteo Luis (gestores).
+- 2026-10-06 — Feriados: começam com os nacionais de out/2026 a dez/2027 (sem pontos facultativos); o admin edita na tela de Configurações.
+- 2026-10-06 — Tela: "Só horário comercial" não fica na tela principal (é configuração). Carteira, qualidade e reuniões ficam escondidas até as Fases 6/7. Linha do Time mostra também DSQ, cadastro → disparo e cadastros sem disparo.
+- 2026-10-06 — **A Lia é um robô** (mensagens automáticas com usuário próprio na Poli), assim como a Poliana. Lista `POLI_BOT_EMAILS`; `painel.sdrs.is_bot`. Mensagens de robô viram automação: não encerram a espera do lead, não contam como resposta e o robô sai dos cards. Os chats da Lia continuam sendo gravados pela integração (estão lá as primeiras mensagens do lead antes de ir para um SDR). Substitui a decisão de 2026-10-04/05 que colocava a Lia como SDR. A Lia continua em `POLI_SDR_EMAILS` **da integração** (registra no HubSpot e grava em `raw_events`): ela faz a qualificação da maioria dos leads DSQ.
+- 2026-10-06 — Tabela da tela do SDR com **uma linha por lead** (não por atendimento da Poli): situação, contagens e tempos juntam os atendimentos do lead com o SDR. "Lead não respondeu" só quando o lead nunca escreveu.
+- 2026-10-06 — Deploy feito: `https://painel-sdr.camposai.com.br` no ar (containers `painel-sdr-web` e `painel-sdr-worker` em `/root/painel-sdr`). Passo a passo de atualização em `docs/deploy.md`. O worker local foi desligado: só a VPS processa.
 - 2026-10-05 — Sem histórico anterior e sem API da Poli por enquanto: o painel começa em 01/10/2026 07:08 (primeiro evento em `raw_events`). Chats que já existiam antes disso podem ter "quem iniciou" e a primeira resposta imprecisos. A ideia de backfill desde 25/09 foi abandonada.
 - 2026-10-05 — Felipe conferiu 3 chats reais no Poli (linha do tempo e tempos de resposta): tudo certo.
 - 2026-10-05 — Lia passa a ser SDR também na integração (`POLI_SDR_EMAILS` do `.env` da VPS). Efeito colateral aceito: as mensagens dela passam a ser registradas no HubSpot, como as dos outros SDRs.
