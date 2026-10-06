@@ -105,10 +105,7 @@ A Fase 2 mexe em produção e em outro repositório. Não edite a integração a
 | Pendência | Quando perguntar |
 |---|---|
 | Ligar ou não a nota diária no HubSpot (`DAILY_NOTES_ENABLED`) | Depois da Fase 2 |
-| Definição escrita de cada status de reunião (Agendada, Validada, No show, Invalidada, Cancelada) | Fase 6 |
-| Coluna "agendou" (ideia do Felipe, 2026-10-06): 1º pelo HubSpot — Lead passou pela etapa "Garantir Agendamento" ou "Qualificado" (datas hs_v2_date_entered_*); 2º por nota interna do SDR com a palavra "agendado". Detalhar regras na Fase 6. | Fase 6 |
 | Carteira: qual objeto/campo do HubSpot define "lead em aberto no funil do SDR" | Fase 6 |
-| Quem pode mudar status de reunião (admin, gestor, closer) | Fase 6 |
 | Critérios reais de qualidade do lead e contexto para o Claude | Fase 7 |
 | Modelo e limite de gasto da API da Anthropic | Fase 7 |
 | Retenção de conteúdo de mensagens (LGPD) | Fase 8 |
@@ -158,6 +155,8 @@ Registre aqui toda decisão nova, com data.
 - 2026-10-06 — **A Lia é um robô** (mensagens automáticas com usuário próprio na Poli), assim como a Poliana. Lista `POLI_BOT_EMAILS`; `painel.sdrs.is_bot`. Mensagens de robô viram automação: não encerram a espera do lead, não contam como resposta e o robô sai dos cards. Os chats da Lia continuam sendo gravados pela integração (estão lá as primeiras mensagens do lead antes de ir para um SDR). Substitui a decisão de 2026-10-04/05 que colocava a Lia como SDR. A Lia continua em `POLI_SDR_EMAILS` **da integração** (registra no HubSpot e grava em `raw_events`): ela faz a qualificação da maioria dos leads DSQ.
 - 2026-10-06 — Tabela da tela do SDR com **uma linha por lead** (não por atendimento da Poli): situação, contagens e tempos juntam os atendimentos do lead com o SDR. "Lead não respondeu" só quando o lead nunca escreveu.
 - 2026-10-06 — Deploy feito: `https://painel-sdr.camposai.com.br` no ar (containers `painel-sdr-web` e `painel-sdr-worker` em `/root/painel-sdr`). Passo a passo de atualização em `docs/deploy.md`. O worker local foi desligado: só a VPS processa.
+- 2026-10-07 — Status de reunião: **Agendada** (reunião combinada com o lead); **Validada** = realizada e o closer validou que é boa oportunidade; **Invalidada** = realizada, mas o closer achou red flag que fere o SLA; **No show** = lead não apareceu; **Cancelada** = lead cancelou antes. Quem muda à mão: admin e gestor.
+- 2026-10-07 — Fase 6 enxuta: só identificar na lista quem agendou. **Agendada** vem do HubSpot (Lead mais recente do contato passou por "Garantir Agendamento" ou "Qualificado"); admin/gestor podem marcar qualquer status à mão na tabela, inclusive "Agendada"; o HubSpot nunca sobrescreve a marcação manual. Sem data da reunião. Objeto Reunião do HubSpot não é usado (processo mal implementado). Nota interna "agendado" fica para depois. Card e Time mostram **Agendados** (leads que agendaram no período, pelo dono do Lead) e a % sobre os abordados.
 - 2026-10-05 — Sem histórico anterior e sem API da Poli por enquanto: o painel começa em 01/10/2026 07:08 (primeiro evento em `raw_events`). Chats que já existiam antes disso podem ter "quem iniciou" e a primeira resposta imprecisos. A ideia de backfill desde 25/09 foi abandonada.
 - 2026-10-05 — Felipe conferiu 3 chats reais no Poli (linha do tempo e tempos de resposta): tudo certo.
 - 2026-10-05 — Lia passa a ser SDR também na integração (`POLI_SDR_EMAILS` do `.env` da VPS). Efeito colateral aceito: as mensagens dela passam a ser registradas no HubSpot, como as dos outros SDRs.

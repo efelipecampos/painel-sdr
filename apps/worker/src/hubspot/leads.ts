@@ -42,12 +42,14 @@ export class HubspotClient {
 export interface MetricStages {
   descartado: string | null;
   dsq: string | null;
+  agendado?: string[];   // etapas que contam como "agendou" (hubspot_agendado_stages)
 }
 
 /** Converte um Lead da API na linha de painel.hubspot_leads. */
 export function toRow(lead: HubspotLead, contactId: string | null, stages: MetricStages = { descartado: null, dsq: null }) {
   const p = lead.properties;
   const entered = (stage: string | null) => (stage ? (p[`hs_v2_date_entered_${stage}`] ?? null) : null);
+  const agendado = (stages.agendado ?? []).map((s) => entered(s)).filter((d): d is string => !!d).sort()[0] ?? null;
   return {
     hubspot_lead_id: lead.id,
     hubspot_contact_id: contactId,
@@ -58,6 +60,7 @@ export function toRow(lead: HubspotLead, contactId: string | null, stages: Metri
     updated_at: p.hs_lastmodifieddate ?? null,
     entered_descartado_at: entered(stages.descartado),
     entered_dsq_at: entered(stages.dsq),
+    entered_agendado_at: agendado,
     synced_at: new Date().toISOString(),
   };
 }
@@ -98,16 +101,24 @@ export async function syncOwners(db: SupabaseClient, hs: HubspotClient): Promise
 }
 
 async function metricStages(db: SupabaseClient): Promise<MetricStages> {
-  const rows = check(await db.schema("painel").from("settings").select("key, value").in("key", ["hubspot_stage_descartado", "hubspot_stage_dsq"]), "ler etapas das métricas");
-  const get = (k: string) => { const r = rows.find((x: { key: string }) => x.key === k); return r ? String(r.value) : null; };
-  return { descartado: get("hubspot_stage_descartado"), dsq: get("hubspot_stage_dsq") };
+  const rows = check(await db.schema("painel").from("settings").select("key, value").in("key", ["hubspot_stage_descartado", "hubspot_stage_dsq", "hubspot_agendado_stages"]), "ler etapas das métricas");
+  const find = (k: string) => rows.find((x: { key: string }) => x.key === k)?.value;
+  const get = (k: string) => { const v = find(k); return v == null ? null : String(v); };
+  const ag = find("hubspot_agendado_stages");
+  return { descartado: get("hubspot_stage_descartado"), dsq: get("hubspot_stage_dsq"), agendado: Array.isArray(ag) ? ag.map(String) : [] };
+}
+
+/** Volta o cursor do sync de Leads para uma data (para reler, ex.: depois de passar a guardar um campo novo). */
+export async function resetLeadsCursor(db: SupabaseClient, since: string): Promise<void> {
+  const iso = new Date(`${since}T00:00:00-03:00`).toISOString();
+  check(await db.schema("painel").from("settings").upsert({ key: CURSOR_KEY, value: iso, updated_at: new Date().toISOString() }), "voltar cursor do HubSpot");
 }
 
 /** Busca e grava os Leads modificados desde o cursor. Devolve quantos foram gravados. */
 export async function syncLeads(db: SupabaseClient, hs: HubspotClient): Promise<number> {
   const p = db.schema("painel");
   const stages = await metricStages(db);
-  const extra = [stages.descartado, stages.dsq].filter(Boolean).map((id) => `hs_v2_date_entered_${id}`);
+  const extra = [stages.descartado, stages.dsq, ...(stages.agendado ?? [])].filter(Boolean).map((id) => `hs_v2_date_entered_${id}`);
   const cur = check(await p.from("settings").select("value").eq("key", CURSOR_KEY), "ler cursor do HubSpot");
   let since = Date.parse(cur.length ? String(cur[0].value) : INITIAL_SINCE);
   let total = 0;

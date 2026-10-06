@@ -24,6 +24,7 @@ beforeEach(async () => {
     reset role;
     select set_config('request.jwt.claims', '{"role":"service_role"}', false);
     select set_config('request.jwt.claim.sub', '', false);
+    delete from painel.meeting_status_history; delete from painel.meetings;
     delete from painel.response_events; delete from painel.chat_owner_history; delete from painel.chat_messages;
     delete from painel.chats; delete from painel.leads; delete from painel.profiles; delete from auth.users; delete from painel.sdrs;
     delete from painel.hubspot_leads; delete from painel.hubspot_stages; delete from painel.hubspot_owners;
@@ -279,6 +280,76 @@ describe("Cadastro → disparo do app token (Time)", () => {
       "select disparo_mediana_s, cadastros, cadastros_sem_disparo from painel.team_metrics($1, $2)", [FROM, TO],
     )).rows[0];
     expect(t).toEqual({ disparo_mediana_s: 360, cadastros: 5, cadastros_sem_disparo: 2 });
+  });
+});
+
+describe("Agendamentos (Fase 6)", () => {
+  const rowsOf = async (filter = "all") => (await db.query<{ lead_name: string; reuniao_status: string | null; reuniao_origem: string | null }>(
+    "select lead_name, reuniao_status, reuniao_origem from painel.sdr_chats($1, $2, $3, false, $4) order by lead_name", [sdr.X, FROM, TO, filter],
+  )).rows;
+
+  it("HubSpot: Lead mais recente que passou por agendamento aparece como agendada; conta em Agendados pelo dono do Lead", async () => {
+    await db.exec("insert into painel.hubspot_owners (owner_id, email) values ('o-x', 'x@x')");
+    const a = await lead("X", [["lead", day("09:00")]], { name: "Agendou" });
+    const b = await lead("X", [["lead", day("09:00")]], { name: "Antigo" });
+    await lead("X", [["lead", day("09:00")]], { name: "Nada" });
+    await db.query("update painel.leads set hubspot_contact_id = 'ca' where id = $1", [a.leadId]);
+    await db.query("update painel.leads set hubspot_contact_id = 'cb' where id = $1", [b.leadId]);
+    await db.exec(`
+      insert into painel.hubspot_leads (hubspot_lead_id, hubspot_contact_id, owner_id, created_at, entered_agendado_at) values
+        ('ha', 'ca', 'o-x', '2026-10-01', '${day("10:00")}'),
+        ('hb1', 'cb', 'o-x', '2026-08-01', '2026-08-05'),   -- agendou num ciclo antigo
+        ('hb2', 'cb', 'o-x', '2026-10-01', null);          -- Lead novo, sem agendamento
+    `);
+    expect(await rowsOf()).toEqual([
+      { lead_name: "Agendou", reuniao_status: "agendada", reuniao_origem: "hubspot" },
+      { lead_name: "Antigo", reuniao_status: null, reuniao_origem: null },
+      { lead_name: "Nada", reuniao_status: null, reuniao_origem: null },
+    ]);
+    expect((await rowsOf("booked")).map((r) => r.lead_name)).toEqual(["Agendou"]);
+    expect((await metrics())["SDR X"].agendados).toBe(1);
+    expect((await db.query<{ agendados: number }>("select agendados from painel.team_metrics($1, $2)", [FROM, TO])).rows[0].agendados).toBe(1);
+  });
+
+  it("admin/gestor marcam à mão (inclusive agendada); manual vale sobre o HubSpot; remover volta ao HubSpot; tudo vai pro histórico", async () => {
+    const uid = "00000000-0000-0000-0000-0000000000bb";
+    await db.exec(`insert into auth.users (id) values ('${uid}'); insert into painel.profiles (id, name, role) values ('${uid}', 'Gestor', 'gestor');`);
+    await db.exec("insert into painel.hubspot_owners (owner_id, email) values ('o-x', 'x@x')");
+    const a = await lead("X", [["lead", day("09:00")]], { name: "Manual" });
+    const b = await lead("X", [["lead", day("09:00")]], { name: "Sem HubSpot" });
+    await db.query("update painel.leads set hubspot_contact_id = 'cm' where id = $1", [a.leadId]);
+    await db.query("insert into painel.hubspot_leads (hubspot_lead_id, hubspot_contact_id, owner_id, created_at, entered_agendado_at) values ('hm', 'cm', 'o-x', '2026-10-01', $1)", [day("10:00")]);
+    const asGestor = async (sql: string, params: unknown[]) => {
+      await db.exec(`select set_config('request.jwt.claims', '{"role":"authenticated"}', false);
+                     select set_config('request.jwt.claim.sub', '${uid}', false); set role authenticated;`);
+      try { return await db.query(sql, params); } finally {
+        await db.exec(`reset role; select set_config('request.jwt.claims', '{"role":"service_role"}', false); select set_config('request.jwt.claim.sub', '', false);`);
+      }
+    };
+    await asGestor("select painel.set_meeting_status($1, 'validada')", [a.leadId]);
+    await asGestor("select painel.set_meeting_status($1, 'agendada')", [b.leadId]);
+    expect(await rowsOf()).toEqual([
+      { lead_name: "Manual", reuniao_status: "validada", reuniao_origem: "manual" },
+      { lead_name: "Sem HubSpot", reuniao_status: "agendada", reuniao_origem: "manual" },
+    ]);
+    await asGestor("select painel.set_meeting_status($1, null)", [a.leadId]);
+    expect((await rowsOf())[0]).toEqual({ lead_name: "Manual", reuniao_status: "agendada", reuniao_origem: "hubspot" });
+    const h = (await db.query<{ from_status: string | null; to_status: string | null; changed_by: string }>(
+      "select from_status, to_status, changed_by from painel.meeting_status_history where lead_id = $1 order by changed_at, id", [a.leadId],
+    )).rows;
+    expect(h.map((x) => [x.from_status, x.to_status])).toEqual([[null, "validada"], ["validada", null]]);
+    expect(h[0].changed_by).toBe(uid);
+    await expect(asGestor("select painel.set_meeting_status($1, 'xyz')", [a.leadId])).rejects.toThrow(/inválido/);
+  });
+
+  it("sem perfil ativo não marca", async () => {
+    const l = await lead("X", [["lead", day("09:00")]]);
+    await db.exec(`select set_config('request.jwt.claims', '{"role":"authenticated"}', false); select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000000cc', false); set role authenticated;`);
+    try {
+      await expect(db.query("select painel.set_meeting_status($1, 'validada')", [l.leadId])).rejects.toThrow(/acesso negado/);
+    } finally {
+      await db.exec(`reset role; select set_config('request.jwt.claims', '{"role":"service_role"}', false); select set_config('request.jwt.claim.sub', '', false);`);
+    }
   });
 });
 
