@@ -69,7 +69,7 @@ Atualize esta lista conforme avança.
 - [x] Fase 2 — Evento cru na integração (no repositório PoliChat-Hubspot; ver seção 6). No ar desde 01/10/2026.
 - [x] Esperar 1 a 2 dias de eventos reais em `public.raw_events`.
 - [x] Fase 3 — Parser e worker (sem backfill: dados a partir de 01/10/2026). Worker roda manualmente (`npm run once -w @painel/worker`) até o deploy da Fase 5.
-- [ ] Fase 4 — Métricas no banco (Felipe confere os números com o Poli).
+- [x] Fase 4 — Métricas no banco (Felipe confere os números com o Poli). Concluída em 05/10/2026, com sync de Leads do HubSpot (descarte, Descartados, DSQ) adiantado da Fase 6.
 - [ ] Fase 5 — Telas, login e deploy do painel.
 - [ ] Fase 6 — Reuniões do HubSpot.
 - [ ] Fase 7 — Score de qualidade.
@@ -103,7 +103,6 @@ A Fase 2 mexe em produção e em outro repositório. Não edite a integração a
 
 | Pendência | Quando perguntar |
 |---|---|
-| Subdomínio do painel (sugestão: `painel-sdr.camposai.com.br`) | Fase 5 |
 | Ligar ou não a nota diária no HubSpot (`DAILY_NOTES_ENABLED`) | Depois da Fase 2 |
 | Definição escrita de cada status de reunião (Agendada, Validada, No show, Invalidada, Cancelada) | Fase 6 |
 | Carteira: qual objeto/campo do HubSpot define "lead em aberto no funil do SDR" | Fase 6 |
@@ -150,6 +149,7 @@ Registre aqui toda decisão nova, com data.
 - 2026-10-05 — Novas métricas do HubSpot: **Descartados** = Leads que entraram na etapa "Descartado" no período (lead abordado que o SDR descartou), no card do SDR pelo **dono do Lead no HubSpot**, e no Time. **DSQ** = Leads que entraram em "DSQ - BR" no período (cadastro não qualificado para abordagem), métrica separada, **só na linha do Time**. 
 - 2026-10-05 — Contagem de Descartados e DSQ: **nota interna primeiro, HubSpot se não houver nota**. Com nota no período, conta para o SDR dono do chat no momento da nota; sem nota, vale a entrada na etapa do HubSpot (dono do Lead). O mesmo lead conta uma vez. **Finalizado** = suporte/caiu por engano, não é lead: sai só de Aguardando/Parados (continua nos tempos de resposta e em Leads que responderam) e não conta como Descartado nem DSQ. Conferência nota × HubSpot: não precisa.
 - 2026-10-05 — **1ª resposta por ciclo do lead com cada SDR** (substitui "por atendimento"): conta o primeiro bloco do lead com aquele SDR; o ciclo recomeça quando o lead volta depois de nota interna (Descartado/DSQ/Finalizado) ou de entrar em Descartado/DSQ - BR no HubSpot. Transferência conta como 1ª resposta de quem recebeu. Atendimento novo aberto pela Poli no meio da conversa (ex.: template de cadência) não reinicia.
+- 2026-10-06 — Subdomínio do painel: `painel-sdr.camposai.com.br` (registro A para 76.13.112.74, criado pelo Felipe na Hostinger).
 - 2026-10-05 — Sem histórico anterior e sem API da Poli por enquanto: o painel começa em 01/10/2026 07:08 (primeiro evento em `raw_events`). Chats que já existiam antes disso podem ter "quem iniciou" e a primeira resposta imprecisos. A ideia de backfill desde 25/09 foi abandonada.
 - 2026-10-05 — Felipe conferiu 3 chats reais no Poli (linha do tempo e tempos de resposta): tudo certo.
 - 2026-10-05 — Lia passa a ser SDR também na integração (`POLI_SDR_EMAILS` do `.env` da VPS). Efeito colateral aceito: as mensagens dela passam a ser registradas no HubSpot, como as dos outros SDRs.
