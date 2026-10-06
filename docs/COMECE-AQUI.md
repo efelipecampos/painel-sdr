@@ -70,7 +70,7 @@ Atualize esta lista conforme avança.
 - [x] Esperar 1 a 2 dias de eventos reais em `public.raw_events`.
 - [x] Fase 3 — Parser e worker (sem backfill: dados a partir de 01/10/2026). Worker roda manualmente (`npm run once -w @painel/worker`) até o deploy da Fase 5.
 - [x] Fase 4 — Métricas no banco (Felipe confere os números com o Poli). Concluída em 05/10/2026, com sync de Leads do HubSpot (descarte, Descartados, DSQ) adiantado da Fase 6.
-- [ ] Fase 5 — Telas, login e deploy do painel.
+- [x] Fase 5 — Telas, login e deploy do painel. No ar em https://painel-sdr.camposai.com.br desde 06/10/2026.
 - [ ] Fase 6 — Reuniões do HubSpot.
 - [ ] Fase 7 — Score de qualidade.
 - [ ] Fase 8 — Operação (conferência diária, alertas, backup, revisão de segurança).
