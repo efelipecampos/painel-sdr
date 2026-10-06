@@ -24,6 +24,8 @@ export const config = {
   sdrEmails: emailList("POLI_SDR_EMAILS"),
   closerEmails: emailList("POLI_CLOSER_EMAILS"),
   managerEmails: emailList("POLI_MANAGER_EMAILS"),
+  /** Atendentes que são robôs da Poli (ex.: Lia): mensagens deles não contam como resposta humana. */
+  botEmails: emailList("POLI_BOT_EMAILS"),
   /** Intervalo entre rodadas de leitura de raw_events. */
   pollSeconds: Number(process.env.WORKER_POLL_SECONDS ?? 30),
   /** Eventos por lote. */
@@ -34,8 +36,12 @@ export const config = {
   hubspotEveryMinutes: Number(process.env.HUBSPOT_SYNC_MINUTES ?? 15),
 };
 
+export function isBot(email: string | null): boolean {
+  return !!email && config.botEmails.has(email);
+}
+
 export function roleFor(email: string | null): TeamRole | null {
-  if (!email) return null;
+  if (!email || isBot(email)) return null;
   if (config.sdrEmails.has(email)) return "sdr";
   if (config.closerEmails.has(email)) return "closer";
   if (config.managerEmails.has(email)) return "gestor";

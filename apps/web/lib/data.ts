@@ -36,7 +36,7 @@ export interface TeamMetrics {
 }
 
 export interface ChatRow {
-  chat_id: string;
+  lead_id: string;
   poli_contact_uuid: string;
   lead_name: string | null;
   phone_masked: string | null;

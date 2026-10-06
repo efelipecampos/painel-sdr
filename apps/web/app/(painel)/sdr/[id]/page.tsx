@@ -116,10 +116,10 @@ export default async function SdrPage({ params, searchParams }: {
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={9} className="muted">Nenhum chat com mensagem neste período.</td></tr>
+              <tr><td colSpan={9} className="muted">Nenhum lead com mensagem neste período.</td></tr>
             )}
             {rows.map((r) => (
-              <tr key={r.chat_id}>
+              <tr key={r.lead_id}>
                 <td><div className="cell-stack"><span>{r.lead_name ?? "(sem nome)"}</span><span className="muted">{r.phone_masked ?? "sem telefone"}</span></div></td>
                 <td><Situacao r={r} /></td>
                 <td>{r.origem === "lead" ? "Lead" : r.origem === "poli" ? "Poli" : "—"}</td>
@@ -134,7 +134,7 @@ export default async function SdrPage({ params, searchParams }: {
           </tbody>
         </table>
         <div className="pager">
-          <span className="muted">{total === 0 ? "0 chats" : `${(page - 1) * PAGE + 1}–${(page - 1) * PAGE + rows.length} de ${total} chats`}</span>
+          <span className="muted">{total === 0 ? "0 leads" : `${(page - 1) * PAGE + 1}–${(page - 1) * PAGE + rows.length} de ${total} leads`}</span>
           <span className="spacer" />
           {page > 1 ? <Link className="btn small" href={link({ pagina: String(page - 1) })}>Anterior</Link> : <button className="btn small" disabled>Anterior</button>}
           {page * PAGE < total ? <Link className="btn small" href={link({ pagina: String(page + 1) })}>Próxima</Link> : <button className="btn small" disabled>Próxima</button>}
