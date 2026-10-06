@@ -1,8 +1,10 @@
 # Painel SDR na VPS (Coolify). O Traefik do Coolify (container "coolify-proxy") cuida de domínio e HTTPS
 # pelos labels + rede "coolify". Nenhuma porta é publicada no host (80/443 são do Traefik).
-# Deploy: rsync do projeto para /root/painel-sdr e, na VPS, `docker compose up -d --build`.
+# Deploy: `npm run deploy` (scripts/deploy.sh) monta as imagens fora da VPS e só troca os containers lá
+# (`docker compose up -d --no-build`). Não monte imagens na VPS: ver docs/deploy.md (incidente de 06/10/2026).
 services:
   painel-web:
+    image: painel-sdr-web:latest
     build:
       context: .
       target: web
@@ -30,6 +32,7 @@ services:
       - traefik.http.routers.painel-sdr-http.middlewares=redirect-to-https@file
 
   painel-worker:
+    image: painel-sdr-worker:latest
     build:
       context: .
       target: worker

@@ -9,7 +9,8 @@
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json && npm run typecheck --workspaces --if-present",
-    "db:push": "bash scripts/db-push.sh"
+    "db:push": "bash scripts/db-push.sh",
+    "deploy": "bash scripts/deploy.sh"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",
