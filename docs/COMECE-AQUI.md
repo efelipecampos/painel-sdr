@@ -110,7 +110,6 @@ A Fase 2 mexe em produção e em outro repositório. Não edite a integração a
 | Critérios reais de qualidade do lead e contexto para o Claude | Fase 7 |
 | Modelo e limite de gasto da API da Anthropic | Fase 7 |
 | Retenção de conteúdo de mensagens (LGPD) | Fase 8 |
-| Lista de feriados | Fase 5 |
 
 ## 8. Decisões
 
@@ -151,6 +150,9 @@ Registre aqui toda decisão nova, com data.
 - 2026-10-05 — **1ª resposta por ciclo do lead com cada SDR** (substitui "por atendimento"): conta o primeiro bloco do lead com aquele SDR; o ciclo recomeça quando o lead volta depois de nota interna (Descartado/DSQ/Finalizado) ou de entrar em Descartado/DSQ - BR no HubSpot. Transferência conta como 1ª resposta de quem recebeu. Atendimento novo aberto pela Poli no meio da conversa (ex.: template de cadência) não reinicia.
 - 2026-10-06 — Subdomínio do painel: `painel-sdr.camposai.com.br` (registro A para 76.13.112.74, criado pelo Felipe na Hostinger).
 - 2026-10-06 — Métricas da automação de disparo (app token / n8n), **só na linha do Time**: **Cadastro → disparo** = mediana do tempo entre a criação do Lead no [New] Pipeline SDR e o 1º template do app token para o contato (até 24 h); **Cadastros sem disparo** = Leads criados no período, fora de DSQ, sem template do app token em até 30 min. Em 05/10: mediana 4,1 min; 3 cadastros sem disparo fora de DSQ.
+- 2026-10-06 — Login por **e-mail e senha** (Supabase Auth), sem cadastro aberto: o Felipe cria o usuário no Supabase (Authentication → Users → Add user) e o acesso é liberado com `npm run usuarios -w @painel/worker -- email:papel:Nome`. Usuários da V1: Felipe (admin), Iago Leal e Timóteo Luis (gestores).
+- 2026-10-06 — Feriados: começam com os nacionais de out/2026 a dez/2027 (sem pontos facultativos); o admin edita na tela de Configurações.
+- 2026-10-06 — Tela: "Só horário comercial" não fica na tela principal (é configuração). Carteira, qualidade e reuniões ficam escondidas até as Fases 6/7. Linha do Time mostra também DSQ, cadastro → disparo e cadastros sem disparo.
 - 2026-10-05 — Sem histórico anterior e sem API da Poli por enquanto: o painel começa em 01/10/2026 07:08 (primeiro evento em `raw_events`). Chats que já existiam antes disso podem ter "quem iniciou" e a primeira resposta imprecisos. A ideia de backfill desde 25/09 foi abandonada.
 - 2026-10-05 — Felipe conferiu 3 chats reais no Poli (linha do tempo e tempos de resposta): tudo certo.
 - 2026-10-05 — Lia passa a ser SDR também na integração (`POLI_SDR_EMAILS` do `.env` da VPS). Efeito colateral aceito: as mensagens dela passam a ser registradas no HubSpot, como as dos outros SDRs.

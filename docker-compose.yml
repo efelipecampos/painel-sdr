@@ -1,0 +1,43 @@
+# Painel SDR na VPS (Coolify). O Traefik do Coolify (container "coolify-proxy") cuida de domínio e HTTPS
+# pelos labels + rede "coolify". Nenhuma porta é publicada no host (80/443 são do Traefik).
+# Deploy: rsync do projeto para /root/painel-sdr e, na VPS, `docker compose up -d --build`.
+services:
+  painel-web:
+    build:
+      context: .
+      target: web
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    container_name: painel-sdr-web
+    restart: unless-stopped
+    # Só as variáveis públicas: o app web nunca recebe a service_role.
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+    networks:
+      - coolify
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - traefik.http.services.painel-sdr.loadbalancer.server.port=3000
+      - traefik.http.routers.painel-sdr-https.rule=Host(`painel-sdr.camposai.com.br`)
+      - traefik.http.routers.painel-sdr-https.entrypoints=https
+      - traefik.http.routers.painel-sdr-https.tls.certresolver=letsencrypt
+      - traefik.http.routers.painel-sdr-https.service=painel-sdr
+      - traefik.http.routers.painel-sdr-http.rule=Host(`painel-sdr.camposai.com.br`)
+      - traefik.http.routers.painel-sdr-http.entrypoints=http
+      - traefik.http.routers.painel-sdr-http.middlewares=redirect-to-https@file
+
+  painel-worker:
+    build:
+      context: .
+      target: worker
+    container_name: painel-sdr-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+
+networks:
+  coolify:
+    external: true

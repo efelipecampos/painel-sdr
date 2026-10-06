@@ -8,7 +8,8 @@
     "start": "tsx src/index.ts",
     "once": "tsx src/index.ts --once",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "rebuild-all": "tsx src/index.ts --rebuild-all"
+    "rebuild-all": "tsx src/index.ts --rebuild-all",
+    "usuarios": "tsx src/users.ts"
   },
   "dependencies": {
     "@painel/shared": "*",
