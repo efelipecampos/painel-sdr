@@ -69,7 +69,7 @@ Atualize esta lista conforme avança.
 - [x] Fase 2 — Evento cru na integração (no repositório PoliChat-Hubspot; ver seção 6). No ar desde 01/10/2026.
 - [x] Esperar 1 a 2 dias de eventos reais em `public.raw_events`.
 - [x] Fase 3 — Parser e worker (sem backfill: dados a partir de 01/10/2026). Worker roda manualmente (`npm run once -w @painel/worker`) até o deploy da Fase 5.
-- [ ] Fase 4 — Métricas no banco (Felipe confere os números com o Poli).
+- [x] Fase 4 — Métricas no banco (Felipe confere os números com o Poli). Concluída em 05/10/2026, com sync de Leads do HubSpot (descarte, Descartados, DSQ) adiantado da Fase 6.
 - [ ] Fase 5 — Telas, login e deploy do painel.
 - [ ] Fase 6 — Reuniões do HubSpot.
 - [ ] Fase 7 — Score de qualidade.
@@ -103,14 +103,13 @@ A Fase 2 mexe em produção e em outro repositório. Não edite a integração a
 
 | Pendência | Quando perguntar |
 |---|---|
-| Subdomínio do painel (sugestão: `painel-sdr.camposai.com.br`) | Fase 5 |
 | Ligar ou não a nota diária no HubSpot (`DAILY_NOTES_ENABLED`) | Depois da Fase 2 |
 | Definição escrita de cada status de reunião (Agendada, Validada, No show, Invalidada, Cancelada) | Fase 6 |
+| Carteira: qual objeto/campo do HubSpot define "lead em aberto no funil do SDR" | Fase 6 |
 | Quem pode mudar status de reunião (admin, gestor, closer) | Fase 6 |
 | Critérios reais de qualidade do lead e contexto para o Claude | Fase 7 |
 | Modelo e limite de gasto da API da Anthropic | Fase 7 |
 | Retenção de conteúdo de mensagens (LGPD) | Fase 8 |
-| Quem iniciou: por atendimento (atual) ou pelo primeiro atendimento do lead | Fase 4 |
 | Lista de feriados | Fase 5 |
 
 ## 8. Decisões
@@ -136,7 +135,21 @@ Registre aqui toda decisão nova, com data.
 - 2026-10-04 — Tempo de resposta e tempo de primeira resposta usam **mediana**, não média. Resposta = mensagem escrita por pessoa da equipe ou template enviado manualmente; template do app token e bot não contam. A resposta pode vir em qualquer atendimento do mesmo lead. Primeira resposta = primeira mensagem do lead em cada atendimento.
 - 2026-10-04 — Chat aberto = sem encerramento da Poli e sem atividade (lead ou equipe) em outro atendimento do mesmo lead depois da última atividade dele.
 - 2026-10-04 — Papéis: SDRs = 8 e-mails (inclui Lia); closers = 11; gestores = Iago, Felipe, Hugo, Marcos. Listas em `POLI_SDR_EMAILS`, `POLI_CLOSER_EMAILS`, `POLI_MANAGER_EMAILS`. Tifany e Poliana são de outros departamentos. Cards mostram só SDRs.
-- 2026-10-04 — Quem iniciou a conversa (`painel.chats.initiated_by`): por atendimento, pela primeira mensagem sem contar eventos de sistema. Do lead = "lead"; de pessoa da equipe, template ou bot = "poli".
+- 2026-10-05 — Quem iniciou é por **lead** (`painel.leads.initiated_by`): primeira mensagem, sem eventos de sistema, do primeiro atendimento do lead. Responde "o lead veio por iniciativa dele ou fomos atrás?". Aparece só como coluna "Origem" na tabela de chats do SDR. (`painel.chats.initiated_by`, por atendimento, continua calculado mas não é usado na tela.)
+- 2026-10-05 — Nova métrica no card: **Leads que responderam** = leads distintos que mandaram pelo menos 1 mensagem em chat do SDR no período.
+- 2026-10-05 — **Carteira** = leads em aberto no funil do SDR no HubSpot (proteção de 30 dias já existe no HubSpot). Entra na Fase 6, junto com a qualidade da carteira. Até lá o card mostra vazio.
+- 2026-10-05 — Tabela do SDR mostra os chats em que ele é o dono e que tiveram mensagem no período. Contagens e tempos de cada linha são do chat inteiro.
+- 2026-10-05 — Correção: as medianas de 1ª resposta e de resposta entram no período pelo momento em que o **lead escreveu**, não pelo da resposta. Motivo: na segunda-feira, respostas a leads do fim de semana e da semana anterior inflavam a mediana do dia (ex.: 37h para quem atendeu os leads do dia em 14min).
+- 2026-10-05 — Horário comercial = segunda a sexta, **08:20–17:45** (configurável). Com "Só horário comercial" ligado (padrão da tela), as medianas usam só os leads que escreveram dentro do expediente, com o **tempo real** de espera (lead que escreveu 17:40 e foi respondido 08:30 esperou 14h50). Desligado: todos os leads, tempo real. Motivo: medir se quem escreveu no horário de trabalho foi atendido com o celular na mão.
+- 2026-10-05 — Respostas automáticas do lead (WhatsApp Business respondendo segundos depois do template) contam como mensagem normal do lead.
+- 2026-10-05 — O número ao lado de cada mediana de tempo é a quantidade de **leads** distintos que entraram na conta, não de respostas.
+- 2026-10-05 — "Só horário comercial" sai da tela principal e vira opção das Configurações (`painel.settings.metrics_business_only`, padrão marcada). Marcada: medianas só com leads que escreveram no expediente. Desmarcada: qualquer mensagem do lead. Tempo sempre real. A tela mostra um único número por métrica.
+- 2026-10-05 — Descarte vem do **objeto Lead do HubSpot**, pela etapa do funil. No "[New] Pipeline SDR" (id 841793591), as etapas **Descartado** (1250901141), **DSQ - BR** (1250901142) e **Qualificado** (1358962969) tiram o lead de "Aguardando" e "Parados" (vale o Lead mais recente do contato). "Garantir Agendamento" e as etapas de cadência continuam com o SDR. Medianas não mudam. A lista de etapas fica numa configuração. Sync do HubSpot adiantado da Fase 6; o token do app privado precisa de leitura de Leads.
+- 2026-10-05 — Descarte também por **nota interna da Poli**: o SDR escreve "Finalizado", "DSQ" ou "Descartado" (ou só 0, 1, 2) na nota. O lead sai de "Aguardando" e "Parados" e só volta quando existir no HubSpot um Lead do contato criado depois da nota e fora das etapas de descarte. O worker guarda só a marcação (`chat_messages.note_tag`), nunca o texto da nota. Limitação aceita: uma nota como "não foi descartado" também é lida como descarte.
+- 2026-10-05 — Novas métricas do HubSpot: **Descartados** = Leads que entraram na etapa "Descartado" no período (lead abordado que o SDR descartou), no card do SDR pelo **dono do Lead no HubSpot**, e no Time. **DSQ** = Leads que entraram em "DSQ - BR" no período (cadastro não qualificado para abordagem), métrica separada, **só na linha do Time**. 
+- 2026-10-05 — Contagem de Descartados e DSQ: **nota interna primeiro, HubSpot se não houver nota**. Com nota no período, conta para o SDR dono do chat no momento da nota; sem nota, vale a entrada na etapa do HubSpot (dono do Lead). O mesmo lead conta uma vez. **Finalizado** = suporte/caiu por engano, não é lead: sai só de Aguardando/Parados (continua nos tempos de resposta e em Leads que responderam) e não conta como Descartado nem DSQ. Conferência nota × HubSpot: não precisa.
+- 2026-10-05 — **1ª resposta por ciclo do lead com cada SDR** (substitui "por atendimento"): conta o primeiro bloco do lead com aquele SDR; o ciclo recomeça quando o lead volta depois de nota interna (Descartado/DSQ/Finalizado) ou de entrar em Descartado/DSQ - BR no HubSpot. Transferência conta como 1ª resposta de quem recebeu. Atendimento novo aberto pela Poli no meio da conversa (ex.: template de cadência) não reinicia.
+- 2026-10-06 — Subdomínio do painel: `painel-sdr.camposai.com.br` (registro A para 76.13.112.74, criado pelo Felipe na Hostinger).
 - 2026-10-05 — Sem histórico anterior e sem API da Poli por enquanto: o painel começa em 01/10/2026 07:08 (primeiro evento em `raw_events`). Chats que já existiam antes disso podem ter "quem iniciou" e a primeira resposta imprecisos. A ideia de backfill desde 25/09 foi abandonada.
 - 2026-10-05 — Felipe conferiu 3 chats reais no Poli (linha do tempo e tempos de resposta): tudo certo.
 - 2026-10-05 — Lia passa a ser SDR também na integração (`POLI_SDR_EMAILS` do `.env` da VPS). Efeito colateral aceito: as mensagens dela passam a ser registradas no HubSpot, como as dos outros SDRs.

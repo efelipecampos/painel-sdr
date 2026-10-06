@@ -1,7 +1,7 @@
 // Payloads com o formato real da Poli (chaves e valores categóricos vistos em public.raw_events),
 // com ids, nomes, telefones e textos fictícios.
 import { describe, expect, it } from "vitest";
-import { parsePoliEvent, toE164 } from "./event";
+import { noteTagOf, parsePoliEvent, toE164 } from "./event";
 
 const OWNER = { uuid: "owner-1", email: "Sdr.Um@Poli.Digital", attributes: { name: "SDR Um" } };
 
@@ -114,4 +114,30 @@ describe("toE164", () => {
     ["", null],
     [null, null],
   ])("%s → %s", (input, out) => expect(toE164(input)).toBe(out));
+});
+
+describe("nota interna de descarte", () => {
+  it.each([
+    ["Descartado", "descartado"],
+    ["lead DESCARTADO, sem fit", "descartado"],
+    ["DSQ - autônomo", "dsq"],
+    ["finalizado", "finalizado"],
+    ["Finalizádo", "finalizado"],
+    [" 0 ", "finalizado"],
+    ["1", "dsq"],
+    ["2", "descartado"],
+    ["ligar amanhã às 10", null],
+    ["tem 2 atendentes", null],
+    ["", null],
+  ])("%s → %s", (text, tag) => expect(noteTagOf(text)).toBe(tag));
+
+  it("evento NOTE guarda só a marcação, não o texto", () => {
+    const e = parsePoliEvent(payload({ direction: "SYSTEM", type: "NOTE", note: { notes_body: "Descartado: não tem WhatsApp" } }))!;
+    expect(e).toMatchObject({ sender: "system", systemType: "NOTE", noteTag: "descartado", body: null });
+  });
+
+  it("nota sem marcação e mensagens comuns ficam sem noteTag", () => {
+    expect(parsePoliEvent(payload({ direction: "SYSTEM", type: "NOTE", note: { notes_body: "retornar sexta" } }))!.noteTag).toBeNull();
+    expect(parsePoliEvent(payload({ components: { body: { text: "Descartado" } } }))!.noteTag).toBeNull();
+  });
 });

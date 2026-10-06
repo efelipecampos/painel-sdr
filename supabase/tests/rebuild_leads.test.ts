@@ -35,6 +35,7 @@ beforeEach(async () => {
   await db.exec(`
     delete from painel.response_events; delete from painel.chat_owner_history;
     delete from painel.chat_messages; delete from painel.chats; delete from painel.leads; delete from painel.sdrs;
+    delete from painel.hubspot_leads;
   `);
 });
 
@@ -65,13 +66,14 @@ async function scenario(steps: Step[], opts: { shuffle?: boolean } = {}) {
     const byHuman = ["sdr", "sdr_outro", "template"].includes(r.kind);
     await db.query(
       `insert into painel.chat_messages
-         (poli_message_id, chat_id, lead_id, sdr_id, sender, sent_at, by_human, system_type, attendance_status, closed_reason)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+         (poli_message_id, chat_id, lead_id, sdr_id, sender, sent_at, by_human, system_type, attendance_status, closed_reason, note_tag)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [
         `m${seq}-${r.i}`, await chatId(r.chat, r.owner), lead, await sdrId(r.owner), sender,
         new Date(T0 + r.sec * 1000).toISOString(), byHuman, system ? r.kind.slice(7) : null,
         r.kind === "system:ATTENDANCE_CLOSED" ? "CLOSED" : "IN_PROGRESS",
         r.kind === "system:ATTENDANCE_CLOSED" ? "FINISHED_BY_USER" : null,
+        r.kind === "system:NOTE_DESCARTADO" ? "descartado" : null,
       ],
     );
   }
@@ -164,11 +166,11 @@ describe("rebuild_leads: tempo de resposta", () => {
   });
 
   it("guarda também o tempo em horário comercial", async () => {
-    // Segunda 17:30 → terça 08:30: 15h corridas, 1h em horário comercial (17:30–18:00 + 08:00–08:30).
+    // Segunda 17:30 → terça 08:30: 15h corridas; 25 min no horário configurado (17:30–17:45 + 08:20–08:30).
     const s = await scenario([["lead", 8.5 * 3600], ["sdr", 23.5 * 3600]]);
     const r = await responses(s.lead);
     expect(r[0].secs).toBe(15 * 3600);
-    expect(r[0].biz).toBe(3600);
+    expect(r[0].biz).toBe(25 * 60);
   });
 
   it("é idempotente e não depende da ordem em que as mensagens chegaram", async () => {
@@ -178,6 +180,33 @@ describe("rebuild_leads: tempo de resposta", () => {
     await db.query("select painel.rebuild_leads($1::uuid[])", [[a.lead]]);
     expect(await responses(a.lead)).toEqual(first);
     expect(first.map((x) => x.secs)).toEqual([50, 20]);
+  });
+});
+
+describe("rebuild_leads: 1ª resposta por ciclo do lead com cada SDR", () => {
+  it("atendimento novo aberto pela Poli no meio da conversa não reinicia a 1ª resposta", async () => {
+    const s = await scenario([["lead", 0, "A"], ["sdr", 60, "A"], ["template_bot", 86400, "B"], ["lead", 86500, "B"], ["sdr", 86600, "B"]]);
+    expect((await responses(s.lead)).map((x) => x.first)).toEqual([true, false]);
+  });
+
+  it("lead transferido para outro SDR conta como 1ª resposta de quem recebeu", async () => {
+    const s = await scenario([["lead", 0, "A", "X"], ["sdr", 60, "A", "X"], ["lead", 3600, "B", "Y"], ["sdr", 3700, "B", "Y"]]);
+    const r = await responses(s.lead);
+    expect(r.map((x) => [x.sdr === s.sdrs.get("X") ? "X" : "Y", x.first])).toEqual([["X", true], ["Y", true]]);
+  });
+
+  it("lead que volta depois de nota de descarte entra de novo na 1ª resposta", async () => {
+    const s = await scenario([["lead", 0], ["sdr", 60], ["system:NOTE_DESCARTADO", 120], ["lead", 864000], ["sdr", 864100], ["lead", 864200], ["sdr", 864300]]);
+    expect((await responses(s.lead)).map((x) => x.first)).toEqual([true, true, false]);
+  });
+
+  it("lead que volta depois de ser descartado no HubSpot entra de novo na 1ª resposta", async () => {
+    const s = await scenario([["lead", 0], ["sdr", 60], ["lead", 864000], ["sdr", 864100]]);
+    await db.query("update painel.leads set hubspot_contact_id = 'hc' where id = $1", [s.lead]);
+    await db.query("insert into painel.hubspot_leads (hubspot_lead_id, hubspot_contact_id, entered_descartado_at) values ('h', 'hc', $1)",
+      [new Date(T0 + 3600 * 1000).toISOString()]);
+    await db.query("select painel.rebuild_leads($1::uuid[])", [[s.lead]]);
+    expect((await responses(s.lead)).map((x) => x.first)).toEqual([true, true]);
   });
 });
 

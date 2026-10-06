@@ -40,7 +40,7 @@ O papel do atendente (SDR ou Closer) vem das listas `POLI_SDR_EMAILS` / `POLI_CL
 
 Estas definições foram fechadas como padrão da V1. Qualquer mudança é decisão do Felipe.
 
-**Período**: sempre `[de, até]` escolhido na tela, no fuso `America/Sao_Paulo`. Padrão: hoje, 00:00 a 23:59.
+**Período**: sempre `[de, até]` escolhido na tela, no fuso `America/Sao_Paulo`. Padrão: hoje, 00:00 a 23:59. Nas funções, o intervalo é semiaberto: `[de, até)`.
 
 **Dono do lead (SDR)**: o atendente responsável pelo chat no Poli **no momento de cada evento**. Cada mensagem guarda o SDR responsável naquele instante. Se o chat for transferido para um closer, o que acontece depois disso não conta para o SDR.
 
@@ -50,14 +50,18 @@ Estas definições foram fechadas como padrão da V1. Qualquer mudança é decis
 |---|---|
 | Leads abordados | Leads distintos que receberam ao menos 1 template enviado pelo SDR dentro do período. Um lead abordado duas vezes conta uma vez. |
 | Templates enviados | Total de mensagens de template enviadas pelo SDR no período (conta repetidos). |
-| Tempo de resposta (mediana) | **Mediana**, no período, do tempo entre o **início de um bloco de mensagens do lead** e a **próxima mensagem da equipe para o mesmo lead**, em qualquer atendimento dele. Mensagem da equipe = mensagem escrita por uma pessoa (SDR, closer ou gestor; não precisa ser o dono do chat) ou template enviado manualmente por uma pessoa. Template do app token, mensagens de bot, automações e eventos de sistema (nota interna, resumo, transferência) NÃO contam como resposta e não interrompem o bloco. Bloco = sequência de mensagens do lead sem mensagem da equipe no meio; o relógio começa na primeira mensagem do bloco. O tempo é creditado ao SDR dono do atendimento onde o lead escreveu, no momento da primeira mensagem do bloco. Entra no período pelo horário da resposta. Blocos ainda sem resposta não entram (entram em "Aguardando"). |
-| Tempo de primeira resposta (mediana) | Mesmo cálculo, mas só para o bloco que começa na **primeira mensagem do lead em cada atendimento**. Caso típico: o app token dispara o template no cadastro, o lead responde quando quiser, e mede-se da resposta do lead até a primeira mensagem da equipe. |
+| Leads que responderam | Leads distintos que mandaram pelo menos 1 mensagem em chat do SDR (dono no momento da mensagem) dentro do período. |
+| Descartados | Leads do HubSpot que entraram na etapa "Descartado" do [New] Pipeline SDR no período, atribuídos ao dono do Lead no HubSpot (ligado ao SDR pelo e-mail). Card do SDR e Time. |
+| DSQ (só Time) | Leads do HubSpot que entraram na etapa "DSQ - BR" no período, de qualquer dono. Cadastro não qualificado para abordagem. Só na linha do Time. |
+| Tempo de resposta (mediana) | **Mediana**, no período, do tempo entre o **início de um bloco de mensagens do lead** e a **próxima mensagem da equipe para o mesmo lead**, em qualquer atendimento dele. Mensagem da equipe = mensagem escrita por uma pessoa (SDR, closer ou gestor; não precisa ser o dono do chat) ou template enviado manualmente por uma pessoa. Template do app token, mensagens de bot, automações e eventos de sistema (nota interna, resumo, transferência) NÃO contam como resposta e não interrompem o bloco. Bloco = sequência de mensagens do lead sem mensagem da equipe no meio; o relógio começa na primeira mensagem do bloco. O tempo é creditado ao SDR dono do atendimento onde o lead escreveu, no momento da primeira mensagem do bloco. Entra no período pelo horário em que o **lead escreveu** (início do bloco), não pelo da resposta: a mediana de hoje mede só quem mandou mensagem hoje. Blocos ainda sem resposta não entram (entram em "Aguardando"). |
+| Tempo de primeira resposta (mediana) | Mesmo cálculo, mas só para o **primeiro bloco do lead com cada SDR em cada ciclo**. O ciclo recomeça quando o lead volta depois de ser descartado (nota interna Descartado/DSQ/Finalizado ou entrada em Descartado/DSQ - BR no HubSpot). Lead transferido conta como 1ª resposta de quem recebeu. Atendimento novo aberto pela Poli no meio da conversa não reinicia. Caso típico: o app token dispara o template no cadastro, o lead responde quando quiser, e mede-se da resposta do lead até a primeira mensagem da equipe. |
 | Aguardando resposta | Chats **abertos**, com o SDR como responsável agora, cuja última mensagem do lead ou da equipe é do lead. Estado atual (não depende do período). Aberto = sem evento de encerramento da Poli e sem mensagem do lead ou da equipe em outro atendimento do mesmo lead depois da última atividade deste (a Poli às vezes mantém mais de um atendimento do mesmo lead sem encerrar o antigo). |
 | Parados há +X min | Subconjunto de "Aguardando" em que o tempo desde o início do bloco sem resposta passa do limite configurado (padrão 30 min). Se "contar só horário comercial" estiver ligado nas configurações, esse tempo é contado em horário comercial. |
+| Carteira | Leads em aberto no funil do SDR no HubSpot (carteira protegida por 30 dias: lead que converte de novo no site nesse prazo volta para o mesmo SDR). Vem do HubSpot, entra na Fase 6. |
 | Qualidade da carteira | Média do score mais recente de cada lead da carteira atual do SDR. Leads sem nenhuma mensagem do lead ficam fora e aparecem como "não analisados". |
 | Reuniões | Chats com status de reunião preenchido no período (pela data da última mudança de status). Taxa = reuniões ÷ leads abordados. Conversão para análise de padrão = status **Validada**. |
 
-**Horário comercial**: quando o filtro "Só horário comercial" está ligado, cada intervalo de tempo conta apenas os segundos dentro dos horários configurados por dia da semana, excluindo feriados cadastrados. Com o filtro desligado, conta 24h corrido. Os dois valores são gravados em cada evento de resposta, para o filtro não precisar recalcular nada.
+**Horário comercial**: quando o filtro "Só horário comercial" está ligado, cada intervalo de tempo conta apenas os segundos dentro dos horários configurados por dia da semana, excluindo feriados cadastrados. Nas medianas de 1ª resposta e de resposta, o filtro faz outra coisa: só considera os blocos em que o lead escreveu dentro do expediente, e o tempo é sempre o real (de relógio). A escolha é uma opção das Configurações (`metrics_business_only`, padrão marcada), não um botão na tela principal. Horário padrão: segunda a sexta, 08:20–17:45. Com o filtro desligado, conta 24h corrido. Os dois valores são gravados em cada evento de resposta, para o filtro não precisar recalcular nada.
 
 ## 3. Schema (Postgres / Supabase)
 
@@ -268,9 +272,9 @@ No painel:
 Reproduzir `design/Main.dc.html`, `design/SDR.dc.html` e `design/Configuracoes.dc.html` com as cores e fontes de `design/tokens.json` (tema escuro, fonte Rubik). A cor laranja `#f0a93b` de "parado" é uma adição ao design system.
 
 - `/login`: e-mail (link mágico ou senha).
-- `/`: painel com filtros de período, "Só horário comercial", ordenação, linha do time e cards por SDR. Atualiza sozinho a cada 60 s.
+- `/`: painel com filtro de período, ordenação, linha do time e cards por SDR. Atualiza sozinho a cada 60 s. O "Só horário comercial" NÃO fica nesta tela (decisão de 2026-10-05): é uma opção das Configurações.
 - `/sdr/[id]`: indicadores do SDR, tabela de chats com filtros, busca, paginação e seletor de status de reunião.
-- `/configuracoes` (só admin): horário comercial, feriados, limite de "parado", contexto e critérios de qualidade.
+- `/configuracoes` (só admin): horário comercial, feriados, opção "Medir tempos só em horário comercial" (`settings.metrics_business_only`, padrão marcada), limite de "parado", contexto e critérios de qualidade.
 
 ## 8. Deploy
 

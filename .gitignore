@@ -17,3 +17,4 @@ supabase/.branches/
 # Sistema
 .DS_Store
 *.log
+*.tsbuildinfo

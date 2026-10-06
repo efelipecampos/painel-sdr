@@ -114,6 +114,7 @@ export async function upsertEvents(db: SupabaseClient, events: (PoliEvent & { ra
       attendance_status: e.attendanceStatus,
       attendance_type: e.attendanceType,
       closed_reason: e.closedReason,
+      note_tag: e.noteTag,
     });
   }
   for (const part of chunks([...messages.values()], 500)) {
@@ -137,6 +138,32 @@ export async function rebuildLeads(db: SupabaseClient, leadIds: string[]): Promi
   for (const part of chunks(leadIds, 200)) {
     check(await db.schema("painel").rpc("rebuild_leads", { p_leads: part }), "recalcular leads");
   }
+}
+
+/** Relê as notas internas já recebidas (para preencher note_tag depois da migration que criou a coluna). */
+export async function reprocessNotes(db: SupabaseClient): Promise<number> {
+  let n = 0;
+  for (let from = 0; ; from += 500) {
+    const raws = check(await db.from("raw_events").select("id, payload").eq("payload->value->>type", "NOTE").order("id").range(from, from + 499), "ler notas");
+    const events = raws.map((r: { id: number; payload: unknown }) => ({ e: parsePoliEvent(r.payload), id: r.id }))
+      .filter((x: { e: PoliEvent | null }) => x.e).map((x: { e: PoliEvent | null; id: number }) => ({ ...x.e!, rawEventId: x.id }));
+    await upsertEvents(db, events);
+    n += raws.length;
+    if (raws.length < 500) return n;
+  }
+}
+
+/** Recalcula todos os leads (usar depois de uma migration que muda o cálculo). */
+export async function rebuildAll(db: SupabaseClient): Promise<number> {
+  await reprocessNotes(db);
+  const ids: string[] = [];
+  for (let from = 0; ; from += 1000) {
+    const rows = check(await db.schema("painel").from("leads").select("id").order("id").range(from, from + 999), "listar leads");
+    ids.push(...rows.map((r: { id: string }) => r.id));
+    if (rows.length < 1000) break;
+  }
+  await rebuildLeads(db, ids);
+  return ids.length;
 }
 
 /** Processa um lote a partir do cursor. Devolve quantos eventos crus foram lidos. */

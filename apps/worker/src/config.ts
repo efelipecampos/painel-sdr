@@ -28,6 +28,10 @@ export const config = {
   pollSeconds: Number(process.env.WORKER_POLL_SECONDS ?? 30),
   /** Eventos por lote. */
   batchSize: Number(process.env.WORKER_BATCH_SIZE ?? 500),
+  /** Token do app privado do HubSpot (só leitura). Sem ele, o sync do HubSpot não roda. */
+  hubspotToken: process.env.HUBSPOT_PRIVATE_APP_TOKEN?.trim() || null,
+  /** Intervalo do sync de Leads do HubSpot. */
+  hubspotEveryMinutes: Number(process.env.HUBSPOT_SYNC_MINUTES ?? 15),
 };
 
 export function roleFor(email: string | null): TeamRole | null {
