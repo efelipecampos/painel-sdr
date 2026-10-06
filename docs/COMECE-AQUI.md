@@ -74,6 +74,7 @@ Atualize esta lista conforme avança.
 - [ ] Fase 6 — Reuniões do HubSpot.
 - [ ] Fase 7 — Score de qualidade.
 - [ ] Fase 8 — Operação (conferência diária, alertas, backup, revisão de segurança).
+- [ ] Fase 9 — SDR Modelo (ideia do Felipe, 2026-10-06): o gestor configura o SDR Ideal (faixas e pesos por comportamento: volume, 1ª resposta, tempo de resposta, taxa de resposta, descartes, reuniões validadas); a IA analisa periodicamente os melhores atendimentos (reunião validada / lead de alta qualidade) e sugere ajustes ao SDR Ideal com dados reais, que o gestor aprova ou não; cada SDR ganha uma aderência ao SDR Modelo com o detalhe de onde está dentro e fora. Depende das Fases 6 e 7.
 
 ## 5. O que já se sabe sobre a integração PoliChat-Hubspot
 
