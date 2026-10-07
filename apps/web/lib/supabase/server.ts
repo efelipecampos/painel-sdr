@@ -35,9 +35,13 @@ export const isManager = (me: Me | null): boolean => me?.role === "admin" || me?
 /** Usuário logado e ativo, ou null. Uma consulta por requisição (cache). */
 export const getMe = cache(async function getMe(): Promise<Me | null> {
   const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return null;
-  const { data } = await supabase.schema("painel").from("profiles").select("id, name, role, active, sdr_id").eq("id", auth.user.id).maybeSingle();
+  // O proxy já validou a sessão com o servidor de login nesta requisição. Aqui basta o id do cookie:
+  // a consulta abaixo leva o token, o banco confere a assinatura e o RLS só devolve o próprio perfil
+  // (um token adulterado é recusado pelo banco). Economiza uma ida ao servidor de login (~200 ms).
+  const { data: session } = await supabase.auth.getSession();
+  const userId = session.session?.user.id;
+  if (!userId) return null;
+  const { data } = await supabase.schema("painel").from("profiles").select("id, name, role, active, sdr_id").eq("id", userId).maybeSingle();
   if (!data || !data.active) return null;
   if (data.role === "sdr" && !data.sdr_id) return null;
   return { id: data.id, name: data.name, role: data.role, sdrId: data.sdr_id ?? null };

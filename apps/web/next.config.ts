@@ -17,6 +17,8 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: resolve(__dirname, "../.."),
   transpilePackages: ["@painel/shared"],
   poweredByHeader: false,
+  // Volta para uma tela já vista em até 30 s sem ir ao servidor (os dados se atualizam a cada 60 s).
+  experimental: { staleTimes: { dynamic: 30 } },
   async headers() {
     return [{
       source: "/:path*",
