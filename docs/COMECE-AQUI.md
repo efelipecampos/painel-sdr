@@ -181,7 +181,7 @@ Registre aqui toda decisão nova, com data.
 - 2026-10-07 — Google Agenda: caminho B confirmado (cada closer conecta a própria agenda), mesmo com o caminho A disponível. Tela Usuários lista só a equipe (SDR, closer, gestor, admin).
 - 2026-10-07 — Divisão de trabalho entre duas sessões do Claude: esta segue na Fase 10 e é a única que edita este arquivo; a outra faz a Fase 8 (backup e alerta) num worktree e branch próprios, combina antes qualquer migration nova e avisa antes de mexer em produção.
 - 2026-10-07 — Passagem de bastão: link do painel na descrição do evento (só abre com login).
-- 2026-10-07 — Closer piloto da 10c: Alessandra.
+- 2026-10-07 — Closers piloto da 10c: Calil e Alessandra.
 - 2026-10-07 — Backup: só o do Supabase no plano Pro (diário, 7 dias), sem cópia extra fora do Supabase (decisão do Felipe).
 - 2026-10-07 — **Lentidão do painel:** a VPS fica em Boston (EUA) e o Supabase em São Paulo; cada ida ao banco custa ~200 ms. Melhorias sem custo no ar: login conferido uma vez por clique, dados em paralelo, tela de carregando, perfil sem ida extra ao servidor de login, telas já vistas guardadas por 30 s no navegador.
 - 2026-10-07 — **Migração da VPS para São Paulo adiada** (sem verba agora; a Hostinger não ofereceu São Paulo na compra). Quando voltar: KVM 4 em São Paulo; migrar só painel SDR, poli-hubspot e api4com-hubspot (Chatwoots, Langfuse, n8n, agents e o postgres `swws40…` não estão em uso e o Felipe recomeça do zero). O disparo do app token é do n8n da própria Poli, não do n8n da VPS. Cópia dos bancos dos serviços não migrados em `~/Backups/vps-boston-20261007` no Mac do Felipe.
