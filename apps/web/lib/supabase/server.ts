@@ -21,13 +21,13 @@ export const createClient = cache(async function createClient() {
   });
 });
 
-export type Role = "admin" | "gestor" | "sdr";
+export type Role = "admin" | "gestor" | "sdr" | "closer";
 
 export interface Me {
   id: string;
   name: string;
   role: Role;
-  sdrId: string | null; // só para o papel sdr: o SDR do usuário
+  sdrId: string | null; // papéis sdr e closer: o atendente do usuário (painel.sdrs)
   canManageUsers: boolean; // admin, ou gestor com a marcação (tela Usuários)
 }
 
@@ -44,7 +44,7 @@ export const getMe = cache(async function getMe(): Promise<Me | null> {
   if (!userId) return null;
   const { data } = await supabase.schema("painel").from("profiles").select("id, name, role, active, sdr_id, can_manage_users").eq("id", userId).maybeSingle();
   if (!data || !data.active) return null;
-  if (data.role === "sdr" && !data.sdr_id) return null;
+  if ((data.role === "sdr" || data.role === "closer") && !data.sdr_id) return null;
   return {
     id: data.id, name: data.name, role: data.role, sdrId: data.sdr_id ?? null,
     canManageUsers: data.role === "admin" || !!data.can_manage_users,
