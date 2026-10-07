@@ -27,6 +27,7 @@ export function AgendarForm({ carousels, initialLead, sdrs }: {
   const [ref, setRef] = useState("");
   const [lead, setLead] = useState<LeadLoaded | null>(null);
   const [email, setEmail] = useState("");
+  const [company, setCompany] = useState("");
   // 2. reunião
   const [brand, setBrand] = useState<"poli" | "chatshub">("poli");
   const [carouselId, setCarouselId] = useState("");
@@ -48,6 +49,7 @@ export function AgendarForm({ carousels, initialLead, sdrs }: {
     const r = await carregarLead(input);
     setLead(r);
     setEmail(r.info?.email ?? "");
+    setCompany(r.info?.company ?? "");
     if (r.sugestao) {
       const sug = r.sugestao[brand] ?? r.sugestao.poli;
       if (sug) {
@@ -97,7 +99,7 @@ export function AgendarForm({ carousels, initialLead, sdrs }: {
     setManual({ erro: r.erro, avisos: r.avisos, count: r.count });
   });
 
-  const canConfirm = !!info && !!carouselId && !!local && !!manual && !manual.erro && manual.count > 0 && (!sdrs || !!sdrId);
+  const canConfirm = !!info && !!company.trim() && !!carouselId && !!local && !!manual && !manual.erro && manual.count > 0 && (!sdrs || !!sdrId);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -138,6 +140,8 @@ export function AgendarForm({ carousels, initialLead, sdrs }: {
               <span className="spacer" />
               <button type="button" className="btn small" onClick={() => { setLead(null); setCarouselId(""); }}>Trocar lead</button>
             </div>
+            <label className="lbl" htmlFor="company">Empresa (vai no título da reunião; preencha se o HubSpot não tiver)</label>
+            <input id="company" className="field" value={company} maxLength={120} onChange={(e) => setCompany(e.target.value)} required />
             <label className="lbl" htmlFor="email">E-mail do lead (recebe o convite do Google; corrija se precisar)</label>
             <input id="email" type="email" className="field" value={email} onChange={(e) => setEmail(e.target.value)} />
             {lead?.reunioes && lead.reunioes.length > 0 && (
@@ -173,6 +177,7 @@ export function AgendarForm({ carousels, initialLead, sdrs }: {
             ))}
           </select>
           {carousel?.description && <span className="muted">{carousel.description}</span>}
+          <span className="muted">Título na agenda: <strong>Apresentação {BRAND[brand]} - {company.trim() || "…"}</strong></span>
           <div className="group">
             <span className="lbl">Duração</span>
             {(carousel?.durations ?? [30, 45, 60]).map((d) => (
@@ -245,6 +250,7 @@ export function AgendarForm({ carousels, initialLead, sdrs }: {
           <input type="hidden" name="local" value={local} />
           <input type="hidden" name="duration" value={duration} />
           <input type="hidden" name="email" value={email} />
+          <input type="hidden" name="company" value={company} />
           <input type="hidden" name="handoff" value={handoff} />
           <input type="hidden" name="leadId" value={lead?.leadId ?? ""} />
           <input type="hidden" name="contactId" value={info.contactId} />

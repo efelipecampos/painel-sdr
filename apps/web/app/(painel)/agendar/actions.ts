@@ -127,6 +127,8 @@ export async function confirmar(_: ConfirmState, form: FormData): Promise<Confir
   const duration = Number(s("duration"));
   const email = s("email").toLowerCase();
   const handoff = s("handoff");
+  const company = s("company").slice(0, 120);
+  if (!company) return { erro: "Preencha a empresa do lead (vai no título da reunião)." };
   if (!carouselId || !local) return { erro: "Escolha o carrossel e o horário." };
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { erro: "O e-mail do lead parece inválido. Corrija ou deixe em branco." };
   if (handoff.length > 4000) return { erro: "A passagem de bastão está longa demais (máximo 4.000 caracteres)." };
@@ -148,7 +150,7 @@ export async function confirmar(_: ConfirmState, form: FormData): Promise<Confir
   const { start, end } = interval(local, duration);
 
   const db = admin();
-  const leadId = loaded.leadId ?? (await db.rpc("lead_para_agendar", { p_hubspot_contact_id: info.contactId, p_name: info.name, p_company: info.company })).data as string;
+  const leadId = loaded.leadId ?? (await db.rpc("lead_para_agendar", { p_hubspot_contact_id: info.contactId, p_name: info.name, p_company: company })).data as string;
   const livres = freeAt(await busyOf(await candidates(carouselId, leadId, info.contactId), start, end), start, end, ctx.carousel.gap_minutes);
   if (!livres.length) return { erro: "Nenhum closer está livre neste horário agora. Escolha outro horário." };
 
@@ -168,7 +170,7 @@ export async function confirmar(_: ConfirmState, form: FormData): Promise<Confir
     db.from("google_connections").select("google_email").eq("closer_id", closerId).single(),
   ]);
   // Título do evento: "Apresentação Poli - Empresa" (decisão do Felipe em 2026-10-07; sem o nome do closer).
-  const title = `Apresentação ${BRAND_LABEL[ctx.carousel.brand]} - ${info.company || info.name || "Lead"}`;
+  const title = `Apresentação ${BRAND_LABEL[ctx.carousel.brand]} - ${company}`;
   const attendees = [email, ctx.inviteSdr ? (sdr as { poli_email?: string } | null)?.poli_email : null].filter((x): x is string => !!x);
 
   try {
@@ -179,7 +181,7 @@ export async function confirmar(_: ConfirmState, form: FormData): Promise<Confir
     });
     await logCalendar({ closer_id: closerId, meeting_id: meetingId, op: "criar", ok: true });
     const up = await db.from("meetings").update({
-      lead_name: info.name, company: info.company, lead_email: email || null, hubspot_contact_id: info.contactId,
+      lead_name: info.name, company, lead_email: email || null, hubspot_contact_id: info.contactId,
       hubspot_lead_id: info.leadId, title, handoff: handoff || null, fora_do_padrao: check.foraDoPadrao,
       google_calendar_id: conn?.google_email ?? "primary", google_event_id: ev.id, meet_url: ev.hangoutLink ?? null,
       google_state: "ok", google_checked_at: new Date().toISOString(),
