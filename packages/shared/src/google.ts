@@ -140,6 +140,8 @@ export interface NewEvent {
   end: Date;
   attendees: string[];
   colorId?: string;
+  /** conferenceData de outro evento: reaproveita o mesmo link do Meet (troca de closer no reagendamento). */
+  conference?: unknown;
 }
 
 const API = "https://www.googleapis.com/calendar/v3";
@@ -175,7 +177,7 @@ export class GoogleCalendar {
         start: { dateTime: ev.start.toISOString(), timeZone: "America/Sao_Paulo" },
         end: { dateTime: ev.end.toISOString(), timeZone: "America/Sao_Paulo" },
         attendees: ev.attendees.map((email) => ({ email })),
-        conferenceData: { createRequest: { requestId: randomBytes(12).toString("hex"), conferenceSolutionKey: { type: "hangoutsMeet" } } },
+        conferenceData: ev.conference ?? { createRequest: { requestId: randomBytes(12).toString("hex"), conferenceSolutionKey: { type: "hangoutsMeet" } } },
         reminders: { useDefault: true },
         ...(ev.colorId ? { colorId: ev.colorId } : {}),
       }),
