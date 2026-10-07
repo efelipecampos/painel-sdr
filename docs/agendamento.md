@@ -197,6 +197,16 @@ Navegação do gestor e do admin: Painel · Reuniões · Carrosséis · Usuário
    5. Reuniões já marcadas pela Poli Agenda para depois do corte: continuam valendo na agenda do Google dos closers. No painel novo elas não aparecem na lista nem contam no saldo, a menos que o Felipe peça para lançá-las à mão. Os saldos de todos os carrosséis começam zerados no corte.
    6. Desligar a Poli Agenda.
 
+## 10.1 Pedidos do Felipe em 2026-10-07 (entendimento registrado; detalhes em aberto na seção 11)
+
+**A. Troca de marca durante a reunião ("Passar para CH" / "Passar para Poli").** Durante a reunião o closer entende a situação real do cliente e a reunião muda de empresa. O **closer entra no sistema**, acha a reunião dele na lista e clica num botão só. Isso muda o nome da reunião no painel e no Google Calendar na hora; o HubSpot é atualizado no fim do dia (item B). Consequência: **closer passa a ser usuário do painel** (antes: "closers não entram nesta fase"), vendo só as próprias reuniões.
+
+**B. HubSpot: reunião criada no agendamento + atualização diária às 17:55.** Toda reunião agendada gera uma **Reunião no HubSpot associada** ao Lead, ao contato, ao closer e ao SDR. Todo dia às **17:55** o painel envia ao HubSpot os status do dia (validada, invalidada, no show, cancelada etc.). Motivo: a Poli Agenda e a extensão do HubSpot atualizam tudo na hora e geram **reuniões duplicadas**, e o time recontava as reuniões à mão todo dia. Regra de ouro: **uma reunião do painel = uma reunião no HubSpot, para sempre** (guardar o id e sempre atualizar, nunca criar de novo). Substitui a decisão de 2026-10-07 "objeto Reunião do HubSpot fica fora".
+
+**C. "Editar" e "Reagendar" na lista do SDR.** Em vez de "Abrir Meet", a linha tem **Editar**: mudar o **horário** da reunião. **Reagendar**: mudar o **dia** (e talvez o closer). Reagendar **move o convite** na agenda (o mesmo evento), e **não pode duplicar no HubSpot** de jeito nenhum.
+
+**D. Reaproveitar a reunião do lead.** Lead cancelou e volta dias depois: em vez de nova reunião, o SDR acha a reunião anterior e clica em **Reagendar** (a nova substitui a antiga; no HubSpot continua sendo a mesma reunião). Na tela **Agendar**, mostrar de forma simples **"Reuniões já agendadas com este lead"**: data, closer e resultado (validada, invalidada...), com atalho para reagendar.
+
 ## 11. Pendências para decidir com o Felipe
 
 | Pendência | Quando |
@@ -209,6 +219,13 @@ Navegação do gestor e do admin: Painel · Reuniões · Carrosséis · Usuário
 | Por onde o closer recebe a passagem de bastão: e-mail separado ou Google Chat | 10c |
 | O SDR entra como convidado no evento? | 10c |
 | Liberar escrita de Leads no token do HubSpot | Antes da 10e |
+| (A) Trocar de marca: a reunião muda de carrossel (Poli ↔ ChatsHub do mesmo porte)? E o livro-caixa (o crédito/débito vai para o carrossel novo)? Formato do nome da reunião | 10b/10e |
+| (A) Closer como usuário: vê só as próprias reuniões? Também marca validada/invalidada/no show? Login com e-mail do Google Workspace | 10e |
+| (B) A agenda dos closers está ligada ao HubSpot (sincronização de calendário / ferramenta de reuniões / extensão)? Se estiver, o HubSpot já cria a reunião sozinho a partir do convite — e o painel criando também duplica | Antes da 10c |
+| (B) Criar a Reunião no HubSpot na hora do agendamento, ou também só às 17:55? E mover o Lead para "Garantir Agendamento": na hora ou às 17:55? | Antes da 10e |
+| (B) Como cada status vira no HubSpot (resultado da reunião: agendada, realizada, no show, cancelada, reagendada) e onde ficam validada/invalidada (propriedade nova?) | Antes da 10e |
+| (C) Editar (horário) e Reagendar (dia): mesmo closer sempre, ou reagendar pode mudar o closer pelo carrossel? (conflita com "lead mantém o mesmo closer") | 10d |
+| (D) Reagendar uma reunião cancelada: o evento volta da agenda de arquivo para a agenda do closer, com o mesmo id no HubSpot? | 10d |
 | Criar o webhook do espaço "Gestão SDR" no Google Chat (o Felipe cria e cola no `.env`) | 10e |
 | Quem pode reagendar e cancelar: SDR dono, closer, gestor | 10e |
 
