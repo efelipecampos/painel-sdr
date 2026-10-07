@@ -76,6 +76,12 @@ Atualize esta lista conforme avança.
 - [ ] Fase 8 — Operação (conferência diária, alertas, backup, revisão de segurança).
 - [ ] Fase 9 — SDR Modelo (ideia do Felipe, 2026-10-06): o gestor configura o SDR Ideal (faixas e pesos por comportamento: volume, 1ª resposta, tempo de resposta, taxa de resposta, descartes, reuniões validadas); a IA analisa periodicamente os melhores atendimentos (reunião validada / lead de alta qualidade) e sugere ajustes ao SDR Ideal com dados reais, que o gestor aprova ou não; cada SDR ganha uma aderência ao SDR Modelo com o detalhe de onde está dentro e fora. Depende das Fases 6 e 7.
 - [ ] Fase 10 — Agendamento e carrossel de reuniões (pedido do Felipe, 2026-10-06): SDRs entram no painel (veem só o que é deles) e agendam reuniões na Google Agenda dos closers; o sistema distribui entre os closers por pesos definidos pelos gestores. Especificação completa em `docs/agendamento.md`; telas em `design/Agendar.dc.html`, `design/AgendarSucesso.dc.html`, `design/Reunioes.dc.html`, `design/Carrossel.dc.html` e `design/Usuarios.dc.html`. Substitui a Poli Agenda (feita no Lovable), construída do zero. Não depende das Fases 7 e 9. Antes de liberar para os SDRs: backup e alerta da Fase 8 e Supabase no plano Pro.
+  - [x] 10a — Acesso do SDR (papel `sdr`, escopo por SDR no banco, tela "Meus chats"). No ar desde 07/10/2026; testado pelo Felipe com o login da Isadora.
+  - [ ] 10b — Carrossel sem Google.
+  - [ ] 10c — Google Agenda.
+  - [ ] 10d — Agendar de ponta a ponta.
+  - [ ] 10e — HubSpot e pós-agendamento.
+  - [ ] Virada da Poli Agenda.
 
 ## 5. O que já se sabe sobre a integração PoliChat-Hubspot
 
@@ -169,6 +175,7 @@ Registre aqui toda decisão nova, com data.
 - 2026-10-07 — **Regra do DSQ (Marketing):** o lead que preenche o formulário do site e não atende o critério de qualidade do Marketing vai para DSQ, e não para o SDR. A **Lia** (robô) prospecta dentro dos DSQ, tentando achar empresas com mais de 3 usuários; o script dela está em teste. A Poli não vende para empresas com menos de 3 usuários.
 - 2026-10-07 — Definição de lead ruim (análise de 763 leads com conversa e desfecho desde 01/10 + motivos de descarte de 30 dias): não conversa (60% dos descartes; mediana de 1–2 mensagens curtas, contra 7 dos qualificados); menos de 3 usuários / autônomo / "atendo sozinho"; pede para encerrar ou diz que não pediu contato; resposta automática do WhatsApp Business; procura disparo em massa, catálogo ou divulgação. Lead bom fala de equipe e estrutura (setores, diretoria, fluxo, CNPJ), descreve dor de atendimento, engaja (várias mensagens, áudio) e pede reunião (32% dos qualificados). Base para os critérios da Fase 7.
 - 2026-10-07 — Tabela do SDR passa a listar também os leads aguardando agora, mesmo sem mensagem no período (antes o card mostrava 3 aguardando e a lista não mostrava nenhum).
+- 2026-10-07 — 10a no ar. Login de teste = conta real da Isadora (`isadora.rocha@poli.digital`, papel sdr), escolha do Felipe. Os demais SDRs só ganham login depois do backup/alerta da Fase 8 e do Supabase Pro.
 - 2026-10-05 — Sem histórico anterior e sem API da Poli por enquanto: o painel começa em 01/10/2026 07:08 (primeiro evento em `raw_events`). Chats que já existiam antes disso podem ter "quem iniciou" e a primeira resposta imprecisos. A ideia de backfill desde 25/09 foi abandonada.
 - 2026-10-05 — Felipe conferiu 3 chats reais no Poli (linha do tempo e tempos de resposta): tudo certo.
 - 2026-10-05 — Lia passa a ser SDR também na integração (`POLI_SDR_EMAILS` do `.env` da VPS). Efeito colateral aceito: as mensagens dela passam a ser registradas no HubSpot, como as dos outros SDRs.
