@@ -163,12 +163,12 @@ export async function confirmar(_: ConfirmState, form: FormData): Promise<Confir
   }
   const { meeting_id: meetingId, closer_id: closerId } = (r.data as { meeting_id: string; closer_id: string }[])[0];
 
-  const [{ data: closer }, { data: sdr }, { data: conn }] = await Promise.all([
-    db.from("sdrs").select("name").eq("id", closerId).single(),
+  const [{ data: sdr }, { data: conn }] = await Promise.all([
     sdrId ? db.from("sdrs").select("poli_email").eq("id", sdrId).single() : Promise.resolve({ data: null }),
     db.from("google_connections").select("google_email").eq("closer_id", closerId).single(),
   ]);
-  const title = `${BRAND_LABEL[ctx.carousel.brand]} | ${info.company || info.name || "Lead"} | ${closer?.name ?? "Closer"}`;
+  // Título do evento: "Apresentação Poli - Empresa" (decisão do Felipe em 2026-10-07; sem o nome do closer).
+  const title = `Apresentação ${BRAND_LABEL[ctx.carousel.brand]} - ${info.company || info.name || "Lead"}`;
   const attendees = [email, ctx.inviteSdr ? (sdr as { poli_email?: string } | null)?.poli_email : null].filter((x): x is string => !!x);
 
   try {

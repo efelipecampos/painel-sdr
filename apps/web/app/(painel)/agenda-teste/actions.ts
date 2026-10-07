@@ -42,7 +42,7 @@ export async function criarTeste(form: FormData) {
     const { data: s } = await createAdminClient().schema("painel").from("sdrs").select("name").eq("id", closer).single();
     const start = localToDate(`${dia}T${hora}`);
     r = await withLog(closer, "criar", () => cal.insert({
-      title: `TESTE | Painel SDR | ${s?.name ?? "Closer"}`,
+      title: "Apresentação Poli - TESTE do Painel SDR",
       description: `Evento de teste do Painel SDR. Pode ser apagado.\n\nPassagem de bastão (equipe): ${APP_URL}/agenda-teste`,
       start, end: new Date(start.getTime() + 30 * 60_000),
       attendees: u.user?.email ? [u.user.email] : [],
