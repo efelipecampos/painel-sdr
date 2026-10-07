@@ -166,6 +166,12 @@ Em qualquer caminho:
 - V1: um job confere periodicamente se o evento ainda existe e se o closer recusou. Notificações em tempo real do Google ficam para depois.
 - Credenciais do Google só no servidor (`.env` da VPS). Token de closer (caminho B) cifrado no banco.
 
+**Decisões de 2026-10-07 (10c):**
+- O closer conecta a agenda pelo botão **"Conectar minha agenda do Google"** na tela dele no painel. O closer passa a ter login (papel `closer`) já na 10c. No piloto, só a Alessandra ganha login. Não existe "link de conexão".
+- **Lead recusou o convite no Google:** a conferência periódica mostra o aviso "Lead recusou no Google" no painel. O SDR ou o closer confirma o cancelamento com 1 clique. Não cancela sozinho.
+- O painel **não** mostra o link do Meet ao SDR depois de agendar: o SDR copia da própria Google Agenda, onde ele é convidado, e manda ao lead pelo chat da Poli.
+- O lead **recebe o convite do Google por e-mail** quando tiver e-mail.
+
 ## 7. HubSpot
 
 - Consulta ao vivo do lead ao abrir o agendamento (seção 4): Contato e Lead associado, por link ou ID. Só leitura.
