@@ -200,19 +200,25 @@ export class GoogleCalendar {
     return this.call("mover", `${API}/calendars/${enc(calendarId)}/events/${enc(eventId)}/move?destination=${enc(destination)}&sendUpdates=none`, { method: "POST" });
   }
 
-  /** Lê um evento criado pelo painel. 404/410 = apagado no Google. */
+  /** Lê um evento criado pelo painel. Apagado no Google (404/410 ou status cancelled) = null. */
   async get(eventId: string, calendarId = "primary"): Promise<CalendarEvent | null> {
     try {
-      return await this.call<CalendarEvent>("ler", `${API}/calendars/${enc(calendarId)}/events/${enc(eventId)}`);
+      const ev = await this.call<CalendarEvent>("ler", `${API}/calendars/${enc(calendarId)}/events/${enc(eventId)}`);
+      return ev.status === "cancelled" ? null : ev;
     } catch (e) {
       if (e instanceof GoogleError && (e.status === 404 || e.status === 410)) return null;
       throw e;
     }
   }
 
-  /** Apaga (só a tela de teste usa; reunião de verdade vai para o arquivo). */
-  remove(eventId: string, calendarId = "primary"): Promise<void> {
-    return this.call("apagar", `${API}/calendars/${enc(calendarId)}/events/${enc(eventId)}?sendUpdates=none`, { method: "DELETE" });
+  /** Apaga (só a tela de teste usa; reunião de verdade vai para o arquivo). Já apagado conta como feito. */
+  async remove(eventId: string, calendarId = "primary"): Promise<void> {
+    try {
+      await this.call("apagar", `${API}/calendars/${enc(calendarId)}/events/${enc(eventId)}?sendUpdates=none`, { method: "DELETE" });
+    } catch (e) {
+      if (e instanceof GoogleError && (e.status === 404 || e.status === 410)) return;
+      throw e;
+    }
   }
 }
 

@@ -77,7 +77,9 @@ describe("situação do evento", () => {
     expect(eventState(ev([{ email: "l@x.com", responseStatus: "declined" }]), null)).toBe("recusada_lead");
     expect(eventState(ev([{ email: "sdr@poli.digital", responseStatus: "declined" }]), null)).toBe("ok");
   });
-  it("leitura de evento apagado devolve null", async () => {
+  it("leitura de evento apagado devolve null (410 ou status cancelled); apagar de novo não é erro", async () => {
     expect(await new GoogleCalendar("tk", async () => json(410, { error: { errors: [{ reason: "deleted" }] } })).get("e")).toBeNull();
+    expect(await new GoogleCalendar("tk", async () => json(200, { id: "e", status: "cancelled" })).get("e")).toBeNull();
+    await expect(new GoogleCalendar("tk", async () => json(410, { error: { errors: [{ reason: "deleted" }] } })).remove("e")).resolves.toBeUndefined();
   });
 });

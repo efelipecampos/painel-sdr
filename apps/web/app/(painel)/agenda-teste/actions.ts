@@ -36,6 +36,7 @@ export async function criarTeste(form: FormData) {
   const q = { closer, dia };
   const { data: u } = await (await createClient()).auth.getUser();
   let r: { id: string } | undefined;
+  let erro: string | null = null;
   try {
     const cal = await calendarOf(closer);
     const { data: s } = await createAdminClient().schema("painel").from("sdrs").select("name").eq("id", closer).single();
@@ -47,8 +48,9 @@ export async function criarTeste(form: FormData) {
       attendees: u.user?.email ? [u.user.email] : [],
     }));
   } catch (e) {
-    go(q, (e as Error).message);
+    erro = (e as Error).message;
   }
+  if (erro || !r) go(q, erro ?? "Não foi possível criar o evento.");
   go({ ...q, ev: r!.id, onde: "closer" });
 }
 
@@ -61,6 +63,7 @@ export async function operarTeste(form: FormData) {
   const op = String(form.get("op"));
   const q = { closer, dia, ev, onde };
   let next = onde;
+  let erro: string | null = null;
   try {
     const cal = await calendarOf(closer);
     const arq = await archiveId();
@@ -83,11 +86,14 @@ export async function operarTeste(form: FormData) {
       next = "closer";
     } else if (op === "apagar") {
       await withLog(closer, "apagar", () => cal.remove(ev, here));
-      go({ closer, dia }, undefined);
+      next = "";
     }
   } catch (e) {
-    go(q, (e as Error).message);
+    erro = (e as Error).message;
   }
+  // redirect fora do try: ele funciona lançando um erro interno do Next, que o catch acima engoliria
+  if (erro) go(q, erro);
+  if (!next) go({ closer, dia });
   go({ ...q, onde: next });
 }
 
