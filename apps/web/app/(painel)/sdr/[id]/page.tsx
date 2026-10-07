@@ -41,18 +41,21 @@ export default async function SdrPage({ params, searchParams }: {
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  // SDR só abre a própria tela (o banco também recusa sdr_chats de outro SDR).
-  const me = await getMe();
-  if (me?.role === "sdr" && me.sdrId !== id) redirect(`/sdr/${me.sdrId}`);
-  const manager = isManager(me);
   const period = resolvePeriod(sp);
   const filter = FILTERS.some((f) => f.key === sp.filtro) ? sp.filtro! : "all";
   const search = sp.busca?.trim() || null;
   const page = Math.max(1, Number(sp.pagina) || 1);
-  const [all, settings, rows] = await Promise.all([
+  // Busca os dados em paralelo com a conferência do usuário (cada ida ao banco custa ~200 ms).
+  const data = Promise.all([
     getSdrMetrics(period), getSettings(),
     getSdrChats(id, period, { filter, search, limit: PAGE, offset: (page - 1) * PAGE }),
   ]);
+  data.catch(() => {}); // se o SDR pediu a tela de outro, o banco recusa; ele é redirecionado abaixo
+  // SDR só abre a própria tela (o banco também recusa sdr_chats de outro SDR).
+  const me = await getMe();
+  if (me?.role === "sdr" && me.sdrId !== id) redirect(`/sdr/${me.sdrId}`);
+  const manager = isManager(me);
+  const [all, settings, rows] = await data;
   const s = all.find((x) => x.sdr_id === id);
   if (!s) notFound();
   const total = rows[0]?.total ?? 0;

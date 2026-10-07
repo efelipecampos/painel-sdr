@@ -2,8 +2,10 @@
 // Usa a chave anon: o acesso é decidido pelo RLS e pelas funções do banco. A service_role nunca entra aqui.
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
-export async function createClient() {
+// cache(): um cliente e um getMe por requisição (o layout e a página reaproveitam, sem ir ao banco de novo).
+export const createClient = cache(async function createClient() {
   const store = await cookies();
   return createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     cookies: {
@@ -17,7 +19,7 @@ export async function createClient() {
       },
     },
   });
-}
+});
 
 export type Role = "admin" | "gestor" | "sdr";
 
@@ -30,8 +32,8 @@ export interface Me {
 
 export const isManager = (me: Me | null): boolean => me?.role === "admin" || me?.role === "gestor";
 
-/** Usuário logado e ativo, ou null. */
-export async function getMe(): Promise<Me | null> {
+/** Usuário logado e ativo, ou null. Uma consulta por requisição (cache). */
+export const getMe = cache(async function getMe(): Promise<Me | null> {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return null;
@@ -39,4 +41,4 @@ export async function getMe(): Promise<Me | null> {
   if (!data || !data.active) return null;
   if (data.role === "sdr" && !data.sdr_id) return null;
   return { id: data.id, name: data.name, role: data.role, sdrId: data.sdr_id ?? null };
-}
+});

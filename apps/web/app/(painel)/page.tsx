@@ -24,11 +24,14 @@ function pct(n: number, base: number): string {
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
   // SDR não vê o painel do time: vai para os próprios chats (o banco também recusa team_metrics para ele).
-  const me = await getMe();
-  if (me?.role === "sdr") redirect(`/sdr/${me.sdrId}`);
   const period = resolvePeriod(sp);
   const sortKey = sp.ordem && SORTS[sp.ordem] ? sp.ordem : "aguardando";
-  const [team, sdrs, settings] = await Promise.all([getTeamMetrics(period), getSdrMetrics(period), getSettings()]);
+  // Dados em paralelo com a conferência do usuário (cada ida ao banco custa ~200 ms).
+  const data = Promise.all([getTeamMetrics(period), getSdrMetrics(period), getSettings()]);
+  data.catch(() => {}); // SDR: o banco recusa team_metrics; ele é redirecionado abaixo
+  const me = await getMe(); // já carregado pelo layout (cache)
+  if (me?.role === "sdr") redirect(`/sdr/${me.sdrId}`);
+  const [team, sdrs, settings] = await data;
   const list = [...sdrs].sort(SORTS[sortKey]);
   const qs = new URLSearchParams(Object.entries(sp).filter(([, v]) => v != null) as [string, string][]).toString();
   const timeMode = settings.metrics_business_only
