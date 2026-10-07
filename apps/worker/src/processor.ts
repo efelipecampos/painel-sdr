@@ -44,6 +44,17 @@ export async function setCursor(db: SupabaseClient, id: number): Promise<void> {
 
 /** Mantém o papel de cada atendente (e quem é robô) igual às listas do .env. */
 export async function syncRoles(db: SupabaseClient): Promise<void> {
+  // Closers da lista que ainda não apareceram em nenhum chat também precisam existir (carrosséis, Fase 10).
+  const known = new Set(check(await db.schema("painel").from("sdrs").select("poli_email"), "ler sdrs").map((r: { poli_email: string }) => r.poli_email));
+  const missing = [...config.closerEmails].filter((e) => !known.has(e));
+  if (missing.length) {
+    const owners = check(await db.schema("painel").from("hubspot_owners").select("email, name").in("email", missing), "ler donos do HubSpot");
+    const nameOf = new Map(owners.map((o: { email: string; name: string | null }) => [o.email, o.name]));
+    check(await db.schema("painel").from("sdrs").upsert(
+      missing.map((e) => ({ poli_email: e, email: e, name: nameOf.get(e) || e.split("@")[0], role: "closer" })),
+      { onConflict: "poli_email", ignoreDuplicates: true },
+    ), "cadastrar closers");
+  }
   const rows = check(await db.schema("painel").from("sdrs").select("id, poli_email, role, is_bot"), "ler sdrs");
   for (const r of rows) {
     const role = roleFor(r.poli_email);

@@ -14,6 +14,8 @@ afterAll(async () => {
 });
 
 const CONFIG_TABLES = ["business_hours", "holidays", "quality_criteria", "settings"];
+// Tabelas de carrossel que gestor e admin editam na tela (sem DELETE: arquivar = active false).
+const CAROUSEL_TABLES = ["carousel_members", "carousels"];
 
 async function tables(): Promise<{ schema: string; name: string; rls: boolean }[]> {
   const res = await db.query<{ schema: string; name: string; rls: boolean }>(`
@@ -28,7 +30,7 @@ async function tables(): Promise<{ schema: string; name: string; rls: boolean }[
 describe("segurança do banco", () => {
   it("todas as tabelas de public e painel têm RLS ligado", async () => {
     const all = await tables();
-    expect(all.length).toBe(19);
+    expect(all.length).toBe(22);
     expect(all.filter((t) => !t.rls)).toEqual([]);
   });
 
@@ -45,7 +47,7 @@ describe("segurança do banco", () => {
     expect(f.rows).toEqual([]);
   });
 
-  it("authenticated só acessa profiles (leitura) e as tabelas de configuração", async () => {
+  it("authenticated só acessa profiles (leitura), as tabelas de configuração e as de carrossel", async () => {
     const res = await db.query<{ table_name: string; privilege_type: string }>(`
       select table_name, privilege_type from information_schema.role_table_grants
       where grantee = 'authenticated' and table_schema in ('public', 'painel')
@@ -53,7 +55,8 @@ describe("segurança do banco", () => {
     `);
     const byTable = new Map<string, string[]>();
     for (const r of res.rows) byTable.set(r.table_name, [...(byTable.get(r.table_name) ?? []), r.privilege_type]);
-    expect([...byTable.keys()].sort()).toEqual([...CONFIG_TABLES, "profiles"].sort());
+    expect([...byTable.keys()].sort()).toEqual([...CONFIG_TABLES, ...CAROUSEL_TABLES, "profiles"].sort());
+    for (const t of CAROUSEL_TABLES) expect(byTable.get(t)).toEqual(["INSERT", "SELECT", "UPDATE"]);
     expect(byTable.get("profiles")).toEqual(["SELECT"]);
     for (const t of CONFIG_TABLES) expect(byTable.get(t)).toEqual(["DELETE", "INSERT", "SELECT", "UPDATE"]);
   });

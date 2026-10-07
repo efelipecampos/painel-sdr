@@ -23,6 +23,7 @@ export default async function PainelLayout({ children }: { children: ReactNode }
         <Link href={me.role === "sdr" ? `/sdr/${me.sdrId}` : "/"} className="brand">Painel SDR</Link>
         <nav className="group" aria-label="Navegação">
           {isManager(me) && <Link href="/" className="btn small">Painel</Link>}
+          {isManager(me) && <Link href="/carrosseis" className="btn small">Carrosséis</Link>}
           {me.role === "sdr" && <Link href={`/sdr/${me.sdrId}`} className="btn small">Meus chats</Link>}
         </nav>
         <span className="spacer" />
