@@ -14,8 +14,8 @@ afterAll(async () => {
 });
 
 const CONFIG_TABLES = ["business_hours", "holidays", "quality_criteria", "settings"];
-// Tabelas de carrossel que gestor e admin editam na tela (sem DELETE: arquivar = active false).
-const CAROUSEL_TABLES = ["carousel_members", "carousels"];
+// Tabelas de carrossel que gestor e admin editam na tela. Carrossel não se apaga (arquivar = active false);
+// closer pode ser removido do carrossel (o livro-caixa fica).
 
 async function tables(): Promise<{ schema: string; name: string; rls: boolean }[]> {
   const res = await db.query<{ schema: string; name: string; rls: boolean }>(`
@@ -55,8 +55,9 @@ describe("segurança do banco", () => {
     `);
     const byTable = new Map<string, string[]>();
     for (const r of res.rows) byTable.set(r.table_name, [...(byTable.get(r.table_name) ?? []), r.privilege_type]);
-    expect([...byTable.keys()].sort()).toEqual([...CONFIG_TABLES, ...CAROUSEL_TABLES, "profiles"].sort());
-    for (const t of CAROUSEL_TABLES) expect(byTable.get(t)).toEqual(["INSERT", "SELECT", "UPDATE"]);
+    expect([...byTable.keys()].sort()).toEqual([...CONFIG_TABLES, "carousel_members", "carousels", "profiles"].sort());
+    expect(byTable.get("carousels")).toEqual(["INSERT", "SELECT", "UPDATE"]);
+    expect(byTable.get("carousel_members")).toEqual(["DELETE", "INSERT", "SELECT", "UPDATE"]);
     expect(byTable.get("profiles")).toEqual(["SELECT"]);
     for (const t of CONFIG_TABLES) expect(byTable.get(t)).toEqual(["DELETE", "INSERT", "SELECT", "UPDATE"]);
   });

@@ -28,6 +28,7 @@ export interface Me {
   name: string;
   role: Role;
   sdrId: string | null; // só para o papel sdr: o SDR do usuário
+  canManageUsers: boolean; // admin, ou gestor com a marcação (tela Usuários)
 }
 
 export const isManager = (me: Me | null): boolean => me?.role === "admin" || me?.role === "gestor";
@@ -41,8 +42,11 @@ export const getMe = cache(async function getMe(): Promise<Me | null> {
   const { data: session } = await supabase.auth.getSession();
   const userId = session.session?.user.id;
   if (!userId) return null;
-  const { data } = await supabase.schema("painel").from("profiles").select("id, name, role, active, sdr_id").eq("id", userId).maybeSingle();
+  const { data } = await supabase.schema("painel").from("profiles").select("id, name, role, active, sdr_id, can_manage_users").eq("id", userId).maybeSingle();
   if (!data || !data.active) return null;
   if (data.role === "sdr" && !data.sdr_id) return null;
-  return { id: data.id, name: data.name, role: data.role, sdrId: data.sdr_id ?? null };
+  return {
+    id: data.id, name: data.name, role: data.role, sdrId: data.sdr_id ?? null,
+    canManageUsers: data.role === "admin" || !!data.can_manage_users,
+  };
 });

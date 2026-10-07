@@ -56,9 +56,10 @@ export function CarouselEditor({ carousel, members, closers, periodLabel }: {
             <thead><tr>
               <th scope="col">Closer</th><th scope="col">No carrossel</th><th scope="col">Peso</th>
               <th scope="col">Fatia</th><th scope="col">Recebidas</th><th scope="col">Esperado</th>
+              <th scope="col"><span className="sr-only">Remover</span></th>
             </tr></thead>
             <tbody>
-              {rows.length === 0 && <tr><td colSpan={6} className="muted">Nenhum closer neste carrossel.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={7} className="muted">Nenhum closer neste carrossel.</td></tr>}
               {rows.map((r) => {
                 const st = stats.get(r.closer_id);
                 const fatia = r.active && r.weight > 0 && totalWeight > 0 ? r.weight / totalWeight : null;
@@ -76,6 +77,10 @@ export function CarouselEditor({ carousel, members, closers, periodLabel }: {
                     <td>{fatia == null ? "—" : `${Math.round(fatia * 100)}%`}</td>
                     <td>{st ? Number(st.recebidas) : 0}</td>
                     <td>{st ? Number(st.esperado).toFixed(1) : "0.0"}</td>
+                    <td>
+                      <button type="button" className="btn small" aria-label={`Remover ${r.name} do carrossel`}
+                        onClick={() => setRows(rows.filter((x) => x.closer_id !== r.closer_id))}>Remover</button>
+                    </td>
                   </tr>
                 );
               })}
@@ -93,6 +98,7 @@ export function CarouselEditor({ carousel, members, closers, periodLabel }: {
             setAdd("");
           }}>Adicionar</button>
         </div>
+        <p className="muted" style={{ margin: 0 }}>Remover tira o closer deste carrossel ao salvar. As reuniões que ele já recebeu continuam guardadas.</p>
       </section>
 
       <section className="cell-stack" style={{ gap: 8 }} aria-labelledby="regras">

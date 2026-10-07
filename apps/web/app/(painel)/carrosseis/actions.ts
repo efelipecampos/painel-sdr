@@ -46,6 +46,14 @@ export async function saveCarousel(form: FormData) {
   } catch {
     back(id, "Não foi possível ler os closers. Recarregue a página.");
   }
+  const kept = new Set(members.map((x) => x.closer_id));
+  const existing = await db.from("carousel_members").select("closer_id").eq("carousel_id", id);
+  if (existing.error) back(id, `Não foi possível ler os closers: ${existing.error.message}`);
+  const removed = (existing.data ?? []).map((r) => r.closer_id as string).filter((c) => !kept.has(c));
+  if (removed.length) {
+    const d = await db.from("carousel_members").delete().eq("carousel_id", id).in("closer_id", removed);
+    if (d.error) back(id, `Não foi possível remover: ${d.error.message}`);
+  }
   if (members.length) {
     const m = await db.from("carousel_members").upsert(
       members.map((x) => ({ carousel_id: id, closer_id: x.closer_id, weight: Math.max(0, Math.min(100, Math.round(x.weight))), active: !!x.active })),
