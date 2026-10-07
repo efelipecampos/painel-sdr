@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { randomBytes } from "node:crypto";
-import { GoogleCalendar, GoogleError, accessToken, authUrl, decryptToken, encryptToken, eventState, exchangeCode, isFree } from "./google";
+import { GoogleCalendar, GoogleError, accessToken, activeTitle, archiveTitle, authUrl, decryptToken, encryptToken, eventState, exchangeCode, isFree } from "./google";
 
 const KEY = randomBytes(32).toString("base64");
 const creds = { clientId: "cid", clientSecret: "sec", redirectUri: "https://x/api/google/callback" };
@@ -81,5 +81,14 @@ describe("situação do evento", () => {
     expect(await new GoogleCalendar("tk", async () => json(410, { error: { errors: [{ reason: "deleted" }] } })).get("e")).toBeNull();
     expect(await new GoogleCalendar("tk", async () => json(200, { id: "e", status: "cancelled" })).get("e")).toBeNull();
     await expect(new GoogleCalendar("tk", async () => json(410, { error: { errors: [{ reason: "deleted" }] } })).remove("e")).resolves.toBeUndefined();
+  });
+});
+
+describe("título no arquivo", () => {
+  it("ganha o closer no final ao arquivar e perde ao voltar; não duplica", () => {
+    expect(archiveTitle("Apresentação Poli - Empresa X", "Calil")).toBe("Apresentação Poli - Empresa X (Calil)");
+    expect(archiveTitle("Apresentação Poli - Empresa X (Calil)", "Ana")).toBe("Apresentação Poli - Empresa X (Ana)");
+    expect(activeTitle("Apresentação Poli - Empresa X (Calil)")).toBe("Apresentação Poli - Empresa X");
+    expect(activeTitle("Apresentação Poli - Empresa X")).toBe("Apresentação Poli - Empresa X");
   });
 });

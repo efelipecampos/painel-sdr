@@ -225,6 +225,17 @@ export class GoogleCalendar {
 /** Cores do Google Agenda usadas no arquivo: a situação da reunião (o lead não vê a cor). */
 export const ARCHIVE_COLOR = { cancelada: "11", noshow: "5" } as const; // 11 = vermelho, 5 = amarelo
 
+/** Título no arquivo: o da reunião com o closer no final ("Apresentação Poli - Empresa X (Calil)"). */
+export function archiveTitle(title: string, closer: string): string {
+  const base = activeTitle(title);
+  return closer ? `${base} (${closer})` : base;
+}
+
+/** Título fora do arquivo: sem o closer no final. */
+export function activeTitle(title: string): string {
+  return title.replace(/ \([^()]*\)$/, "");
+}
+
 // ---------- regras puras (testadas) ----------
 
 /**
