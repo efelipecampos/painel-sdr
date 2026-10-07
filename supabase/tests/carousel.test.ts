@@ -20,14 +20,17 @@ beforeEach(async () => {
     select set_config('request.jwt.claims', '{"role":"service_role"}', false);
     select set_config('request.jwt.claim.sub', '', false);
     delete from painel.carousel_ledger; delete from painel.meeting_status_history; delete from painel.meetings;
-    delete from painel.carousel_members; delete from painel.carousels;
+    delete from painel.carousel_members; delete from painel.carousels; delete from painel.google_connections;
   `);
 });
 
-async function closer(name: string): Promise<string> {
-  return (await db.query<{ id: string }>(
+async function closer(name: string, conectada = true): Promise<string> {
+  const id = (await db.query<{ id: string }>(
     "insert into painel.sdrs (poli_email, name, role) values ($1, $2, 'closer') returning id", [`${name}${++n}@x`, name],
   )).rows[0].id;
+  // closer só recebe e acumula crédito com a agenda do Google conectada (Fase 10d)
+  if (conectada) await db.query("insert into painel.google_connections (closer_id, google_email, refresh_token_enc, scopes) values ($1, 'x@x', 'v1:x', '{}')", [id]);
+  return id;
 }
 async function carousel(members: [string, number][], name = "C"): Promise<string> {
   const id = (await db.query<{ id: string }>("insert into painel.carousels (brand, name) values ('poli', $1) returning id", [name])).rows[0].id;
@@ -72,6 +75,19 @@ describe("distribuição por saldo", () => {
     const recebidasB = (await resumo(car))[b].recebidas;
     for (let i = 20; i < 30; i++) await reservar(car, [a, b], i);
     expect((await resumo(car))[b].recebidas - recebidasB).toBeLessThanOrEqual(6);
+  });
+
+  it("closer sem agenda conectada não acumula crédito nem recebe; desconectar no meio para o crédito", async () => {
+    const [a, b] = [await closer("Ana"), await closer("Bia", false)];
+    const car = await carousel([[a, 1], [b, 1]]);
+    for (let i = 0; i < 4; i++) expect((await reservar(car, [a, b], i)).closer_id).toBe(a);
+    expect((await resumo(car))[b].esperado).toBe(0);
+    await db.query("insert into painel.google_connections (closer_id, google_email, refresh_token_enc, scopes) values ($1, 'x@x', 'v1:x', '{}')", [b]);
+    await reservar(car, [a, b], 4);
+    await db.query("update painel.google_connections set status = 'desconectada' where closer_id = $1", [b]);
+    const antes = (await resumo(car))[b].esperado;
+    await reservar(car, [a, b], 5);
+    expect((await resumo(car))[b].esperado).toBe(antes);
   });
 
   it("mudança de peso no meio não redistribui o passado", async () => {
@@ -254,7 +270,7 @@ describe("acesso", () => {
     await expect(as(sdrUser, "select * from painel.carousel_ledger")).rejects.toThrow(/permission denied/);
     const lista = await as(sdrUser, "select * from painel.carrosseis_para_agendar()");
     expect(lista).toHaveLength(1);
-    expect(Object.keys(lista[0]).sort()).toEqual(["brand", "description", "durations", "id", "name"]);
+    expect(Object.keys(lista[0]).sort()).toEqual(["brand", "description", "durations", "id", "name", "suggest_max_users", "suggest_min_users"]);
     expect(JSON.stringify(lista)).not.toContain(a);
   });
 

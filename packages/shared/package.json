@@ -9,6 +9,7 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./google": "./src/google.ts"
+    "./google": "./src/google.ts",
+    "./hubspot": "./src/hubspot.ts"
   }
 }

@@ -144,7 +144,8 @@ export default async function SdrPage({ params, searchParams }: {
                 <td><div className="cell-stack"><span>{formatDateTime(r.last_message_at)}</span><span className="muted">{FROM_LABEL[r.last_message_from ?? ""] ?? ""}</span></div></td>
                 <td>{manager
                   ? <MeetingSelect leadId={r.lead_id} leadName={r.lead_name ?? "lead"} status={r.reuniao_status} origem={r.reuniao_origem} />
-                  : <MeetingStatusText status={r.reuniao_status} origem={r.reuniao_origem} />}</td>
+                  : <MeetingStatusText status={r.reuniao_status} origem={r.reuniao_origem} />}
+                  <div><Link href={`/agendar?lead=${r.lead_id}`} className="muted" aria-label={`Agendar reunião com ${r.lead_name ?? "lead"}`}>Agendar</Link></div></td>
                 <td><a href={`https://app.poli.digital/chat/${r.poli_contact_uuid}`} target="_blank" rel="noreferrer" aria-label={`Abrir chat de ${r.lead_name ?? "lead"} no Poli`}>Abrir no Poli</a></td>
               </tr>
             ))}
