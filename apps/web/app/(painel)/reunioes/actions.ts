@@ -96,7 +96,8 @@ export async function reagendar(_: { erro?: string }, form: FormData): Promise<{
   }
   const me = (await (await createClient()).auth.getUser()).data.user?.id ?? null;
   const after = (await loadMeeting(id))!;
-  await admin().from("meetings").update({ fora_do_padrao: check.foraDoPadrao }).eq("id", id);
+  // hubspot_sync_needed: o worker atualiza a Reunião no HubSpot (horário e closer) em seguida
+  await admin().from("meetings").update({ fora_do_padrao: check.foraDoPadrao, hubspot_sync_needed: true }).eq("id", id);
   await admin().from("meeting_changes").insert({
     meeting_id: id, changed_by: me, from_starts: before.starts_at, to_starts: after.starts_at, from_closer: before.closer_id, to_closer: after.closer_id,
   });
