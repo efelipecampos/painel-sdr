@@ -61,6 +61,9 @@ Até aqui o painel só lê dados. Com este módulo ele passa a **operar**: SDRs 
 - **Closer como usuário (2026-10-07):** o closer entra no painel, vê **só as próprias reuniões** e **marca o status** delas (validada, invalidada, no show, cancelada), além de "Passar para CH/Poli".
 - **Nome da reunião (2026-10-07):** `Marca | Empresa | Closer` (ex.: "Poli | Empresa X | Closer"), no painel e no Google; atualizado na troca de marca e de closer.
 - **Status → HubSpot (2026-10-07):** campo `hs_meeting_outcome` da Reunião: Agendada → `SCHEDULED` (Programados); Validada → `COMPLETED` (Concluído); No show → `NO_SHOW` (Não compareceu); Cancelada → `CANCELED` (Cancelado); Invalidada → `INVALIDADO` (Invalidado, opção criada pela Poli). `RESCHEDULED` (Reprogramado) não é usado pelo painel: reagendar só atualiza data e hora da mesma Reunião.
+- **Campos da Reunião no HubSpot (2026-10-07):** `hubspot_owner_id` ("Atividade atribuída a") = **closer**; `atividade_criada_por` ("Atividade criada pelo SDR", campo da Poli, lista de usuários) = **SDR** que agendou; `hs_meeting_title` = nome do painel (`Marca | Empresa | Closer`); `hs_meeting_outcome` = status; `hs_meeting_start_time` / `hs_meeting_end_time` = início e fim. Associações: contato e Lead. Ids de closer e SDR achados pelo e-mail (`painel.hubspot_owners`). Campo `sdr_quem_agendou_a_reuniao` (sim/não) não é usado. Atualizados na criação, no editar/reagendar/trocar e na rodada das 17:55.
+- **SDR como convidado no Google (2026-10-07):** por enquanto o SDR entra como convidado no evento para ver a reunião na agenda dele; fica numa configuração para o Felipe desligar quando quiser (ele pretende acabar com isso).
+- **Escopos do token do HubSpot (2026-10-07):** o Felipe acrescentou `crm.objects.contacts.write` e `crm.objects.leads.write` ao app privado (necessários para criar Reuniões e associá-las). Primeiro teste de escrita só na 10e, num contato de teste.
 
 ## 3. Quem usa
 
@@ -227,10 +230,8 @@ Navegação do gestor e do admin: Painel · Reuniões · Carrosséis · Usuário
 | Quais outros campos do HubSpot o SDR e o closer precisam ver no agendamento | 10d |
 | Prazo para o pedido de troca expirar antes da reunião (padrão 2 h) | 10e |
 | Lead sem e-mail: bloquear ou permitir (padrão: permitir) | 10d |
+| Gravar o link do Meet no "Local da reunião" (`hs_meeting_location`) da Reunião no HubSpot? | 10e |
 | Por onde o closer recebe a passagem de bastão: e-mail separado ou Google Chat | 10c |
-| O SDR entra como convidado no evento? | 10c |
-| Liberar escrita de Leads no token do HubSpot | Antes da 10e |
-| Liberar escrita de Reuniões (meetings) e associações no token do HubSpot | Antes da 10e |
 | Criar o webhook do espaço "Gestão SDR" no Google Chat (o Felipe cria e cola no `.env`) | 10e |
 | Quem pode reagendar e cancelar: SDR dono, closer, gestor | 10e |
 
