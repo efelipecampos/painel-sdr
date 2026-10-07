@@ -79,7 +79,7 @@ Atualize esta lista conforme avança.
   - [x] 10a — Acesso do SDR (papel `sdr`, escopo por SDR no banco, tela "Meus chats"). No ar desde 07/10/2026; testado pelo Felipe com o login da Isadora.
   - [x] 10b — Carrossel sem Google, tela Usuários e remover closer. No ar e no `main` desde 07/10/2026.
   - [x] 10c — Google Agenda: papel closer, conexão da agenda pela tela do closer, livre/ocupado, criar/alterar/arquivar/restaurar evento, conferência no worker a cada 10 min, tela Teste da agenda (admin). No ar e no `main` desde 07/10/2026. Testado pelo Felipe com o Calil (agenda conectada; ocupado bateu com a agenda real; Meet, convite, arquivo vermelho e volta conferidos). O app web passou a receber a service_role (só no servidor, para a conexão do Google). Logins de closer: Calil e Alessandra.
-  - [ ] 10d — Agendar. 10d.1 (agendar pelo painel: HubSpot na hora, grade de 30 em 30 min às cegas, ajuste manual, evento no Google, passagem de bastão) aplicada e no ar em 07/10/2026, branch `fase-10`; falta o teste do Felipe e o merge. 10d.2 (tela Reuniões, status com arquivo, Editar/Reagendar) a fazer.
+  - [ ] 10d — Agendar. 10d.1 (agendar pelo painel) no ar e no `main` desde 07/10/2026, testada pelo Felipe. 10d.2 (tela Reuniões, status com agenda de arquivo, mudar horário/reagendar com o mesmo Meet) aplicada e no ar em 07/10/2026, branch `fase-10`; falta o teste do Felipe e o merge.
   - [ ] 10e — HubSpot e pós-agendamento.
   - [ ] Virada da Poli Agenda.
 
