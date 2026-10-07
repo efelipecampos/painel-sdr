@@ -6,10 +6,11 @@ import { config } from "./config.js";
 import { getCursor } from "./processor.js";
 import { AlertState, alertText, filaParada, poliMuda, type AlertKey } from "./alert-rules.js";
 
-async function postToGoogleChat(text: string): Promise<void> {
+/** Devolve true se o Google Chat aceitou a mensagem. */
+export async function postToGoogleChat(text: string): Promise<boolean> {
   if (!config.alertWebhookUrl) {
     console.warn("[alertas] GOOGLE_CHAT_WEBHOOK_URL_ALERTAS não configurada; alerta só no log:", text);
-    return;
+    return false;
   }
   const res = await fetch(config.alertWebhookUrl, {
     method: "POST",
@@ -17,6 +18,7 @@ async function postToGoogleChat(text: string): Promise<void> {
     body: JSON.stringify({ text }),
   });
   if (!res.ok) console.error(`[alertas] falha ao enviar para o Google Chat: HTTP ${res.status}`);
+  return res.ok;
 }
 
 /** Mensagem de erro curta para o alerta (as mensagens de erro do worker não levam dados de lead). */
