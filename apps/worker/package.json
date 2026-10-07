@@ -9,6 +9,7 @@
     "once": "tsx src/index.ts --once",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "rebuild-all": "tsx src/index.ts --rebuild-all",
+    "alerta-teste": "tsx src/index.ts --testar-alerta",
     "usuarios": "tsx src/users.ts"
   },
   "dependencies": {

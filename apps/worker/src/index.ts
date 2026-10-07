@@ -1,7 +1,9 @@
 // Worker do painel: lê public.raw_events e monta o schema painel.
 // Uso: npm start (fica rodando) | npm run once (processa o que estiver pendente e sai)
 //      | --hubspot-desde AAAA-MM-DD (relê os Leads do HubSpot modificados desde a data e sai)
+//      | npm run alerta-teste (manda uma mensagem de teste no Google Chat e sai)
 //      | npm run rebuild-all (recalcula todos os leads; usar depois de migration que muda o cálculo).
+import { Monitor, postToGoogleChat } from "./alerts.js";
 import { config } from "./config.js";
 import { HubspotClient, resetLeadsCursor, syncLeads, syncOwners, syncStages } from "./hubspot/leads.js";
 import { checkGoogle } from "./google.js";
@@ -22,14 +24,16 @@ async function syncGoogle(): Promise<void> {
   console.log(`[worker] Google: ${r.conectadas} agendas ok, ${r.desconectadas} desconectadas, ${r.eventos} eventos conferidos, ${r.avisos} avisos`);
 }
 
-async function syncHubspot(force: boolean): Promise<void> {
-  if (!hubspot) return;
-  if (!force && Date.now() - lastHubspotSync < config.hubspotEveryMinutes * 60_000) return;
+/** Devolve false quando não era hora de sincronizar. */
+async function syncHubspot(force: boolean): Promise<boolean> {
+  if (!hubspot) return false;
+  if (!force && Date.now() - lastHubspotSync < config.hubspotEveryMinutes * 60_000) return false;
   const stages = await syncStages(db, hubspot);
   const owners = await syncOwners(db, hubspot);
   const leads = await syncLeads(db, hubspot);
   lastHubspotSync = Date.now();
   console.log(`[worker] HubSpot: ${stages} etapas, ${owners} donos, ${leads} Leads atualizados`);
+  return true;
 }
 
 async function drain(): Promise<void> {
@@ -41,7 +45,11 @@ async function drain(): Promise<void> {
   }
 }
 
-if (hubspotSince) {
+if (process.argv.includes("--testar-alerta")) {
+  const ok = await postToGoogleChat("🧪 *Painel SDR:* teste de alerta. Se você está vendo isto, os alertas do painel chegam neste espaço.");
+  console.log(ok ? "[alertas] teste enviado" : "[alertas] teste NÃO enviado");
+  process.exit(ok ? 0 : 1);
+} else if (hubspotSince) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(hubspotSince)) throw new Error("Use --hubspot-desde AAAA-MM-DD");
   await resetLeadsCursor(db, hubspotSince);
   await syncHubspot(true);
@@ -52,14 +60,27 @@ if (hubspotSince) {
   await syncHubspot(true);
 } else {
   console.log(`[worker] iniciado; lendo raw_events a cada ${config.pollSeconds}s`);
+  const monitor = new Monitor(db);
   for (;;) {
     try {
       await drain();
-      await syncHubspot(false);
-      await syncGoogle();
+      await monitor.worker(null);
     } catch (err) {
       console.error("[worker] erro na rodada:", err instanceof Error ? err.message : err);
+      await monitor.worker(err);
     }
+    try {
+      if (await syncHubspot(false)) await monitor.hubspot(null);
+    } catch (err) {
+      console.error("[worker] erro no sync do HubSpot:", err instanceof Error ? err.message : err);
+      await monitor.hubspot(err);
+    }
+    try {
+      await syncGoogle();
+    } catch (err) {
+      console.error("[worker] erro na conferência do Google:", err instanceof Error ? err.message : err);
+    }
+    await monitor.check();
     await new Promise((r) => setTimeout(r, config.pollSeconds * 1000));
   }
 }

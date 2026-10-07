@@ -34,6 +34,22 @@ export const config = {
   hubspotToken: process.env.HUBSPOT_PRIVATE_APP_TOKEN?.trim() || null,
   /** Intervalo do sync de Leads do HubSpot. */
   hubspotEveryMinutes: Number(process.env.HUBSPOT_SYNC_MINUTES ?? 15),
+  /** Webhook do espaço Gestão SDR no Google Chat. Sem ele, os alertas só vão para o log. */
+  alertWebhookUrl: process.env.GOOGLE_CHAT_WEBHOOK_URL_ALERTAS?.trim() || null,
+  /** Endereço do painel, para conferir se está no ar. */
+  painelUrl: (process.env.PAINEL_URL?.trim() || "https://painel-sdr.camposai.com.br").replace(/\/$/, ""),
+  /** Intervalo das verificações de saúde (fila, Poli, painel no ar). */
+  alertCheckMinutes: Number(process.env.ALERTA_INTERVALO_MIN ?? 2),
+  /** Fila parada: evento esperando há este tempo sem o worker processar. */
+  alertQueueMinutes: Number(process.env.ALERTA_FILA_MIN ?? 10),
+  /** Integração muda: este tempo, em horário comercial, sem evento novo da Poli. */
+  alertPoliMinutes: Number(process.env.ALERTA_POLI_MIN ?? 30),
+  /** Worker com erro em todas as rodadas por este tempo. */
+  alertWorkerMinutes: Number(process.env.ALERTA_WORKER_MIN ?? 5),
+  /** Sync do HubSpot falhando por este tempo. */
+  alertHubspotMinutes: Number(process.env.ALERTA_HUBSPOT_MIN ?? 30),
+  /** Painel sem responder por este tempo. */
+  alertPainelMinutes: Number(process.env.ALERTA_PAINEL_MIN ?? 5),
   /** Google Agenda (Fase 10c). Sem as três variáveis, a conferência das agendas não roda. */
   google: process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_TOKEN_KEY
     ? {
