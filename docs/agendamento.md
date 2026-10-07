@@ -172,6 +172,8 @@ Em qualquer caminho:
 - O painel **não** mostra o link do Meet ao SDR depois de agendar: o SDR copia da própria Google Agenda, onde ele é convidado, e manda ao lead pelo chat da Poli.
 - O lead **recebe o convite do Google por e-mail** quando tiver e-mail.
 
+**Decisões de 2026-10-07 (10e):** o aviso do pedido de troca de closer vai para o espaço "Gestão SDR" pelo mesmo webhook dos alertas da Fase 8 (`GOOGLE_CHAT_WEBHOOK_URL_ALERTAS`). O aprovador principal continua o Iago Leal; qualquer gestor ou admin também aprova.
+
 ## 7. HubSpot
 
 - Consulta ao vivo do lead ao abrir o agendamento (seção 4): Contato e Lead associado, por link ou ID. Só leitura.
