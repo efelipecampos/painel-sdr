@@ -185,6 +185,7 @@ export async function confirmar(_: ConfirmState, form: FormData): Promise<Confir
       hubspot_lead_id: info.leadId, title, handoff: handoff || null, fora_do_padrao: check.foraDoPadrao,
       google_calendar_id: conn?.google_email ?? "primary", google_event_id: ev.id, meet_url: ev.hangoutLink ?? null,
       google_state: "ok", google_checked_at: new Date().toISOString(),
+      hubspot_sync_needed: true,  // o worker cria a Reunião no HubSpot em seguida (Fase 10e.1)
     }).eq("id", meetingId);
     if (up.error) throw new Error(up.error.message);
   } catch (e) {

@@ -6,6 +6,7 @@
 import { Monitor, postToGoogleChat } from "./alerts.js";
 import { config } from "./config.js";
 import { HubspotClient, resetLeadsCursor, syncLeads, syncOwners, syncStages } from "./hubspot/leads.js";
+import { dailyStatusRun, syncMeetings } from "./hubspot/meetings.js";
 import { checkGoogle } from "./google.js";
 import { createDb, processBatch, rebuildAll, syncRoles } from "./processor.js";
 
@@ -25,6 +26,15 @@ async function syncGoogle(): Promise<void> {
 }
 
 /** Devolve false quando não era hora de sincronizar. */
+/** Reuniões do painel no HubSpot: cria/atualiza a cada rodada; status uma vez por dia (17:55). */
+async function syncHubspotMeetings(): Promise<void> {
+  if (!hubspot) return;
+  const r = await syncMeetings(db, hubspot);
+  if (r.criadas || r.atualizadas || r.erros) console.log(`[worker] HubSpot reuniões: ${r.criadas} criadas, ${r.atualizadas} atualizadas, ${r.erros} com erro`);
+  const n = await dailyStatusRun(db, hubspot);
+  if (n !== null) console.log(`[worker] HubSpot: rodada diária de status, ${n} reuniões atualizadas`);
+}
+
 async function syncHubspot(force: boolean): Promise<boolean> {
   if (!hubspot) return false;
   if (!force && Date.now() - lastHubspotSync < config.hubspotEveryMinutes * 60_000) return false;
@@ -79,6 +89,11 @@ if (process.argv.includes("--testar-alerta")) {
       await syncGoogle();
     } catch (err) {
       console.error("[worker] erro na conferência do Google:", err instanceof Error ? err.message : err);
+    }
+    try {
+      await syncHubspotMeetings();
+    } catch (err) {
+      console.error("[worker] erro nas reuniões do HubSpot:", err instanceof Error ? err.message : err);
     }
     await monitor.check();
     await new Promise((r) => setTimeout(r, config.pollSeconds * 1000));
