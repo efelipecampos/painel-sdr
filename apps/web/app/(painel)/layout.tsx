@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { getMe } from "@/lib/supabase/server";
+import { getMe, isManager } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +20,11 @@ export default async function PainelLayout({ children }: { children: ReactNode }
   return (
     <>
       <header className="topbar">
-        <Link href="/" className="brand">Painel SDR</Link>
+        <Link href={me.role === "sdr" ? `/sdr/${me.sdrId}` : "/"} className="brand">Painel SDR</Link>
+        <nav className="group" aria-label="Navegação">
+          {isManager(me) && <Link href="/" className="btn small">Painel</Link>}
+          {me.role === "sdr" && <Link href={`/sdr/${me.sdrId}`} className="btn small">Meus chats</Link>}
+        </nav>
         <span className="spacer" />
         {me.role === "admin" && <Link href="/configuracoes" className="btn small">Configurações</Link>}
         <span className="user">{me.name}</span>

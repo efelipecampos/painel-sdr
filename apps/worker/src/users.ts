@@ -1,6 +1,7 @@
 // Dá acesso ao painel a usuários já criados no Supabase Auth (Authentication → Users → Add user).
 // Uso: npm run usuarios -w @painel/worker -- email:papel:Nome [email:papel:Nome ...]
-// papel = admin | gestor. Não cria nem altera senha: só grava painel.profiles.
+// papel = admin | gestor | sdr. Não cria nem altera senha: só grava painel.profiles.
+// Para sdr, o login é ligado ao SDR (painel.sdrs) pelo mesmo e-mail da Poli.
 import { createDb } from "./processor.js";
 
 const db = createDb();
@@ -24,9 +25,15 @@ for (const arg of args) {
   const name = rest.join(":").trim();
   const id = users.get(email.trim().toLowerCase());
   if (!id) { console.error(`✗ ${email}: usuário não existe no Supabase Auth. Crie em Authentication → Users → Add user.`); failed = true; continue; }
-  if (role !== "admin" && role !== "gestor") { console.error(`✗ ${email}: papel precisa ser admin ou gestor.`); failed = true; continue; }
+  if (role !== "admin" && role !== "gestor" && role !== "sdr") { console.error(`✗ ${email}: papel precisa ser admin, gestor ou sdr.`); failed = true; continue; }
   if (!name) { console.error(`✗ ${email}: falta o nome.`); failed = true; continue; }
-  const { error } = await db.schema("painel").from("profiles").upsert({ id, name, role, active: true });
+  let sdrId: string | null = null;
+  if (role === "sdr") {
+    const { data: s } = await db.schema("painel").from("sdrs").select("id, role").eq("poli_email", email.trim().toLowerCase()).maybeSingle();
+    if (!s || s.role !== "sdr") { console.error(`✗ ${email}: não é SDR nas listas do painel (POLI_SDR_EMAILS).`); failed = true; continue; }
+    sdrId = s.id;
+  }
+  const { error } = await db.schema("painel").from("profiles").upsert({ id, name, role, sdr_id: sdrId, active: true });
   if (error) { console.error(`✗ ${email}: ${error.message}`); failed = true; continue; }
   console.log(`✓ ${email}: ${name} (${role})`);
 }

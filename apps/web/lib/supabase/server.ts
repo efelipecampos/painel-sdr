@@ -19,20 +19,24 @@ export async function createClient() {
   });
 }
 
-export type Role = "admin" | "gestor";
+export type Role = "admin" | "gestor" | "sdr";
 
 export interface Me {
   id: string;
   name: string;
   role: Role;
+  sdrId: string | null; // só para o papel sdr: o SDR do usuário
 }
+
+export const isManager = (me: Me | null): boolean => me?.role === "admin" || me?.role === "gestor";
 
 /** Usuário logado e ativo, ou null. */
 export async function getMe(): Promise<Me | null> {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return null;
-  const { data } = await supabase.schema("painel").from("profiles").select("id, name, role, active").eq("id", auth.user.id).maybeSingle();
+  const { data } = await supabase.schema("painel").from("profiles").select("id, name, role, active, sdr_id").eq("id", auth.user.id).maybeSingle();
   if (!data || !data.active) return null;
-  return { id: data.id, name: data.name, role: data.role };
+  if (data.role === "sdr" && !data.sdr_id) return null;
+  return { id: data.id, name: data.name, role: data.role, sdrId: data.sdr_id ?? null };
 }

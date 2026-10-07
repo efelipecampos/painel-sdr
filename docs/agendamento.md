@@ -48,6 +48,10 @@ Até aqui o painel só lê dados. Com este módulo ele passa a **operar**: SDRs 
 - **Almoço igual para todos os closers: 12:00 a 13:30** (a grade não oferece esse intervalo). **Limite absoluto do ajuste manual: 07:00 a 20:00.** Confirmado pelo Felipe em 2026-10-07. Os dois ficam em configuração.
 - **Closer às cegas (2026-10-07):** o SDR não vê nem escolhe o closer antes de confirmar. Motivo, nas palavras do Felipe: o SDR prioriza o closer de quem gosta e, se enxerga o closer antes, troca o horário para a reunião cair em outro. Regras completas na seção 5.
 - **Dados do lead vêm do HubSpot (2026-10-07):** ao abrir o agendamento, o sistema traz o máximo de dados do lead. O SDR não redigita o que o HubSpot já tem.
+- **Carrossel sugerido pelo HubSpot (2026-10-07):** a propriedade de contato `sdr_2_0__quantidade_de_usuarios_a_utilizar_a_plataforma` ("[SDR 2.0] Quantidade de usuários a utilizar a plataforma") sugere o carrossel (até 5 / 6 a 10 / acima de 10). O SDR pode trocar.
+- **Aviso de pedido de troca de closer (2026-10-07):** vai para o espaço **"Gestão SDR"** do Google Chat (webhook do espaço no `.env`), além da fila no painel.
+- **Disponibilidade da Poli Agenda (2026-10-07):** não há casos reais documentados. Seguir as hipóteses da seção 0 e validar no piloto, registrando toda falha de agenda com horário, closer e a resposta do Google.
+- **Padrões aprovados para a 10b (2026-10-07):** equilíbrio por **mês**; No show e Cancelada **devolvem** a vez, Invalidada **não**; antecedência mínima **2 h**; janela **10 dias úteis**; intervalo entre reuniões **15 min**; durações **30, 45 e 60 min**; lead preso ao mesmo closer por **30 dias**.
 
 ## 3. Quem usa
 
@@ -199,19 +203,13 @@ Navegação do gestor e do admin: Painel · Reuniões · Carrosséis · Usuário
 |---|---|
 | Agendas no Google: quem na Poli tem acesso de administrador ao Google Workspace / Google Cloud para criar o projeto novo como app **interno** da organização | Antes da 10c |
 | Virada: data de corte e como tratar as reuniões já marcadas na Poli Agenda (seção 10, passo 6) | Antes da 10d |
-| Qual é exatamente o problema de disponibilidade: horário aparece livre e não está, ou está livre e não aparece? Exemplos reais | Antes da 10b |
-| Existe no HubSpot uma propriedade com o nº de usuários do lead? Se existir, ela sugere o carrossel sozinha (a tela de referência já mostra isso) | 10d |
 | Quais outros campos do HubSpot o SDR e o closer precisam ver no agendamento | 10d |
-| Por quantos dias o lead fica preso ao mesmo closer (padrão 30) | 10b |
-| Em qual espaço do Google Chat cai o aviso de pedido de troca (um espaço só do Iago, ou um dos gestores, para os outros também verem). O Felipe cria o webhook do espaço | 10e |
 | Prazo para o pedido de troca expirar antes da reunião (padrão 2 h) | 10e |
-| Período de equilíbrio: mês ou semana | 10b |
-| No show, Cancelada e Invalidada devolvem a vez? (padrão: sim, sim, não) | 10b |
-| Antecedência mínima, janela, intervalo e durações permitidas (padrão: 2 h, 10 dias úteis, 15 min, 30/45/60) | 10b |
 | Lead sem e-mail: bloquear ou permitir (padrão: permitir) | 10d |
 | Por onde o closer recebe a passagem de bastão: e-mail separado ou Google Chat | 10c |
 | O SDR entra como convidado no evento? | 10c |
 | Liberar escrita de Leads no token do HubSpot | Antes da 10e |
+| Criar o webhook do espaço "Gestão SDR" no Google Chat (o Felipe cria e cola no `.env`) | 10e |
 | Quem pode reagendar e cancelar: SDR dono, closer, gestor | 10e |
 
 ## 12. Prompt para iniciar
