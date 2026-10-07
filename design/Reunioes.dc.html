@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Reuniões</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#1a1a1a;font-family:"Rubik",system-ui,sans-serif;color:#f6f7f9}
+a{color:#f6f7f9}a:hover{color:#cecff0}
+button,input,select{font-family:inherit}
+input::placeholder{color:#a7abb5}
+input[type="date"]{color-scheme:dark}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #f6f7f9;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1260px; display: flex; flex-direction: column; background: #1a1a1a; font-family: Rubik, system-ui, sans-serif; color: #f6f7f9">
+
+<div style="height: 46px; flex-shrink: 0; display: flex; align-items: center; gap: 4px; padding: 0 16px; border-bottom: 1px solid #252c3c; font-size: 14px; line-height: 20px">
+<img src="/_blob/836dc846171f77c8e53729b39de898fe" alt="Poli" style="height: 24px; margin-right: 12px">
+<a href="Main.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Painel</a>
+<a href="Reunioes.dc.html" aria-current="page" style="padding: 6px 12px; border-radius: 8px; text-decoration: none; font-weight: 600; background: #20203a">Reuniões</a>
+<a href="Carrossel.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Carrosséis</a>
+<a href="Usuarios.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Usuários</a>
+<a href="Configuracoes.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Configurações</a>
+</div>
+
+<div style="flex-grow: 1; padding: 20px 16px 16px 16px; display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<h1 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; color: #6868d7">Reuniões</h1>
+<span style="background: #20293a; border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600">Dados de exemplo</span>
+<div style="flex-grow: 1"></div>
+<button type="button" style="height: 40px; padding: 0 12px; border: 1px solid #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; font-size: 14px; cursor: pointer">Anterior</button>
+<label for="day" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Dia</label>
+<input id="day" type="date" value="{{day}}" onChange="{{onDay}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<button type="button" style="height: 40px; padding: 0 12px; border: 1px solid #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; font-size: 14px; cursor: pointer">Próximo</button>
+<button type="button" style="height: 40px; padding: 0 12px; border: 1px solid #4e5d7f; border-radius: 8px; background: #313a4f; color: #f6f7f9; font-size: 14px; cursor: pointer">Hoje</button>
+<a href="Agendar.dc.html" style="height: 40px; display: flex; align-items: center; padding: 0 16px; border: 1px solid #5757d3; border-radius: 8px; background: #5757d3; text-decoration: none; font-size: 14px; font-weight: 600">Agendar reunião</a>
+</div>
+
+<sc-if value="{{hasRequests}}" hint-placeholder-val="{{true}}">
+<section aria-labelledby="sec-req" style="background: #181828; border: 1px solid #f0a93b; border-radius: 12px; overflow: hidden">
+<div style="padding: 12px 16px; display: flex; align-items: center; gap: 12px">
+<h2 id="sec-req" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Pedidos de troca de closer</h2>
+<span style="border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f0a93b; background: rgba(240,169,59,0.12)">{{requestsLabel}}</span>
+<div style="flex-grow: 1"></div>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Responsável: gestor de SDR. Qualquer gestor ou admin pode decidir. A reunião segue com o closer atual até a decisão.</span>
+</div>
+<sc-for list="{{requests}}" as="q" hint-placeholder-count="2">
+<div style="border-top: 1px solid #252c3c; padding: 12px 16px; display: grid; grid-template-columns: 170px 220px 150px minmax(0, 1fr) 210px auto auto; gap: 16px; align-items: center">
+<div style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 600">{{q.sdr}}</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{q.when}}</span></div>
+<div style="display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 600">{{q.company}}</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{q.slot}}</span></div>
+<div style="display: flex; flex-direction: column"><span style="font-size: 12px; line-height: 16px; color: #a7abb5">Closer atual</span><span style="font-size: 14px">{{q.closer}}</span></div>
+<div style="display: flex; flex-direction: column"><span style="font-size: 12px; line-height: 16px; color: #a7abb5">Justificativa do SDR</span><span style="font-size: 14px; line-height: 20px">{{q.reason}}</span></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><label for="{{q.selId}}" style="font-size: 12px; line-height: 16px; color: #a7abb5">Novo closer</label><select id="{{q.selId}}" value="{{q.target}}" onChange="{{q.onTarget}}" style="height: 36px; padding: 0 8px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px"><option value="">Carrossel escolhe</option><option value="Rafael Teixeira">Rafael Teixeira</option><option value="Bianca Rocha">Bianca Rocha</option></select></div>
+<button type="button" onClick="{{q.approve}}" style="height: 36px; padding: 0 14px; border: 1px solid #5757d3; border-radius: 8px; background: #5757d3; color: #f6f7f9; font-size: 14px; font-weight: 600; cursor: pointer">Aprovar</button>
+<button type="button" onClick="{{q.refuse}}" style="height: 36px; padding: 0 14px; border: 1px solid #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; font-size: 14px; font-weight: 500; cursor: pointer">Recusar</button>
+</div>
+</sc-for>
+</section>
+</sc-if>
+
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+<div role="group" aria-label="Filtrar por situação" style="display: flex; gap: 8px">
+<sc-for list="{{filters}}" as="f" hint-placeholder-count="6">
+<button type="button" onClick="{{f.pick}}" aria-pressed="{{f.pressed}}" style="{{f.style}}">{{f.label}}</button>
+</sc-for>
+</div>
+<div style="flex-grow: 1"></div>
+<select aria-label="Carrossel" style="height: 40px; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px"><option>Todos os carrosséis</option><option>Poli · Clientes até 5 usuários</option><option>Poli · Clientes de 6 a 10 usuários</option><option>Poli · Acima de 10 usuários</option><option>Poli · Licitação</option><option>ChatsHub · Clientes até 5 usuários</option><option>ChatsHub · Clientes de 6 a 10 usuários</option><option>ChatsHub · Acima de 10 usuários</option></select>
+<select aria-label="SDR" style="height: 40px; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px"><option>Todos os SDRs</option></select>
+<select aria-label="Closer" style="height: 40px; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px"><option>Todos os closers</option></select>
+<label for="q" style="position: relative; display: block; width: 260px">
+<span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Buscar reunião</span>
+<input id="q" type="search" value="{{query}}" onChange="{{onQuery}}" placeholder="Buscar lead ou empresa..." style="box-sizing: border-box; width: 100%; height: 40px; padding: 0 12px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+</label>
+</div>
+
+<div style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; overflow: hidden">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px">
+<thead>
+<tr style="background: #20203a; text-align: left">
+<th scope="col" style="padding: 12px 16px; font-size: 12px; line-height: 16px; font-weight: 600; width: 70px">Hora</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Lead</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Carrossel</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600">SDR</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Closer</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Situação</th>
+<th scope="col" style="padding: 12px 16px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: right">Ações</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="10">
+<tr style="border-top: 1px solid #252c3c; height: 64px">
+<td style="padding: 8px 16px; font-weight: 600; font-variant-numeric: tabular-nums">{{r.time}}</td>
+<td style="padding: 8px 12px"><div style="display: flex; flex-direction: column"><span style="font-weight: 600">{{r.company}}</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{r.lead}}</span></div></td>
+<td style="padding: 8px 12px"><div style="display: flex; flex-direction: column"><span>{{r.carousel}}</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{r.brand}}</span></div></td>
+<td style="padding: 8px 12px">{{r.sdr}}</td>
+<td style="padding: 8px 12px"><div style="display: flex; flex-direction: column"><span>{{r.closer}}</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{r.assigned}}</span></div></td>
+<td style="padding: 8px 12px">
+<sc-if value="{{r.ok}}" hint-placeholder-val="{{true}}">
+<select value="{{r.status}}" onChange="{{r.onStatus}}" aria-label="{{r.statusAria}}" style="{{r.selectStyle}}">
+<option value="agendada">Agendada</option>
+<option value="validada">Validada</option>
+<option value="invalidada">Invalidada</option>
+<option value="noshow">No show</option>
+<option value="cancelada">Cancelada</option>
+</select>
+</sc-if>
+<sc-if value="{{r.removed}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-start">
+<span style="border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f0a93b; background: rgba(240,169,59,0.12)">Evento apagado da agenda do closer</span>
+<div style="display: flex; gap: 8px">
+<button type="button" onClick="{{r.recreate}}" style="height: 28px; padding: 0 10px; border: 1px solid #4e5d7f; border-radius: 8px; background: #313a4f; color: #f6f7f9; font-size: 12px; font-weight: 600; cursor: pointer">Recriar evento</button>
+<button type="button" onClick="{{r.cancel}}" style="height: 28px; padding: 0 10px; border: 1px solid #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; font-size: 12px; font-weight: 600; cursor: pointer">Marcar como cancelada</button>
+</div>
+</div>
+</sc-if>
+</td>
+<td style="padding: 8px 16px"><div style="display: flex; align-items: center; justify-content: flex-end; gap: 12px"><a href="Agendar.dc.html" aria-label="{{r.rescheduleAria}}" style="font-size: 12px; font-weight: 500; white-space: nowrap">Reagendar</a><a href="#" aria-label="{{r.swapAria}}" style="font-size: 12px; font-weight: 500; white-space: nowrap">Trocar closer</a><a href="#" aria-label="{{r.meetAria}}" style="font-size: 12px; font-weight: 500; white-space: nowrap">Abrir Meet</a></div></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+<div style="border-top: 1px solid #252c3c; padding: 12px 16px; font-size: 12px; line-height: 16px; color: #a7abb5">{{footer}}</div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1260}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      filter: 'all', query: '', day: '2026-10-06',
+      requests: [
+        { id: 1, meetingId: 4, when: 'Pediu há 25 min', reason: 'O lead pediu para falar com a mesma pessoa que o atendeu em setembro.', target: '' },
+        { id: 2, meetingId: 7, when: 'Pediu há 1h 10min', reason: 'A closer avisou que a reunião anterior dela vai estourar o horário.', target: '' }
+      ],
+      meetings: [
+        { id: 1, time: '09:00', company: 'Central Máquinas', lead: 'Elaine Prado', carousel: 'Clientes até 5 usuários', brand: 'Poli', sdr: 'Ana Souza', closer: 'Rafael Teixeira', manual: false, status: 'validada', removed: false },
+        { id: 2, time: '09:00', company: 'Airport Training', lead: 'Simone Reis', carousel: 'Clientes até 5 usuários', brand: 'ChatsHub', sdr: 'Bruno Lima', closer: 'Marina Duarte', manual: false, status: 'noshow', removed: false },
+        { id: 3, time: '09:30', company: 'Escola Caminhos', lead: 'Flávio Novaes', carousel: 'Clientes de 6 a 10 usuários', brand: 'ChatsHub', sdr: 'Carla Mendes', closer: 'Bianca Rocha', manual: false, status: 'validada', removed: false },
+        { id: 4, time: '11:00', company: 'Splash Piscinas', lead: 'Yara Correia', carousel: 'Clientes até 5 usuários', brand: 'Poli', sdr: 'Diego Rocha', closer: 'Lucas Pires', manual: false, status: 'agendada', removed: false },
+        { id: 5, time: '11:00', company: 'Conselho Regional de Contabilidade', lead: 'Adriano Oliveira', carousel: 'Licitação', brand: 'Poli', sdr: 'Carla Mendes', closer: 'Bianca Rocha', manual: false, status: 'agendada', removed: true },
+        { id: 6, time: '11:00', company: 'Fresh', lead: 'Marcelo Dias', carousel: 'Clientes de 6 a 10 usuários', brand: 'Poli', sdr: 'Diego Rocha', closer: 'Rafael Teixeira', manual: true, status: 'agendada', removed: false },
+        { id: 7, time: '14:00', company: 'Poupe Mais Farma', lead: 'Cleyson Oliveira', carousel: 'Clientes até 5 usuários', brand: 'Poli', sdr: 'Carla Mendes', closer: 'Marina Duarte', manual: false, status: 'agendada', removed: false },
+        { id: 8, time: '14:30', company: 'Notícia FM', lead: 'Paulo Henrique', carousel: 'Acima de 10 usuários', brand: 'Poli', sdr: 'Elisa Prado', closer: 'Rafael Teixeira', manual: false, status: 'cancelada', removed: false },
+        { id: 9, time: '15:00', company: 'Clínica Sorriso Vivo', lead: 'Renata Lopes', carousel: 'Clientes até 5 usuários', brand: 'Poli', sdr: 'Diego Rocha', closer: 'Lucas Pires', manual: false, status: 'agendada', removed: false },
+        { id: 10, time: '16:30', company: 'Auto Peças Central', lead: 'Jorge Matos', carousel: 'Clientes até 5 usuários', brand: 'Poli', sdr: 'Ana Souza', closer: 'Bianca Rocha', manual: false, status: 'agendada', removed: true }
+      ]
+    };
+  }
+  renderVals() {
+    var self = this, st = this.state;
+    function patch(id, p) { self.setState({ meetings: self.state.meetings.map(function (m) { return m.id === id ? Object.assign({}, m, p) : m; }) }); }
+    var q = st.query.trim().toLowerCase();
+    function match(m, f) {
+      if (f === 'all') return true;
+      if (f === 'problem') return m.removed;
+      if (m.removed) return false;
+      if (f === 'done') return m.status === 'validada' || m.status === 'invalidada';
+      return m.status === f;
+    }
+    var visible = st.meetings.filter(function (m) {
+      if (!match(m, st.filter)) return false;
+      if (q && (m.company + ' ' + m.lead).toLowerCase().indexOf(q) === -1) return false;
+      return true;
+    });
+    var rows = visible.map(function (m) {
+      var set = m.status !== 'agendada';
+      return {
+        time: m.time, company: m.company, lead: m.lead, carousel: m.carousel, brand: m.brand, sdr: m.sdr, closer: m.closer,
+        assigned: m.note || (m.manual ? 'Trocado por um gestor' : 'Pelo carrossel'),
+        ok: !m.removed, removed: m.removed, status: m.status,
+        statusAria: 'Situação da reunião com ' + m.company,
+        selectStyle: 'height: 36px; min-width: 140px; padding: 0 8px; background: #313a4f; border: 1px solid ' + (set ? '#5757d3' : '#4e5d7f') + '; border-radius: 8px; color: #f6f7f9; font-size: 14px; font-weight: ' + (set ? '600' : '400'),
+        onStatus: function (e) { patch(m.id, { status: e.target.value }); },
+        recreate: function () { patch(m.id, { removed: false }); },
+        cancel: function () { patch(m.id, { removed: false, status: 'cancelada' }); },
+        rescheduleAria: 'Reagendar reunião com ' + m.company, swapAria: 'Trocar o closer da reunião com ' + m.company + ' (só gestor)', meetAria: 'Abrir o Meet da reunião com ' + m.company
+      };
+    });
+    var requests = st.requests.map(function (q) {
+      var m = st.meetings.filter(function (x) { return x.id === q.meetingId; })[0];
+      function drop() { return self.state.requests.filter(function (x) { return x.id !== q.id; }); }
+      return {
+        sdr: m.sdr, when: q.when, company: m.company, slot: 'Hoje, ' + m.time + ' · ' + m.carousel, closer: m.closer, reason: q.reason,
+        selId: 'req-' + q.id, target: q.target,
+        onTarget: function (e) { self.setState({ requests: self.state.requests.map(function (x) { return x.id === q.id ? Object.assign({}, x, { target: e.target.value }) : x; }) }); },
+        approve: function () {
+          var next = q.target || (m.closer === 'Rafael Teixeira' ? 'Bianca Rocha' : 'Rafael Teixeira');
+          self.setState({ requests: drop(), meetings: self.state.meetings.map(function (x) { return x.id === m.id ? Object.assign({}, x, { closer: next, manual: true, note: 'Trocado a pedido do SDR, aprovado por você' }) : x; }) });
+        },
+        refuse: function () { self.setState({ requests: drop() }); }
+      };
+    });
+    var FILTERS = [['all', 'Todas'], ['agendada', 'Agendadas'], ['done', 'Realizadas'], ['noshow', 'No show'], ['cancelada', 'Canceladas'], ['problem', 'Com problema']];
+    var filters = FILTERS.map(function (f) {
+      var on = st.filter === f[0];
+      var n = st.meetings.filter(function (m) { return match(m, f[0]); }).length;
+      return {
+        label: f[1] + ' ' + n, pressed: on ? 'true' : 'false',
+        style: 'height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid ' + (on ? '#5757d3' : '#4e5d7f') + '; background: ' + (on ? '#5757d3' : '#313a4f') + '; color: #f6f7f9; font-size: 14px; font-weight: ' + (on ? '600' : '400') + '; cursor: pointer',
+        pick: function () { self.setState({ filter: f[0] }); }
+      };
+    });
+    return {
+      rows: rows, filters: filters, query: st.query, day: st.day,
+      requests: requests, hasRequests: requests.length > 0, requestsLabel: requests.length + (requests.length === 1 ? ' aguardando decisão' : ' aguardando decisão'),
+      onQuery: function (e) { self.setState({ query: e.target.value }); },
+      onDay: function (e) { self.setState({ day: e.target.value }); },
+      footer: 'Terça-feira, 06/10/2026 · mostrando ' + rows.length + ' de ' + st.meetings.length + ' reuniões do dia'
+    };
+  }
+}
+</script>
+</body>
+</html>

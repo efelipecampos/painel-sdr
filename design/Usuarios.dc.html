@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Usuários</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#1a1a1a;font-family:"Rubik",system-ui,sans-serif;color:#f6f7f9}
+a{color:#f6f7f9}a:hover{color:#cecff0}
+button,input,select{font-family:inherit}
+input::placeholder{color:#a7abb5}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #f6f7f9;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1120px; display: flex; flex-direction: column; background: #1a1a1a; font-family: Rubik, system-ui, sans-serif; color: #f6f7f9">
+
+<div style="height: 46px; flex-shrink: 0; display: flex; align-items: center; gap: 4px; padding: 0 16px; border-bottom: 1px solid #252c3c; font-size: 14px; line-height: 20px">
+<img src="/_blob/836dc846171f77c8e53729b39de898fe" alt="Poli" style="height: 24px; margin-right: 12px">
+<a href="Main.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Painel</a>
+<a href="Reunioes.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Reuniões</a>
+<a href="Carrossel.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Carrosséis</a>
+<a href="Usuarios.dc.html" aria-current="page" style="padding: 6px 12px; border-radius: 8px; text-decoration: none; font-weight: 600; background: #20203a">Usuários</a>
+<a href="Configuracoes.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Configurações</a>
+</div>
+
+<div style="flex-grow: 1; padding: 20px 16px 16px 16px; display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<h1 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; color: #6868d7">Usuários</h1>
+<span style="background: #20293a; border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600">Dados de exemplo</span>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
+<div style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; line-height: 22px; font-weight: 600">Admin</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">Vê tudo e muda configurações, carrosséis e usuários.</span></div>
+<div style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; line-height: 22px; font-weight: 600">Gestor</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">Vê o painel e as reuniões de todos. Ajusta pesos e aprova pedidos de troca de closer.</span></div>
+<div style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; line-height: 22px; font-weight: 600">SDR</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">Vê só os próprios chats, números e reuniões. Agenda reuniões.</span></div>
+<div style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; line-height: 22px; font-weight: 600">Closer</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">Recebe reuniões na agenda do Google. Não entra no painel.</span></div>
+</div>
+
+<section aria-labelledby="sec-add" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<h2 id="sec-add" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Adicionar usuário</h2>
+<div style="display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) 180px 180px auto; gap: 12px; align-items: end">
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="n-name" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Nome</label><input id="n-name" type="text" value="{{newName}}" onChange="{{onNewName}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px"></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="n-email" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">E-mail do Google Workspace</label><input id="n-email" type="email" value="{{newEmail}}" onChange="{{onNewEmail}}" placeholder="nome@poli.digital" style="height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px"></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="n-role" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Papel</label><select id="n-role" value="{{newRole}}" onChange="{{onNewRole}}" style="height: 40px; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px"><option value="sdr">SDR</option><option value="closer">Closer</option><option value="gestor">Gestor</option><option value="admin">Admin</option></select></div>
+<div style="display: flex; flex-direction: column; gap: 6px"><label for="n-brand" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Empresa</label><select id="n-brand" value="{{newBrand}}" onChange="{{onNewBrand}}" style="height: 40px; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px"><option value="Poli">Poli</option><option value="ChatsHub">ChatsHub</option><option value="Poli e ChatsHub">Poli e ChatsHub</option></select></div>
+<button type="button" onClick="{{add}}" style="height: 40px; padding: 0 16px; border: 1px solid #5757d3; border-radius: 8px; background: #5757d3; color: #f6f7f9; font-size: 14px; font-weight: 600; cursor: pointer">Adicionar</button>
+</div>
+</section>
+
+<div style="display: flex; align-items: center; gap: 12px">
+<div role="group" aria-label="Filtrar por papel" style="display: flex; gap: 8px">
+<sc-for list="{{filters}}" as="f" hint-placeholder-count="5">
+<button type="button" onClick="{{f.pick}}" aria-pressed="{{f.pressed}}" style="{{f.style}}">{{f.label}}</button>
+</sc-for>
+</div>
+<div style="flex-grow: 1"></div>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Agenda de arquivo (recebe reuniões canceladas, no show e reagendadas): conectada na conta de um gestor · <a href="Configuracoes.dc.html">trocar</a></span>
+</div>
+
+<div style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; overflow: hidden">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px">
+<thead>
+<tr style="background: #20203a; text-align: left">
+<th scope="col" style="padding: 12px 16px; font-size: 12px; line-height: 16px; font-weight: 600">Usuário</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Papel</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Empresa</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Carrosséis</th>
+<th scope="col" style="padding: 12px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Agenda do Google</th>
+<th scope="col" style="padding: 12px 16px; font-size: 12px; line-height: 16px; font-weight: 600">Ativo</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{rows}}" as="r" hint-placeholder-count="10">
+<tr style="border-top: 1px solid #252c3c; height: 60px">
+<td style="padding: 8px 16px"><div style="display: flex; align-items: center; gap: 12px"><div style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 8px; background: #4b194d; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 500">{{r.ini}}</div><div style="display: flex; flex-direction: column"><span style="font-weight: 600">{{r.name}}</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{r.email}}</span></div></div></td>
+<td style="padding: 8px 12px"><select value="{{r.role}}" onChange="{{r.onRole}}" aria-label="{{r.roleAria}}" style="height: 36px; padding: 0 8px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px"><option value="admin">Admin</option><option value="gestor">Gestor</option><option value="sdr">SDR</option><option value="closer">Closer</option></select></td>
+<td style="padding: 8px 12px">{{r.brand}}</td>
+<td style="padding: 8px 12px"><div style="display: flex; flex-direction: column"><span>{{r.carousels}}</span><sc-if value="{{r.isCloser}}" hint-placeholder-val="{{false}}"><a href="Carrossel.dc.html" style="font-size: 12px; line-height: 16px; font-weight: 500">Editar carrosséis</a></sc-if></div></td>
+<td style="padding: 8px 12px">
+<sc-if value="{{r.connected}}" hint-placeholder-val="{{false}}"><span style="font-size: 14px">Conectada</span></sc-if>
+<sc-if value="{{r.notConnected}}" hint-placeholder-val="{{false}}"><div style="display: flex; align-items: center; gap: 8px"><span style="border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f0a93b; background: rgba(240,169,59,0.12)">Não conectada</span><button type="button" onClick="{{r.connect}}" style="height: 28px; padding: 0 10px; border: 1px solid #4e5d7f; border-radius: 8px; background: #313a4f; color: #f6f7f9; font-size: 12px; font-weight: 600; cursor: pointer">Enviar link de conexão</button></div></sc-if>
+<sc-if value="{{r.noCalendar}}" hint-placeholder-val="{{true}}"><span style="color: #a7abb5">Não precisa</span></sc-if>
+</td>
+<td style="padding: 8px 16px"><button type="button" role="switch" aria-checked="{{r.checked}}" aria-label="{{r.switchAria}}" onClick="{{r.toggle}}" style="{{r.switchStyle}}"><span style="{{r.knobStyle}}"></span></button></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+<div style="border-top: 1px solid #252c3c; padding: 12px 16px; font-size: 12px; line-height: 16px; color: #a7abb5">{{footer}}</div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1120}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.nextId = 20;
+    this.state = {
+      filter: 'all', newName: '', newEmail: '', newRole: 'sdr', newBrand: 'Poli',
+      users: [
+        { id: 1, name: 'Helena Martins', email: 'helena.martins@poli.digital', role: 'admin', brand: 'Poli e ChatsHub', carousels: '', google: '', on: true },
+        { id: 2, name: 'Igor Leal', email: 'igor.leal@poli.digital', role: 'gestor', brand: 'Poli e ChatsHub', carousels: '', google: '', on: true },
+        { id: 3, name: 'Ana Souza', email: 'ana.souza@poli.digital', role: 'sdr', brand: 'Poli', carousels: '', google: '', on: true },
+        { id: 4, name: 'Bruno Lima', email: 'bruno.lima@poli.digital', role: 'sdr', brand: 'ChatsHub', carousels: '', google: '', on: true },
+        { id: 5, name: 'Carla Mendes', email: 'carla.mendes@poli.digital', role: 'sdr', brand: 'Poli e ChatsHub', carousels: '', google: '', on: true },
+        { id: 6, name: 'Diego Rocha', email: 'diego.rocha@poli.digital', role: 'sdr', brand: 'Poli', carousels: '', google: '', on: true },
+        { id: 7, name: 'Rafael Teixeira', email: 'rafael.teixeira@poli.digital', role: 'closer', brand: 'Poli', carousels: 'Poli: até 5, 6 a 10, acima de 10 · ChatsHub: acima de 10', google: 'ok', on: true },
+        { id: 8, name: 'Marina Duarte', email: 'marina.duarte@poli.digital', role: 'closer', brand: 'Poli e ChatsHub', carousels: 'Poli: até 5, acima de 10 · ChatsHub: até 5, 6 a 10, acima de 10', google: 'ok', on: true },
+        { id: 9, name: 'Lucas Pires', email: 'lucas.pires@poli.digital', role: 'closer', brand: 'Poli', carousels: 'Poli: até 5, 6 a 10', google: 'ok', on: true },
+        { id: 10, name: 'Bianca Rocha', email: 'bianca.rocha@poli.digital', role: 'closer', brand: 'Poli e ChatsHub', carousels: 'Poli: até 5, licitação · ChatsHub: até 5', google: 'ok', on: true },
+        { id: 11, name: 'Pedro Antunes', email: 'pedro.antunes@poli.digital', role: 'closer', brand: 'Poli', carousels: 'Poli: até 5', google: 'no', on: true },
+        { id: 12, name: 'Thiago Nunes', email: 'thiago.nunes@poli.digital', role: 'closer', brand: 'Poli', carousels: 'Poli: até 5', google: 'ok', on: false }
+      ]
+    };
+  }
+  renderVals() {
+    var self = this, st = this.state;
+    function patch(id, p) { self.setState({ users: self.state.users.map(function (u) { return u.id === id ? Object.assign({}, u, p) : u; }) }); }
+    function sw(on) { return 'width: 44px; height: 24px; flex-shrink: 0; border-radius: 9999px; border: 1px solid ' + (on ? '#5757d3' : '#4e5d7f') + '; background: ' + (on ? '#5757d3' : '#313a4f') + '; padding: 0; position: relative; cursor: pointer'; }
+    function knob(on) { return 'position: absolute; top: 3px; left: ' + (on ? '23px' : '3px') + '; width: 16px; height: 16px; border-radius: 9999px; background: #f6f7f9'; }
+    function initials(n) { var p = n.trim().split(/\s+/); return ((p[0] || '').charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '')).toUpperCase(); }
+    var visible = st.users.filter(function (u) { return st.filter === 'all' || u.role === st.filter; });
+    var rows = visible.map(function (u) {
+      var closer = u.role === 'closer';
+      return {
+        ini: initials(u.name), name: u.name, email: u.email, role: u.role, brand: u.brand,
+        carousels: closer ? (u.carousels || 'Nenhum ainda') : '—', isCloser: closer,
+        connected: closer && u.google === 'ok', notConnected: closer && u.google !== 'ok', noCalendar: !closer,
+        roleAria: 'Papel de ' + u.name, switchAria: u.name + ' ativo',
+        checked: u.on ? 'true' : 'false', switchStyle: sw(u.on), knobStyle: knob(u.on),
+        onRole: function (e) { patch(u.id, { role: e.target.value }); },
+        toggle: function () { patch(u.id, { on: !u.on }); },
+        connect: function () { patch(u.id, { google: 'ok' }); }
+      };
+    });
+    var FILTERS = [['all', 'Todos'], ['sdr', 'SDRs'], ['closer', 'Closers'], ['gestor', 'Gestores'], ['admin', 'Admins']];
+    var filters = FILTERS.map(function (f) {
+      var on = st.filter === f[0];
+      var n = st.users.filter(function (u) { return f[0] === 'all' || u.role === f[0]; }).length;
+      return {
+        label: f[1] + ' ' + n, pressed: on ? 'true' : 'false',
+        style: 'height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid ' + (on ? '#5757d3' : '#4e5d7f') + '; background: ' + (on ? '#5757d3' : '#313a4f') + '; color: #f6f7f9; font-size: 14px; font-weight: ' + (on ? '600' : '400') + '; cursor: pointer',
+        pick: function () { self.setState({ filter: f[0] }); }
+      };
+    });
+    var pending = st.users.filter(function (u) { return u.role === 'closer' && u.google !== 'ok'; }).length;
+    return {
+      rows: rows, filters: filters,
+      newName: st.newName, newEmail: st.newEmail, newRole: st.newRole, newBrand: st.newBrand,
+      onNewName: function (e) { self.setState({ newName: e.target.value }); },
+      onNewEmail: function (e) { self.setState({ newEmail: e.target.value }); },
+      onNewRole: function (e) { self.setState({ newRole: e.target.value }); },
+      onNewBrand: function (e) { self.setState({ newBrand: e.target.value }); },
+      add: function () {
+        if (!st.newName.trim() || !st.newEmail.trim()) return;
+        var u = { id: self.nextId++, name: st.newName.trim(), email: st.newEmail.trim(), role: st.newRole, brand: st.newBrand, carousels: '', google: st.newRole === 'closer' ? 'no' : '', on: true };
+        self.setState({ users: [u].concat(self.state.users), newName: '', newEmail: '', filter: 'all' });
+      },
+      footer: st.users.length + ' usuários · ' + pending + (pending === 1 ? ' closer sem agenda conectada' : ' closers sem agenda conectada')
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -71,10 +71,11 @@ Atualize esta lista conforme avança.
 - [x] Fase 3 — Parser e worker (sem backfill: dados a partir de 01/10/2026). Worker roda manualmente (`npm run once -w @painel/worker`) até o deploy da Fase 5.
 - [x] Fase 4 — Métricas no banco (Felipe confere os números com o Poli). Concluída em 05/10/2026, com sync de Leads do HubSpot (descarte, Descartados, DSQ) adiantado da Fase 6.
 - [x] Fase 5 — Telas, login e deploy do painel. No ar em https://painel-sdr.camposai.com.br desde 06/10/2026.
-- [x] Fase 6 — Reuniões (versão enxuta): agendamento pelo HubSpot (Garantir Agendamento / Qualificado) + marcação manual por admin/gestor. No ar desde 06/10/2026. Pendente para depois: nota interna "agendado" e data da reunião.
+- [x] Fase 6 — Reuniões (versão enxuta): agendamento pelo HubSpot (Garantir Agendamento / Qualificado) + marcação manual por admin/gestor. No ar desde 06/10/2026. Em aberto (sem trabalho previsto aqui; a Fase 10 resolve, porque o agendamento passa a nascer no painel): em que dia o agendamento conta (Garantir Agendamento × Qualificado), nota interna "agendado" e data da reunião.
 - [ ] Fase 7 — Score de qualidade.
 - [ ] Fase 8 — Operação (conferência diária, alertas, backup, revisão de segurança).
 - [ ] Fase 9 — SDR Modelo (ideia do Felipe, 2026-10-06): o gestor configura o SDR Ideal (faixas e pesos por comportamento: volume, 1ª resposta, tempo de resposta, taxa de resposta, descartes, reuniões validadas); a IA analisa periodicamente os melhores atendimentos (reunião validada / lead de alta qualidade) e sugere ajustes ao SDR Ideal com dados reais, que o gestor aprova ou não; cada SDR ganha uma aderência ao SDR Modelo com o detalhe de onde está dentro e fora. Depende das Fases 6 e 7.
+- [ ] Fase 10 — Agendamento e carrossel de reuniões (pedido do Felipe, 2026-10-06): SDRs entram no painel (veem só o que é deles) e agendam reuniões na Google Agenda dos closers; o sistema distribui entre os closers por pesos definidos pelos gestores. Especificação completa em `docs/agendamento.md`; telas em `design/Agendar.dc.html`, `design/AgendarSucesso.dc.html`, `design/Reunioes.dc.html`, `design/Carrossel.dc.html` e `design/Usuarios.dc.html`. Substitui a Poli Agenda (feita no Lovable), construída do zero. Não depende das Fases 7 e 9. Antes de liberar para os SDRs: backup e alerta da Fase 8 e Supabase no plano Pro.
 
 ## 5. O que já se sabe sobre a integração PoliChat-Hubspot
 
@@ -104,10 +105,13 @@ A Fase 2 mexe em produção e em outro repositório. Não edite a integração a
 
 | Pendência | Quando perguntar |
 |---|---|
-| Ligar ou não a nota diária no HubSpot (`DAILY_NOTES_ENABLED`) | Depois da Fase 2 |
-| Carteira: qual objeto/campo do HubSpot define "lead em aberto no funil do SDR" | Fase 6 |
-| Critérios reais de qualidade do lead e contexto para o Claude | Fase 7 |
-| Modelo e limite de gasto da API da Anthropic | Fase 7 |
+| Ligar ou não a nota diária no HubSpot (`DAILY_NOTES_ENABLED`); hoje `false` | Quando o Felipe quiser |
+| Carteira (card e qualidade da carteira): proposta = Lead mais recente do contato no [New] Pipeline SDR, em etapa aberta, com o SDR como dono | Fase 7 |
+| Critérios e pesos da nota de qualidade + contexto da Poli (proposta com base nos motivos de descarte já enviada em 07/10) | Fase 7 |
+| Regra que define um lead DSQ (82% dos DSQ não têm "Número de funcionários"; motivo quase nunca preenchido) | Fase 7 |
+| Modelo, limite de gasto e chave da API da Anthropic | Fase 7 |
+| Em que dia o agendamento conta (entrada em Garantir Agendamento × Qualificado) — substituído pelo agendamento dentro do painel | Fase 10 |
+| Formulário de cadastro: separar a faixa "2 a 4 colaboradores" (o corte real é 3 atendentes) | Quando o Felipe quiser |
 | Retenção de conteúdo de mensagens (LGPD) | Fase 8 |
 
 ## 8. Decisões
@@ -159,9 +163,14 @@ Registre aqui toda decisão nova, com data.
 - 2026-10-07 — Fase 6 enxuta: só identificar na lista quem agendou. **Agendada** vem do HubSpot (Lead mais recente do contato passou por "Garantir Agendamento" ou "Qualificado"); admin/gestor podem marcar qualquer status à mão na tabela, inclusive "Agendada"; o HubSpot nunca sobrescreve a marcação manual. Sem data da reunião. Objeto Reunião do HubSpot não é usado (processo mal implementado). Nota interna "agendado" fica para depois. Card e Time mostram **Agendados** (leads que agendaram no período, pelo dono do Lead) e a % sobre os abordados.
 - 2026-10-06 — **Incidente:** o build do deploy da Fase 6 (14:41) esgotou a memória da VPS e travou tudo, inclusive a integração, por ~25 min (eventos da Poli perdidos, parte reenviada); VPS reiniciada pelo Felipe no hPanel. Medidas: swap de 4 GB criado, deploy só fora do horário comercial, build com limite de memória e uma imagem por vez (`docs/deploy.md`). Imagens passam a ser montadas no Mac e enviadas prontas (`npm run deploy`), aprovado pelo Felipe; o Mac só é usado no momento do deploy.
 - 2026-10-06 — Sync do HubSpot continua a cada 15 min (mudança no HubSpot pode levar até 15 min para aparecer no painel). Transferência SDR → closer não é usada como sinal de agendamento: o SDR move o Lead no HubSpot.
+- 2026-10-06 — Leads perdidos no incidente: janela 14:41–15:05 sem eventos (~100–250 eventos; 20 reenviados pela Poli). Não recuperável sem a API da Poli; métricas de tempo dessa meia hora podem estar distorcidas.
+- 2026-10-07 — Caso do Samuel (6 agendamentos para ele, 4 no painel): diferença vem de 2 Leads que entraram em Garantir Agendamento em 05/10 e em Qualificado em 06/10; o painel conta na 1ª entrada. Definição do dia do agendamento fica para a Fase 10, que traz o agendamento para dentro do painel (o clique do SDR passa a ser o agendamento).
+- 2026-10-07 — Análise de lead ruim (HubSpot, últimos 30 dias): 60% dos descartes são "Término de carteira" (não respondeu a cadência); 24% são equipe pequena ("menos de 3 atendentes" + "autônomo"); autônomo quase nunca qualifica (1% dos qualificados); 5+ funcionários = metade dos qualificados; a faixa "2 a 4" do formulário é ambígua. Base para os critérios da Fase 7.
 - 2026-10-05 — Sem histórico anterior e sem API da Poli por enquanto: o painel começa em 01/10/2026 07:08 (primeiro evento em `raw_events`). Chats que já existiam antes disso podem ter "quem iniciou" e a primeira resposta imprecisos. A ideia de backfill desde 25/09 foi abandonada.
 - 2026-10-05 — Felipe conferiu 3 chats reais no Poli (linha do tempo e tempos de resposta): tudo certo.
 - 2026-10-05 — Lia passa a ser SDR também na integração (`POLI_SDR_EMAILS` do `.env` da VPS). Efeito colateral aceito: as mensagens dela passam a ser registradas no HubSpot, como as dos outros SDRs.
+- 2026-10-06 — Fase 10 (agendamento): agenda dos closers = Google Agenda; carrossel no modo "horário primeiro" (SDR escolhe o horário, o sistema dá a reunião ao closer livre de maior saldo); pesos por closer definidos por admin/gestor; distribuição por livro-caixa de créditos e débitos (`docs/agendamento.md`, seção 5); SDR entra com papel próprio e vê só os próprios chats, números e o agendamento; duas entradas para agendar (botão no topo e botão na linha do lead).
+- 2026-10-07 — Fase 10 detalhada com o Felipe; **a fonte da verdade é `docs/agendamento.md`** (seção 2 lista as decisões). Resumo: construir do zero, sem reaproveitar a Poli Agenda; 7 carrosséis (4 Poli, 3 ChatsHub); closer às cegas (o SDR só vê o closer depois de confirmar, mas vê quantos closers há por horário); lead fica preso ao closer; troca de closer só por pedido do SDR com aprovação do gestor de SDR (Iago) ou de qualquer gestor/admin, com aviso no espaço "Gestão SDR" do Google Chat; ajuste livre de início e duração com reconferência da agenda; dados do lead vêm do HubSpot e o carrossel é sugerido pela propriedade de quantidade de usuários; telas novas de Reuniões, Carrosséis e Usuários. Onde este registro e o `agendamento.md` divergirem, vale o `agendamento.md`.
 
 ## 9. Primeira mensagem ao Felipe
 

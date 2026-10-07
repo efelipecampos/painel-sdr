@@ -8,6 +8,7 @@ Dono do projeto: Felipe (Head of Revenue). Usuários da V1: Felipe e, depois, os
 
 - `docs/COMECE-AQUI.md`: como conduzir o projeto com o Felipe, estado atual, pontos de parada, checklist de revisão e decisões. Comece por ele e mantenha o "Estado atual" e as "Decisões" atualizados.
 - `docs/spec.md`: arquitetura, schema, definição exata de cada métrica, integrações e deploy. É a fonte da verdade.
+- `docs/agendamento.md`: especificação completa da Fase 10 (agendamento de reuniões, carrosséis, usuários). Leia antes de qualquer trabalho nessa fase.
 - `docs/roteiro.md`: as fases do projeto, na ordem. Trabalhe uma fase por vez.
 - `design/`: telas de referência (`Main.dc.html`, `SDR.dc.html`, `Configuracoes.dc.html`) e os tokens visuais (`tokens.json`). A interface deve reproduzir essas telas.
 

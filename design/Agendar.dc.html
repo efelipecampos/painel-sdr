@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Agendar reunião</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#1a1a1a;font-family:"Rubik",system-ui,sans-serif;color:#f6f7f9}
+a{color:#f6f7f9}a:hover{color:#cecff0}
+button,input,select,textarea{font-family:inherit}
+input::placeholder,textarea::placeholder{color:#a7abb5}
+input[type="time"]{color-scheme:dark}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #f6f7f9;outline-offset:2px}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 1240px; display: flex; flex-direction: column; background: #1a1a1a; font-family: Rubik, system-ui, sans-serif; color: #f6f7f9">
+
+<div style="height: 46px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 16px; border-bottom: 1px solid #252c3c; font-size: 14px; line-height: 20px">
+<img src="/_blob/836dc846171f77c8e53729b39de898fe" alt="Poli" style="height: 24px; margin-right: 4px">
+<a href="SDR.dc.html" style="text-decoration: none">Meus chats</a>
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6"></path></svg>
+<span aria-current="page" style="font-weight: 600">Agendar reunião</span>
+</div>
+
+<div style="flex-grow: 1; padding: 20px 16px 16px 16px; display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<a href="SDR.dc.html" aria-label="Voltar aos meus chats" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border: 1px solid #4e5d7f; border-radius: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6l6 6"></path></svg></a>
+<h1 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; color: #6868d7">Agendar reunião</h1>
+<span style="background: #20293a; border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600">Dados de exemplo</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 480px minmax(0, 1fr); gap: 16px; align-items: start">
+
+<section aria-labelledby="sec-lead" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 16px">
+<h2 id="sec-lead" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">1. Lead e convite</h2>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="hs" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Trocar de lead</label>
+<div style="display: flex; gap: 8px">
+<input id="hs" type="text" value="{{hsQuery}}" onChange="{{onHs}}" placeholder="Nome ou telefone do lead (ou link/ID do HubSpot)" style="flex-grow: 1; min-width: 0; height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<button type="button" onClick="{{search}}" style="height: 40px; padding: 0 14px; border: 1px solid #4e5d7f; border-radius: 8px; background: #313a4f; color: #f6f7f9; font-size: 14px; font-weight: 600; cursor: pointer">Buscar</button>
+</div>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{hsHint}}</span>
+</div>
+
+<sc-if value="{{found}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 12px; padding: 12px; border: 1px solid #252c3c; border-radius: 8px; background: #1a1a2c">
+<div style="display: flex; align-items: center; gap: 12px">
+<div style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 8px; background: #20203a; display: flex; align-items: center; justify-content: center; color: #6868d7"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V6l8-3l8 3v14M9 20v-5h6v5M9 9h.01M15 9h.01M9 12h.01M15 12h.01"></path></svg></div>
+<div style="display: flex; flex-direction: column; flex-grow: 1">
+<span style="font-size: 14px; line-height: 22px; font-weight: 600">Clínica Sorriso Vivo</span>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Renata Lopes · dados trazidos do HubSpot</span>
+</div>
+<button type="button" onClick="{{clearLead}}" style="height: 32px; padding: 0 10px; border: 1px solid #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; font-size: 12px; font-weight: 600; cursor: pointer">Trocar lead</button>
+</div>
+<dl style="margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px">
+<div style="display: flex; flex-direction: column"><dt style="font-size: 12px; line-height: 16px; color: #a7abb5">Telefone</dt><dd style="margin: 0; font-size: 14px; line-height: 20px">(64) 9••••-2093</dd></div>
+<div style="display: flex; flex-direction: column"><dt style="font-size: 12px; line-height: 16px; color: #a7abb5">Site</dt><dd style="margin: 0; font-size: 14px; line-height: 20px">sorrisovivo.com.br</dd></div>
+<div style="display: flex; flex-direction: column"><dt style="font-size: 12px; line-height: 16px; color: #a7abb5">Usuários informados</dt><dd style="margin: 0; font-size: 14px; line-height: 20px">4</dd></div>
+<div style="display: flex; flex-direction: column"><dt style="font-size: 12px; line-height: 16px; color: #a7abb5">Dono no HubSpot</dt><dd style="margin: 0; font-size: 14px; line-height: 20px">Diego Rocha (você)</dd></div>
+</dl>
+</div>
+</sc-if>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="email" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">E-mail do lead</label>
+<input id="email" type="email" value="{{email}}" onChange="{{onEmail}}" placeholder="email@empresa.com.br" style="height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Veio do HubSpot; confira com o lead. Sem e-mail, você envia o link da reunião pelo WhatsApp.</span>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid #252c3c; border-radius: 8px; background: #1a1a2c">
+<span id="lbl-brand" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Empresa</span>
+<div role="group" aria-labelledby="lbl-brand" style="display: flex; gap: 8px">
+<sc-for list="{{brands}}" as="b" hint-placeholder-count="2">
+<button type="button" onClick="{{b.pick}}" aria-pressed="{{b.pressed}}" style="{{b.style}}">{{b.label}}</button>
+</sc-for>
+</div>
+<label for="carousel" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Carrossel (tamanho do cliente)</label>
+<select id="carousel" value="{{carouselId}}" onChange="{{onCarousel}}" style="height: 40px; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<sc-for list="{{carouselOptions}}" as="c" hint-placeholder-count="4">
+<option value="{{c.id}}">{{c.name}}</option>
+</sc-for>
+</select>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Sugerido pelos 4 usuários informados no HubSpot. Troque se o lead disser outro tamanho.</span>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="title" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Título do convite</label>
+<input id="title" type="text" value="{{title}}" onChange="{{onTitle}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="guests" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Outros convidados (e-mails separados por vírgula)</label>
+<input id="guests" type="text" value="{{guests}}" onChange="{{onGuests}}" placeholder="socio@empresa.com.br" style="height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="notes" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Passagem de bastão para o closer</label>
+<textarea id="notes" rows="4" value="{{notes}}" onChange="{{onNotes}}" placeholder="O que o closer precisa saber antes da reunião: a dor do lead, tamanho da operação, quem decide, o que já foi combinado..." style="box-sizing: border-box; padding: 10px 12px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px; line-height: 22px; resize: vertical"></textarea>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Só o closer recebe. O lead não vê esse texto no convite.</span>
+</div>
+</section>
+
+<div style="display: flex; flex-direction: column; gap: 16px">
+
+<sc-if value="{{choosing}}" hint-placeholder-val="{{true}}">
+<section aria-labelledby="sec-slot" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; gap: 12px">
+<h2 id="sec-slot" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">2. Horário</h2>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{slotHint}}</span>
+<div style="flex-grow: 1"></div>
+<button type="button" aria-label="Semana anterior" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6l6 6"></path></svg></button>
+<span style="font-size: 14px; font-weight: 500">07 a 13 de outubro</span>
+<button type="button" aria-label="Próxima semana" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6"></path></svg></button>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; align-items: start">
+<sc-for list="{{days}}" as="day" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="padding: 8px 0; border-bottom: 1px solid #252c3c; font-size: 14px; line-height: 20px; font-weight: 600">{{day.label}}</div>
+<sc-if value="{{day.closed}}" hint-placeholder-val="{{false}}">
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{day.closedLabel}}</span>
+</sc-if>
+<sc-for list="{{day.slots}}" as="s" hint-placeholder-count="5">
+<button type="button" onClick="{{s.pick}}" aria-pressed="{{s.pressed}}" style="{{s.style}}"><span style="font-size: 14px; font-weight: 600">{{s.time}}</span><span style="{{s.subStyle}}">{{s.freeLabel}}</span></button>
+</sc-for>
+</div>
+</sc-for>
+</div>
+
+<sc-if value="{{hasSlot}}" hint-placeholder-val="{{true}}">
+<div style="border-top: 1px solid #252c3c; padding-top: 16px; display: grid; grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1.1fr); gap: 20px; align-items: start">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<label for="start" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Início</label>
+<input id="start" type="time" step="300" value="{{start}}" onChange="{{onStart}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<span id="lbl-dur" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Duração</span>
+<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+<div role="group" aria-labelledby="lbl-dur" style="display: flex; gap: 8px">
+<sc-for list="{{durations}}" as="d" hint-placeholder-count="3">
+<button type="button" onClick="{{d.pick}}" aria-pressed="{{d.pressed}}" style="{{d.style}}">{{d.label}}</button>
+</sc-for>
+</div>
+<label for="dur" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Duração em minutos</label>
+<input id="dur" type="number" min="10" max="240" step="5" value="{{duration}}" onChange="{{onDuration}}" style="width: 76px; height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<span style="font-size: 14px">min</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Ajuste à vontade. A agenda é conferida a cada mudança.</span>
+<span style="font-size: 14px; line-height: 22px; font-weight: 600">{{adjustLabel}}</span>
+<span style="{{adjustCountStyle}}">{{adjustCount}}</span>
+<sc-if value="{{hasNotice}}" hint-placeholder-val="{{false}}">
+<span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #f0a93b">{{notice}}</span>
+</sc-if>
+</div>
+</div>
+</sc-if>
+</section>
+
+<section aria-label="Confirmação" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1">
+<span style="font-size: 14px; line-height: 22px; font-weight: 600">{{summary}}</span>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">O closer é definido pelo carrossel e só aparece depois que você confirmar. Ao confirmar, o sistema cria o evento com Google Meet, envia o convite ao lead e move o Lead para "Garantir Agendamento" no HubSpot.</span>
+</div>
+<button type="button" onClick="{{confirm}}" style="{{confirmStyle}}">Agendar</button>
+</section>
+</sc-if>
+
+<sc-if value="{{booked}}" hint-placeholder-val="{{false}}">
+<section aria-labelledby="sec-done" style="background: #181828; border: 1px solid #5757d3; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: center; gap: 12px">
+<div style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 9999px; background: #5757d3; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l9-10"></path></svg></div>
+<div style="display: flex; flex-direction: column">
+<h2 id="sec-done" style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 700">Reunião agendada</h2>
+<span style="font-size: 14px; line-height: 20px">{{summary}}</span>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px">
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #252c3c; border-radius: 8px; background: #1a1a2c">
+<div style="width: 40px; height: 40px; flex-shrink: 0; border-radius: 8px; background: #4b194d; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 500">{{closer.ini}}</div>
+<div style="display: flex; flex-direction: column">
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Closer</span>
+<span style="font-size: 14px; line-height: 22px; font-weight: 600">{{closer.name}}</span>
+</div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid #252c3c; border-radius: 8px; background: #1a1a2c">
+<div style="display: flex; flex-direction: column; flex-grow: 1; min-width: 0">
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Link da reunião</span>
+<span style="font-size: 14px; line-height: 22px; font-weight: 600">meet.google.com/[código]</span>
+</div>
+<button type="button" style="height: 32px; padding: 0 12px; border: 1px solid #4e5d7f; border-radius: 8px; background: #313a4f; color: #f6f7f9; font-size: 12px; font-weight: 600; cursor: pointer">Copiar</button>
+</div>
+</div>
+
+<p style="margin: 0; font-size: 14px; line-height: 22px">Convite enviado ao lead. Lead movido para "Garantir Agendamento" no HubSpot.</p>
+<p style="margin: 0; font-size: 12px; line-height: 16px; color: #a7abb5">Se precisar mudar o horário, use Reagendar em Minhas reuniões: a reunião continua com o mesmo closer. Cancelar e agendar de novo para o mesmo lead também mantém o closer.</p>
+
+<div style="display: flex; gap: 12px">
+<a href="Reunioes.dc.html" style="height: 40px; display: flex; align-items: center; padding: 0 16px; border: 1px solid #5757d3; border-radius: 8px; background: #5757d3; text-decoration: none; font-size: 14px; font-weight: 600">Ver minhas reuniões</a>
+<button type="button" onClick="{{reset}}" style="height: 40px; padding: 0 16px; border: 1px solid #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; font-size: 14px; font-weight: 500; cursor: pointer">Agendar outra</button>
+<div style="flex-grow: 1"></div>
+<sc-if value="{{swapIdle}}" hint-placeholder-val="{{true}}">
+<button type="button" onClick="{{swapOpen}}" style="height: 40px; padding: 0 16px; border: 1px solid #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; font-size: 14px; font-weight: 500; cursor: pointer">Pedir troca de closer</button>
+</sc-if>
+</div>
+
+<sc-if value="{{swapForm}}" hint-placeholder-val="{{false}}">
+<div style="border-top: 1px solid #252c3c; padding-top: 16px; display: flex; flex-direction: column; gap: 8px">
+<label for="swap-reason" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Por que esta reunião precisa de outro closer? O pedido vai para o gestor de SDR aprovar. Você não escolhe o novo closer.</label>
+<div style="display: flex; gap: 8px">
+<input id="swap-reason" type="text" value="{{swapReason}}" onChange="{{onSwapReason}}" placeholder="Ex.: o lead pediu para falar com quem o atendeu da última vez" style="flex-grow: 1; min-width: 0; height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<button type="button" onClick="{{swapSend}}" style="height: 40px; padding: 0 16px; border: 1px solid #5757d3; border-radius: 8px; background: #5757d3; color: #f6f7f9; font-size: 14px; font-weight: 600; cursor: pointer">Enviar pedido</button>
+<button type="button" onClick="{{swapCancel}}" style="height: 40px; padding: 0 14px; border: 1px solid #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; font-size: 14px; cursor: pointer">Desistir</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{swapSent}}" hint-placeholder-val="{{false}}">
+<p style="margin: 0; border-top: 1px solid #252c3c; padding-top: 16px; font-size: 14px; line-height: 22px"><span style="border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f0a93b; background: rgba(240,169,59,0.12); margin-right: 8px">Troca pedida</span>Aguardando o gestor de SDR. A reunião continua com o closer atual até ele decidir.</p>
+</sc-if>
+</section>
+</sc-if>
+
+</div>
+</div>
+</div>
+<sc-if value="{{swapBlocked}}" hint-placeholder-val="{{false}}">
+<div style="position: absolute; left: 0; top: 0; width: 1440px; height: 1240px; background: rgba(10,10,16,0.72); display: flex; align-items: flex-start; justify-content: center; padding-top: 260px; box-sizing: border-box">
+<div role="alertdialog" aria-modal="true" aria-labelledby="dlg-title" aria-describedby="dlg-desc" style="width: 480px; background: #181828; border: 1px solid #f0a93b; border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<h2 id="dlg-title" style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 700">Não há outro closer nesse horário</h2>
+<p id="dlg-desc" style="margin: 0; font-size: 14px; line-height: 22px">{{blockedText}}</p>
+<p style="margin: 0; font-size: 12px; line-height: 16px; color: #a7abb5">Se a reunião precisar mesmo de outro closer, fale com o gestor de SDR: só ele ou outro gestor pode mudar o horário e o closer juntos.</p>
+<div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 4px">
+<button type="button" onClick="{{swapCancel}}" style="height: 40px; padding: 0 20px; border: 1px solid #5757d3; border-radius: 8px; background: #5757d3; color: #f6f7f9; font-size: 14px; font-weight: 600; cursor: pointer">Entendi</button>
+</div>
+</div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1240}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { found: true, hsQuery: '', booked: false, swap: 'idle', swapReason: '', slot: '07|15:00', start: '15:00', brand: 'poli', carousel: 'p5', guests: '', duration: 30, email: 'renata@sorrisovivo.com.br', title: 'Poli Digital × Clínica Sorriso Vivo', notes: '' };
+  }
+  renderVals() {
+    var self = this, st = this.state;
+    // O SDR nunca vê esta lista: a escolha do closer acontece no servidor, depois da confirmação.
+    var CLOSERS = [
+      { id: 'rt', name: 'Rafael Teixeira', ini: 'RT', weight: 3, count: 9, lastRank: 1 },
+      { id: 'md', name: 'Marina Duarte', ini: 'MD', weight: 2, count: 7, lastRank: 3 },
+      { id: 'lp', name: 'Lucas Pires', ini: 'LP', weight: 2, count: 4, lastRank: 2 },
+      { id: 'br', name: 'Bianca Rocha', ini: 'BR', weight: 1, count: 3, lastRank: 4 }
+    ];
+    var CAROUSELS = [
+      { id: 'p5', brand: 'poli', name: 'Clientes até 5 usuários', pool: ['rt', 'md', 'lp', 'br'] },
+      { id: 'p10', brand: 'poli', name: 'Clientes de 6 a 10 usuários', pool: ['rt', 'lp'] },
+      { id: 'p11', brand: 'poli', name: 'Acima de 10 usuários', pool: ['rt', 'md'] },
+      { id: 'lic', brand: 'poli', name: 'Licitação', pool: ['br'] },
+      { id: 'c5', brand: 'chatshub', name: 'Clientes até 5 usuários', pool: ['md', 'br'] },
+      { id: 'c10', brand: 'chatshub', name: 'Clientes de 6 a 10 usuários', pool: ['md'] },
+      { id: 'c11', brand: 'chatshub', name: 'Acima de 10 usuários', pool: ['md', 'rt'] }
+    ];
+    var carousel = CAROUSELS.filter(function (c) { return c.id === st.carousel; })[0];
+    var POOL = CLOSERS.filter(function (c) { return carousel.pool.indexOf(c.id) !== -1; });
+    var sumW = POOL.reduce(function (t, c) { return t + c.weight; }, 0);
+    var total = POOL.reduce(function (t, c) { return t + c.count; }, 0);
+    function deficit(c) { return c.weight / sumW * (total + 1) - c.count; }
+    function byId(id) { return CLOSERS.filter(function (c) { return c.id === id; })[0]; }
+    function inPool(ids) { return ids.filter(function (id) { return carousel.pool.indexOf(id) !== -1; }); }
+    function ranked(ids) {
+      return ids.map(byId).sort(function (a, b) { var d = deficit(b) - deficit(a); return Math.abs(d) > 0.001 ? d : a.lastRank - b.lastRank; });
+    }
+    var DAYS = [
+      { id: '07', label: 'Qua 07/10', slots: { '08:30': ['md'], '10:30': ['rt', 'br'], '11:30': ['lp', 'md'], '14:00': ['rt'], '12:30': ['rt'], '15:00': ['lp', 'rt', 'br'], '16:00': ['md', 'br'], '18:00': ['lp', 'md'] } },
+      { id: '08', label: 'Qui 08/10', slots: { '08:30': ['lp', 'rt'], '09:30': ['md'], '11:30': ['br'], '12:00': ['md', 'br'], '14:00': ['lp', 'md', 'rt', 'br'], '15:00': ['rt'], '17:00': ['md'], '18:00': ['rt'] } },
+      { id: '09', label: 'Sex 09/10', slots: { '09:30': ['rt', 'md'], '10:30': ['lp'], '14:00': ['br'], '15:00': ['md'], '16:00': ['rt', 'lp'], '17:00': ['br'] } },
+      { id: '12', label: 'Seg 12/10', closed: 'Feriado nacional. Sem agendamento.', slots: {} },
+      { id: '13', label: 'Ter 13/10', slots: { '08:30': ['rt', 'md', 'lp', 'br'], '09:30': ['lp', 'br'], '10:30': ['md'], '11:30': ['rt'], '15:00': ['lp'], '16:00': ['md', 'rt'], '17:00': ['br'] } }
+    ];
+    var parts = st.slot.split('|');
+    var selDay = DAYS.filter(function (d) { return d.id === parts[0]; })[0];
+    var selTime = parts[1];
+    function toMin(t) { var p = String(t || '').split(':'); return Number(p[0]) * 60 + Number(p[1] || 0); }
+    function fmtMin(m) { return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
+    // Grade padrão: fora do almoço (12:00-13:30) e até 18:00. O ajuste manual pode sair disso.
+    function isStandard(t) { var m = toMin(t); return !(m >= 720 && m < 810) && m < 1080 && m >= 480; }
+    // Janelas livres de cada closer no dia (cada entrada do exemplo vale 1 hora livre), já unidas.
+    function freeIn(day, a, b) {
+      if (!day) return [];
+      return carousel.pool.filter(function (id) {
+        var w = Object.keys(day.slots).filter(function (t) { return day.slots[t].indexOf(id) !== -1; }).map(function (t) { return [toMin(t), toMin(t) + 60]; }).sort(function (x, y) { return x[0] - y[0]; });
+        var merged = [];
+        w.forEach(function (x) { var l = merged[merged.length - 1]; if (l && x[0] <= l[1]) l[1] = Math.max(l[1], x[1]); else merged.push([x[0], x[1]]); });
+        return merged.some(function (x) { return x[0] <= a && b <= x[1]; });
+      });
+    }
+    var dur = Math.max(0, Number(st.duration) || 0);
+    var startMin = selDay && st.start ? toMin(st.start) : NaN;
+    var endMin = startMin + dur;
+    var inBounds = startMin >= 420 && endMin <= 1200 && dur >= 10;
+    var freeIds = selDay && inBounds ? freeIn(selDay, startMin, endMin) : [];
+    var chosen = ranked(freeIds)[0];
+    var ready = !!chosen && st.found;
+    var notices = [];
+    if (selDay && !isNaN(startMin)) {
+      if (!inBounds) notices.push('Fora do limite permitido (07:00 às 20:00).');
+      else {
+        if (startMin < 810 && endMin > 720) notices.push('Pega o horário de almoço.');
+        if (endMin > 1080) notices.push('Termina depois das 18:00.');
+        if (startMin < 480) notices.push('Começa antes das 08:00.');
+      }
+    }
+
+    var days = DAYS.map(function (d) {
+      return {
+        label: d.label, closed: !!d.closed, closedLabel: d.closed || '',
+        slots: Object.keys(d.slots).filter(function (t) { return isStandard(t) && inPool(d.slots[t]).length > 0; }).map(function (t) {
+          var key = d.id + '|' + t, on = st.slot === key, n = inPool(d.slots[t]).length;
+          return {
+            time: t, freeLabel: n === 1 ? '1 closer disponível' : n + ' closers disponíveis', pressed: on ? 'true' : 'false',
+            style: 'display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px 10px; border-radius: 8px; border: 1px solid ' + (on ? '#5757d3' : '#4e5d7f') + '; background: ' + (on ? '#5757d3' : '#313a4f') + '; color: #f6f7f9; cursor: pointer; text-align: left',
+            subStyle: 'font-size: 12px; line-height: 16px; color: ' + (on ? '#f6f7f9' : '#a7abb5'),
+            pick: function () { self.setState({ slot: key, start: t }); }
+          };
+        })
+      };
+    });
+
+    function endTime(t, min) { var p = t.split(':'); var m = Number(p[0]) * 60 + Number(p[1]) + min; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
+    var brandName = st.brand === 'poli' ? 'Poli' : 'ChatsHub';
+    var summary = chosen ? selDay.label + ', ' + fmtMin(startMin) + '–' + fmtMin(endMin) + ' · Clínica Sorriso Vivo · ' + brandName + ', ' + carousel.name : 'Escolha um horário para continuar';
+    function chip(on) { return 'height: 40px; padding: 0 14px; border-radius: 8px; border: 1px solid ' + (on ? '#5757d3' : '#4e5d7f') + '; background: ' + (on ? '#5757d3' : '#313a4f') + '; color: #f6f7f9; font-size: 14px; font-weight: ' + (on ? '600' : '400') + '; cursor: pointer'; }
+    var brands = [['poli', 'Poli'], ['chatshub', 'ChatsHub']].map(function (b) {
+      var on = st.brand === b[0];
+      return { label: b[1], pressed: on ? 'true' : 'false', style: chip(on), pick: function () {
+        var first = CAROUSELS.filter(function (c) { return c.brand === b[0]; })[0];
+        self.setState({ brand: b[0], carousel: first.id, slot: '' });
+      } };
+    });
+    var carouselOptions = CAROUSELS.filter(function (c) { return c.brand === st.brand; }).map(function (c) { return { id: c.id, name: c.name }; });
+    var durations = [30, 45, 60].map(function (m) {
+      var on = Number(st.duration) === m;
+      return { label: m + ' min', pressed: on ? 'true' : 'false', style: chip(on), pick: function () { self.setState({ duration: m }); } };
+    });
+
+    return {
+      found: st.found, choosing: !st.booked, booked: st.booked,
+      hsQuery: st.hsQuery, onHs: function (e) { self.setState({ hsQuery: e.target.value }); },
+      hsHint: st.found ? 'Lead carregado sozinho, com os dados do HubSpot. Você não precisa colar nada.' : 'Busque entre os seus leads pelo nome ou telefone. Link ou ID do HubSpot só se o lead não aparecer.',
+      search: function () { self.setState({ found: true, email: 'renata@sorrisovivo.com.br', title: 'Poli Digital × Clínica Sorriso Vivo' }); },
+      clearLead: function () { self.setState({ found: false, email: '', title: '', hsQuery: '' }); },
+      days: days, durations: durations, summary: summary,
+      hasSlot: !!selDay, start: st.start || '', duration: st.duration,
+      onStart: function (e) { self.setState({ start: e.target.value }); },
+      onDuration: function (e) { self.setState({ duration: e.target.value }); },
+      adjustLabel: selDay && !isNaN(startMin) ? selDay.label + ', ' + fmtMin(startMin) + ' às ' + fmtMin(endMin) : 'Informe o início',
+      adjustCount: !selDay || isNaN(startMin) ? '' : (freeIds.length === 0 ? 'Nenhum closer disponível nesse intervalo. Mude o início ou a duração.' : (freeIds.length === 1 ? '1 closer disponível' : freeIds.length + ' closers disponíveis')),
+      adjustCountStyle: 'font-size: 12px; line-height: 16px; font-weight: 500; color: ' + (freeIds.length === 0 ? '#f0a93b' : '#f6f7f9'),
+      hasNotice: notices.length > 0, notice: notices.join(' ') + (inBounds && notices.length ? ' Fica marcado para os gestores.' : ''),
+      brands: brands, carouselOptions: carouselOptions, carouselId: st.carousel,
+      slotHint: 'Horários livres para ' + brandName + ', ' + carousel.name + ' · Brasília',
+      onCarousel: function (e) { self.setState({ carousel: e.target.value, slot: '' }); },
+      closer: chosen ? { ini: chosen.ini, name: chosen.name } : { ini: '', name: '' },
+      confirm: function () { if (ready) self.setState({ booked: true }); },
+      confirmStyle: 'height: 44px; flex-shrink: 0; padding: 0 24px; border: 1px solid #5757d3; border-radius: 8px; background: ' + (ready ? '#5757d3' : '#313a4f') + '; border-color: ' + (ready ? '#5757d3' : '#4e5d7f') + '; color: #f6f7f9; font-size: 14px; font-weight: 600; cursor: ' + (ready ? 'pointer' : 'not-allowed'),
+      swapIdle: st.swap === 'idle', swapForm: st.swap === 'form', swapSent: st.swap === 'sent', swapReason: st.swapReason,
+      swapOpen: function () { self.setState({ swap: freeIds.length > 1 ? 'form' : 'blocked' }); },
+      swapBlocked: st.swap === 'blocked',
+      blockedText: chosen ? 'Em ' + selDay.label + ', das ' + fmtMin(startMin) + ' às ' + fmtMin(endMin) + ', só ' + chosen.name + ' está disponível neste carrossel. Por isso o pedido de troca não pode ser enviado.' : '',
+      swapCancel: function () { self.setState({ swap: 'idle', swapReason: '' }); },
+      onSwapReason: function (e) { self.setState({ swapReason: e.target.value }); },
+      swapSend: function () { if (st.swapReason.trim()) self.setState({ swap: 'sent' }); },
+      reset: function () { self.setState({ swap: 'idle', swapReason: '', booked: false, slot: '', found: false, email: '', title: '', notes: '', guests: '', hsQuery: '' }); },
+      email: st.email, title: st.title, notes: st.notes, guests: st.guests,
+      onEmail: function (e) { self.setState({ email: e.target.value }); },
+      onTitle: function (e) { self.setState({ title: e.target.value }); },
+      onNotes: function (e) { self.setState({ notes: e.target.value }); },
+      onGuests: function (e) { self.setState({ guests: e.target.value }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
