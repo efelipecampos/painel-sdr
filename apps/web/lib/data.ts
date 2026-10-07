@@ -65,6 +65,8 @@ export interface Settings {
   stale_business_only: boolean;
   metrics_business_only: boolean;
   holidays_off: boolean;
+  google_archive_calendar_id: string;
+  google_invite_sdr: boolean;
 }
 
 function fail(what: string, error: { message: string }): never {
@@ -81,6 +83,8 @@ export async function getSettings(): Promise<Settings> {
     stale_business_only: Boolean(v.get("stale_business_only") ?? false),
     metrics_business_only: v.get("metrics_business_only") !== false,
     holidays_off: v.get("holidays_off") !== false,
+    google_archive_calendar_id: String(v.get("google_archive_calendar_id") ?? ""),
+    google_invite_sdr: v.get("google_invite_sdr") !== false,
   };
 }
 

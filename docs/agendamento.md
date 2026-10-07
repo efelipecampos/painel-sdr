@@ -155,16 +155,22 @@ Caminho B (cada closer conecta a própria agenda uma vez), com um projeto NOVO n
 - O caminho A (conta de serviço com delegação no domínio) continua como melhoria futura.
 - **Confirmado pelo Felipe em 2026-10-07**, já sabendo que ele é o administrador do Workspace e que o caminho A seria possível: **cada closer conecta a própria agenda** (caminho B).
 
-Manter também a **agenda de arquivo**: reuniões canceladas, no show e reagendadas são movidas para ela, para o histórico não sumir da agenda. **Decisão (2026-10-07):** é uma agenda extra na conta do Felipe, "Arquivo de reuniões" (sem licença nova).
+Manter também a **agenda de arquivo**: reuniões canceladas, no show e reagendadas são movidas para ela, para o histórico não sumir da agenda. **Decisão (2026-10-07):** é uma agenda extra na conta do Felipe, "Arquivo de reuniões" (sem licença nova). Compartilhada com os closers com permissão de editar, porque o Google exige isso para mover o evento; os closers veem as arquivadas de todos e os SDRs não veem (aprovado em 2026-10-07). No arquivo, o título continua `Marca | Empresa | Closer`, para saber quem era o closer, e a cor do evento mostra a situação. O lead não vê a cor. **Lead cancelou:** marcar "Cancelada" no painel tira o evento da agenda do closer na hora, movendo-o para o arquivo. O horário fica livre no Google e no painel, e o closer pode receber outra reunião nele. No carrossel, cancelada devolve a vez. Assim o closer não é prejudicado (pedido do Felipe em 2026-10-07).
 
 Em qualquer caminho:
 - Permissões mínimas: ler disponibilidade (free/busy) e criar/alterar eventos. Nada de ler o conteúdo dos eventos dos closers.
 - Evento criado com Meet, título, convidados e lembretes padrão.
-- **Passagem de bastão não vai na descrição do evento** quando o lead é convidado: todo convidado lê a descrição. Ela fica gravada no painel e chega ao closer por um canal só dele (e-mail separado ou alerta no Google Chat, como a integração já faz). Canal a decidir com o Felipe.
+- **Passagem de bastão não vai na descrição do evento** quando o lead é convidado: todo convidado lê a descrição. Ela fica gravada no painel e chega ao closer por um canal só dele (e-mail separado ou alerta no Google Chat, como a integração já faz). **Decisão (2026-10-07):** a descrição do evento leva só um link do painel para a passagem de bastão; quem abre precisa estar logado, então o lead não consegue ler.
 - Guardar `google_event_id` e `meet_url`.
 - Cancelar ou reagendar no painel atualiza o evento.
 - V1: um job confere periodicamente se o evento ainda existe e se o closer recusou. Notificações em tempo real do Google ficam para depois.
 - Credenciais do Google só no servidor (`.env` da VPS). Token de closer (caminho B) cifrado no banco.
+
+**Decisões de 2026-10-07 (10c):**
+- O closer conecta a agenda pelo botão **"Conectar minha agenda do Google"** na tela dele no painel. O closer passa a ter login (papel `closer`) já na 10c. No piloto, só a Alessandra ganha login. Não existe "link de conexão".
+- **Lead recusou o convite no Google:** a conferência periódica mostra o aviso "Lead recusou no Google" no painel. O SDR ou o closer confirma o cancelamento com 1 clique. Não cancela sozinho.
+- O painel **não** mostra o link do Meet ao SDR depois de agendar: o SDR copia da própria Google Agenda, onde ele é convidado, e manda ao lead pelo chat da Poli.
+- O lead **recebe o convite do Google por e-mail** quando tiver e-mail.
 
 ## 7. HubSpot
 

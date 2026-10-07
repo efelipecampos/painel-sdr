@@ -54,6 +54,7 @@ export default async function SdrPage({ params, searchParams }: {
   // SDR só abre a própria tela (o banco também recusa sdr_chats de outro SDR).
   const me = await getMe();
   if (me?.role === "sdr" && me.sdrId !== id) redirect(`/sdr/${me.sdrId}`);
+  if (me?.role === "closer") redirect("/agenda");
   const manager = isManager(me);
   const [all, settings, rows] = await data;
   const s = all.find((x) => x.sdr_id === id);

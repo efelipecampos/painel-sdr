@@ -3,7 +3,8 @@ import { resolve } from "node:path";
 import type { NextConfig } from "next";
 
 // Em desenvolvimento, lê do .env da raiz só as variáveis públicas (URL e chave anon do Supabase).
-// Em produção elas vêm do docker compose. A service_role nunca é carregada no app web.
+// Em produção elas vêm do docker compose (lá o servidor também recebe a service_role e as chaves do Google,
+// usadas só em rotas e server actions; ver docker-compose.yml).
 const rootEnv = resolve(__dirname, "../../.env");
 if (existsSync(rootEnv)) {
   for (const line of readFileSync(rootEnv, "utf8").split("\n")) {

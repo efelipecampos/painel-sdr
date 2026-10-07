@@ -94,6 +94,20 @@ export function SettingsForm({ hours, holidays, settings }: { hours: Hour[]; hol
         </label>
       </section>
 
+      <section className="card" aria-labelledby="ga">
+        <h2 id="ga" className="card-title">Google Agenda</h2>
+        <label className="lbl" htmlFor="google_archive_calendar_id">ID da agenda de arquivo</label>
+        <input id="google_archive_calendar_id" name="google_archive_calendar_id" className="field"
+          defaultValue={settings.google_archive_calendar_id} placeholder="…@group.calendar.google.com" />
+        <p className="muted" style={{ margin: 0 }}>
+          Reuniões canceladas e no show vão para essa agenda. No Google Agenda: Configurações da agenda "Arquivo de reuniões" → Integrar agenda → ID da agenda.
+        </p>
+        <label className="switch">
+          <input type="checkbox" name="google_invite_sdr" defaultChecked={settings.google_invite_sdr} />
+          Convidar o SDR que agendou para o evento da reunião
+        </label>
+      </section>
+
       <div className="group">
         <span className="spacer" />
         <Link href="/" className="btn">Cancelar</Link>

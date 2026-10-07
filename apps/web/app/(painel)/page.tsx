@@ -31,6 +31,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<Rec
   data.catch(() => {}); // SDR: o banco recusa team_metrics; ele é redirecionado abaixo
   const me = await getMe(); // já carregado pelo layout (cache)
   if (me?.role === "sdr") redirect(`/sdr/${me.sdrId}`);
+  if (me?.role === "closer") redirect("/agenda");
   const [team, sdrs, settings] = await data;
   const list = [...sdrs].sort(SORTS[sortKey]);
   const qs = new URLSearchParams(Object.entries(sp).filter(([, v]) => v != null) as [string, string][]).toString();
