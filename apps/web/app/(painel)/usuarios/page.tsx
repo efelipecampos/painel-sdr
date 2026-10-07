@@ -17,7 +17,8 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const { data, error } = await (await createClient()).schema("painel").rpc("usuarios");
   if (error) throw new Error(`Não foi possível ler os usuários: ${error.message}`);
-  const rows = (data ?? []) as Usuario[];
+  // Só a equipe: SDRs, closers, gestores e admin. Robôs e outros atendentes da Poli ficam de fora.
+  const rows = ((data ?? []) as Usuario[]).filter((u) => !u.is_bot && u.papel in PAPEL);
 
   return (
     <main className="page">
@@ -45,7 +46,7 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
                   <tr key={`${u.sdr_id}-${u.profile_id}`} style={{ opacity: u.active ? 1 : 0.55 }}>
                     <td>{u.name}</td>
                     <td>{u.email ?? "—"}</td>
-                    <td>{u.is_bot ? "Robô" : (PAPEL[u.papel] ?? "Outro")}</td>
+                    <td>{PAPEL[u.papel]}</td>
                     <td>{u.tem_login ? "Sim" : "Não"}</td>
                     <td>{u.active ? "Ativo" : "Desativado"}</td>
                     <td>
