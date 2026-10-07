@@ -423,6 +423,21 @@ describe("sdr_chats", () => {
     expect((await db.query("select 1 from painel.response_events r join painel.chats c on c.id = r.chat_id where c.lead_id = $1", [l.leadId])).rows).toHaveLength(0);
   });
 
+  it("lead aguardando de dia anterior aparece na lista de hoje (igual ao número do card); fora do funil não", async () => {
+    await lead("X", [["lead", day("09:00", "04")]], { name: "Esperando desde ontem" });
+    const d = await lead("X", [["lead", day("10:00", "04")]], { name: "Descartado" });
+    await db.query("update painel.leads set hubspot_contact_id = 'hx' where id = $1", [d.leadId]);
+    await db.exec(`insert into painel.hubspot_stages (stage_id, pipeline_id, label) values ('1250901141', 'p', 'Descartado');
+                   insert into painel.hubspot_leads (hubspot_lead_id, hubspot_contact_id, stage_id, created_at) values ('hx1', 'hx', '1250901141', '2026-10-01')`);
+    await lead("X", [["lead", day("09:00", "04")], ["sdr", day("09:05", "04")]], { name: "Respondido ontem" });
+    const rows = (await db.query<{ lead_name: string; situacao: string }>(
+      "select lead_name, situacao from painel.sdr_chats($1, $2, $3, false)", [sdr.X, FROM, TO],
+    )).rows;
+    expect(rows).toEqual([{ lead_name: "Esperando desde ontem", situacao: "aguardando" }]);
+    const w = (await db.query<{ lead_name: string }>("select lead_name from painel.sdr_chats($1, $2, $3, false, 'waiting')", [sdr.X, FROM, TO])).rows;
+    expect(w.map((r) => r.lead_name)).toEqual(["Esperando desde ontem"]);
+  });
+
   it("filtros, busca por nome ou telefone e paginação", async () => {
     await lead("X", [["lead", ago(40)]], { name: "Clínica Sorriso", phone: "+5562912341187" });
     await lead("X", [["template", ago(30)]], { name: "Pet Shop", phone: "+5511988887777" });

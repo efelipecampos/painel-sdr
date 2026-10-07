@@ -61,7 +61,8 @@ $$;
 revoke execute on function painel.escopo_sdr() from public, anon;
 grant execute on function painel.escopo_sdr() to authenticated, service_role;
 
--- Funções da tela com a checagem de papel e escopo (mesmas assinaturas; só muda a checagem de acesso).
+-- Funções da tela com a checagem de papel e escopo (mesmas assinaturas). sdr_chats também passa a listar
+-- os leads aguardando agora, mesmo sem mensagem no período (correção pedida pelo Felipe em 2026-10-07).
 create or replace function painel.sdr_metrics(p_from timestamptz, p_to timestamptz, p_business_only boolean default null)
 returns table (
   sdr_id uuid,
@@ -305,8 +306,12 @@ begin
            (painel.reuniao_do_lead(l.id, l.hubspot_contact_id)).status as reuniao_status,
            (painel.reuniao_do_lead(l.id, l.hubspot_contact_id)).origem as reuniao_origem
     from painel.leads l
-    where exists (select 1 from painel.chat_messages m
-                   where m.lead_id = l.id and m.sdr_id = p_sdr and m.sent_at >= p_from and m.sent_at < p_to)
+    where (exists (select 1 from painel.chat_messages m
+                    where m.lead_id = l.id and m.sdr_id = p_sdr and m.sent_at >= p_from and m.sent_at < p_to)
+           -- lead aguardando agora entra mesmo sem mensagem no período (igual ao número "Aguardando" do card)
+           or (exists (select 1 from painel.chats c
+                        where c.lead_id = l.id and c.sdr_id = p_sdr and c.status = 'open' and c.waiting_since is not null)
+               and painel.fora_do_funil(l.id, l.hubspot_contact_id) is null))
       and (v_search is null
            or l.name ilike '%' || v_search || '%'
            or (v_digits is not null and regexp_replace(coalesce(l.phone_e164, ''), '\D', '', 'g') like '%' || v_digits || '%'))
