@@ -160,7 +160,7 @@ Manter também a **agenda de arquivo**: reuniões canceladas, no show e reagenda
 Em qualquer caminho:
 - Permissões mínimas: ler disponibilidade (free/busy) e criar/alterar eventos. Nada de ler o conteúdo dos eventos dos closers.
 - Evento criado com Meet, título, convidados e lembretes padrão.
-- **Passagem de bastão não vai na descrição do evento** quando o lead é convidado: todo convidado lê a descrição. Ela fica gravada no painel e chega ao closer por um canal só dele (e-mail separado ou alerta no Google Chat, como a integração já faz). Canal a decidir com o Felipe.
+- **Passagem de bastão não vai na descrição do evento** quando o lead é convidado: todo convidado lê a descrição. Ela fica gravada no painel e chega ao closer por um canal só dele (e-mail separado ou alerta no Google Chat, como a integração já faz). **Decisão (2026-10-07):** a descrição do evento leva só um link do painel para a passagem de bastão; quem abre precisa estar logado, então o lead não consegue ler.
 - Guardar `google_event_id` e `meet_url`.
 - Cancelar ou reagendar no painel atualiza o evento.
 - V1: um job confere periodicamente se o evento ainda existe e se o closer recusou. Notificações em tempo real do Google ficam para depois.
