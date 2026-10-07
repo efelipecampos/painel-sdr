@@ -155,7 +155,7 @@ Caminho B (cada closer conecta a própria agenda uma vez), com um projeto NOVO n
 - O caminho A (conta de serviço com delegação no domínio) continua como melhoria futura.
 - **Confirmado pelo Felipe em 2026-10-07**, já sabendo que ele é o administrador do Workspace e que o caminho A seria possível: **cada closer conecta a própria agenda** (caminho B).
 
-Manter também a **agenda de arquivo**: reuniões canceladas, no show e reagendadas são movidas para ela, para o histórico não sumir da agenda. **Decisão (2026-10-07):** é uma agenda extra na conta do Felipe, "Arquivo de reuniões" (sem licença nova).
+Manter também a **agenda de arquivo**: reuniões canceladas, no show e reagendadas são movidas para ela, para o histórico não sumir da agenda. **Decisão (2026-10-07):** é uma agenda extra na conta do Felipe, "Arquivo de reuniões" (sem licença nova). Compartilhada com os closers com permissão de editar, porque o Google exige isso para mover o evento; os closers veem as arquivadas de todos e os SDRs não veem (aprovado em 2026-10-07). No arquivo, o título continua `Marca | Empresa | Closer`, para saber quem era o closer, e a cor do evento mostra a situação. O lead não vê a cor. **Lead cancelou:** marcar "Cancelada" no painel tira o evento da agenda do closer na hora, movendo-o para o arquivo. O horário fica livre no Google e no painel, e o closer pode receber outra reunião nele. No carrossel, cancelada devolve a vez. Assim o closer não é prejudicado (pedido do Felipe em 2026-10-07).
 
 Em qualquer caminho:
 - Permissões mínimas: ler disponibilidade (free/busy) e criar/alterar eventos. Nada de ler o conteúdo dos eventos dos closers.
