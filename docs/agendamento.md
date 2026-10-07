@@ -153,6 +153,7 @@ Caminho B (cada closer conecta a própria agenda uma vez), com um projeto NOVO n
 - Se for criado fora da organização (tipo Externo, em modo de teste), o Google derruba a conexão de cada closer a cada 7 dias e limita a 100 usuários. A agenda "some" sem aviso. Não usar esse modo. É uma causa provável dos problemas de disponibilidade de hoje (hipótese, não verificada).
 - Todos os closers reconectam a agenda uma vez, pela tela de Usuários ("Enviar link de conexão").
 - O caminho A (conta de serviço com delegação no domínio) continua como melhoria futura.
+- **Confirmado pelo Felipe em 2026-10-07**, já sabendo que ele é o administrador do Workspace e que o caminho A seria possível: **cada closer conecta a própria agenda** (caminho B).
 
 Manter também a **agenda de arquivo**: reuniões canceladas, no show e reagendadas são movidas para ela, para o histórico não sumir da agenda.
 
