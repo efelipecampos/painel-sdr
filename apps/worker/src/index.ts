@@ -6,6 +6,7 @@
 import { Monitor, postToGoogleChat } from "./alerts.js";
 import { config } from "./config.js";
 import { HubspotClient, resetLeadsCursor, syncLeads, syncOwners, syncStages } from "./hubspot/leads.js";
+import { checkGoogle } from "./google.js";
 import { createDb, processBatch, rebuildAll, syncRoles } from "./processor.js";
 
 const once = process.argv.includes("--once");
@@ -14,6 +15,14 @@ const hubspotSince = (() => { const i = process.argv.indexOf("--hubspot-desde");
 const db = createDb();
 const hubspot = config.hubspotToken ? new HubspotClient(config.hubspotToken) : null;
 let lastHubspotSync = 0;
+let lastGoogleCheck = 0;
+
+async function syncGoogle(): Promise<void> {
+  if (!config.google || Date.now() - lastGoogleCheck < config.googleEveryMinutes * 60_000) return;
+  lastGoogleCheck = Date.now();
+  const r = await checkGoogle(db);
+  console.log(`[worker] Google: ${r.conectadas} agendas ok, ${r.desconectadas} desconectadas, ${r.eventos} eventos conferidos, ${r.avisos} avisos`);
+}
 
 /** Devolve false quando não era hora de sincronizar. */
 async function syncHubspot(force: boolean): Promise<boolean> {
@@ -65,6 +74,11 @@ if (process.argv.includes("--testar-alerta")) {
     } catch (err) {
       console.error("[worker] erro no sync do HubSpot:", err instanceof Error ? err.message : err);
       await monitor.hubspot(err);
+    }
+    try {
+      await syncGoogle();
+    } catch (err) {
+      console.error("[worker] erro na conferência do Google:", err instanceof Error ? err.message : err);
     }
     await monitor.check();
     await new Promise((r) => setTimeout(r, config.pollSeconds * 1000));

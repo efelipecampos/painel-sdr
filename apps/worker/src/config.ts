@@ -50,6 +50,17 @@ export const config = {
   alertHubspotMinutes: Number(process.env.ALERTA_HUBSPOT_MIN ?? 30),
   /** Painel sem responder por este tempo. */
   alertPainelMinutes: Number(process.env.ALERTA_PAINEL_MIN ?? 5),
+  /** Google Agenda (Fase 10c). Sem as três variáveis, a conferência das agendas não roda. */
+  google: process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_TOKEN_KEY
+    ? {
+        clientId: process.env.GOOGLE_CLIENT_ID.trim(),
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET.trim(),
+        redirectUri: `https://${process.env.APP_DOMAIN?.trim() || "painel-sdr.camposai.com.br"}/api/google/callback`,
+        tokenKey: process.env.GOOGLE_TOKEN_KEY.trim(),
+      }
+    : null,
+  /** Intervalo da conferência das agendas e dos eventos. */
+  googleEveryMinutes: Number(process.env.GOOGLE_CHECK_MINUTES ?? 10),
 };
 
 export function isBot(email: string | null): boolean {

@@ -13,10 +13,16 @@ services:
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
     container_name: painel-sdr-web
     restart: unless-stopped
-    # Só as variáveis públicas: o app web nunca recebe a service_role.
+    # Variáveis públicas + as do servidor para o Google Agenda (Fase 10c). A service_role e as chaves do Google
+    # ficam só no processo do servidor (nomes sem NEXT_PUBLIC_: o Next nunca as envia ao navegador) e são usadas
+    # só para guardar e usar a conexão da agenda dos closers (apps/web/lib/supabase/admin.ts).
     environment:
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_TOKEN_KEY: ${GOOGLE_TOKEN_KEY:-}
     networks:
       - coolify
     labels:

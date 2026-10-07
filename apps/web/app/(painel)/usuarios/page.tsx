@@ -6,8 +6,10 @@ export const metadata = { title: "Usuários — Painel SDR" };
 
 interface Usuario {
   sdr_id: string | null; profile_id: string | null; name: string; email: string | null;
-  papel: string; is_bot: boolean; tem_login: boolean; active: boolean;
+  papel: string; is_bot: boolean; tem_login: boolean; active: boolean; agenda: string | null;
 }
+
+const AGENDA: Record<string, string> = { conectada: "Conectada", desconectada: "Desconectada", nao_conectada: "Não conectada" };
 
 const PAPEL: Record<string, string> = { admin: "Admin", gestor: "Gestor", sdr: "SDR", closer: "Closer" };
 
@@ -36,7 +38,7 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
           <table>
             <thead><tr>
               <th scope="col">Nome</th><th scope="col">E-mail</th><th scope="col">Papel</th>
-              <th scope="col">Login no painel</th><th scope="col">Situação</th><th scope="col"><span className="sr-only">Ação</span></th>
+              <th scope="col">Login no painel</th><th scope="col">Agenda Google</th><th scope="col">Situação</th><th scope="col"><span className="sr-only">Ação</span></th>
             </tr></thead>
             <tbody>
               {rows.map((u) => {
@@ -48,6 +50,7 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
                     <td>{u.email ?? "—"}</td>
                     <td>{PAPEL[u.papel]}</td>
                     <td>{u.tem_login ? "Sim" : "Não"}</td>
+                    <td>{u.agenda ? AGENDA[u.agenda] : "—"}</td>
                     <td>{u.active ? "Ativo" : "Desativado"}</td>
                     <td>
                       {!(self || admin) || !u.active ? (

@@ -27,6 +27,11 @@ export async function saveSettings(form: FormData) {
   const stale = Number(form.get("stale_minutes"));
   if (!Number.isInteger(stale) || stale < 1 || stale > 1440) return back("O limite de parado precisa ser um número de 1 a 1440 minutos.");
 
+  const archive = String(form.get("google_archive_calendar_id") ?? "").trim();
+  if (archive && !/^[^\s@]+@(group\.calendar\.google\.com|poli\.digital)$/.test(archive)) {
+    return back("O ID da agenda de arquivo deve terminar em @group.calendar.google.com (Google Agenda → Configurações da agenda → Integrar agenda).");
+  }
+
   const db = (await createClient()).schema("painel");
   const now = new Date().toISOString();
   const steps = [
@@ -36,6 +41,8 @@ export async function saveSettings(form: FormData) {
       { key: "stale_business_only", value: form.get("stale_business_only") === "on", updated_at: now, updated_by: me!.id },
       { key: "metrics_business_only", value: form.get("metrics_business_only") === "on", updated_at: now, updated_by: me!.id },
       { key: "holidays_off", value: form.get("holidays_off") === "on", updated_at: now, updated_by: me!.id },
+      { key: "google_archive_calendar_id", value: archive, updated_at: now, updated_by: me!.id },
+      { key: "google_invite_sdr", value: form.get("google_invite_sdr") === "on", updated_at: now, updated_by: me!.id },
     ]),
   ];
   for (const r of await Promise.all(steps)) if (r.error) return back(`Não foi possível salvar: ${r.error.message}`);
