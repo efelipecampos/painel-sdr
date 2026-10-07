@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { getMe, isManager } from "@/lib/supabase/server";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Metric, staleLabel } from "@/components/Metric";
 import { PeriodFilter } from "@/components/PeriodFilter";
 import { getSdrChats, getSdrMetrics, getSettings, initials, type ChatRow } from "@/lib/data";
 import { formatDateTime, formatDuration, resolvePeriod } from "@/lib/time";
-import { MeetingSelect } from "./MeetingSelect";
+import { MeetingSelect, MeetingStatusText } from "./MeetingSelect";
 
 const PAGE = 50;
 const FILTERS = [
@@ -40,6 +41,10 @@ export default async function SdrPage({ params, searchParams }: {
 }) {
   const { id } = await params;
   const sp = await searchParams;
+  // SDR só abre a própria tela (o banco também recusa sdr_chats de outro SDR).
+  const me = await getMe();
+  if (me?.role === "sdr" && me.sdrId !== id) redirect(`/sdr/${me.sdrId}`);
+  const manager = isManager(me);
   const period = resolvePeriod(sp);
   const filter = FILTERS.some((f) => f.key === sp.filtro) ? sp.filtro! : "all";
   const search = sp.busca?.trim() || null;
@@ -62,7 +67,7 @@ export default async function SdrPage({ params, searchParams }: {
     <main className="page">
       <AutoRefresh seconds={60} />
       <div className="page-head">
-        <Link href={`/${back ? `?${back}` : ""}`} className="btn small" aria-label="Voltar ao painel">‹ Painel</Link>
+        {manager && <Link href={`/${back ? `?${back}` : ""}`} className="btn small" aria-label="Voltar ao painel">‹ Painel</Link>}
         <div className="avatar" aria-hidden="true">{initials(s.name)}</div>
         <div className="cell-stack">
           <h1 className="title">{s.name}</h1>
@@ -133,7 +138,9 @@ export default async function SdrPage({ params, searchParams }: {
                 <td>{formatDuration(r.resposta_s)}</td>
                 <td>{r.msgs_lead} / {r.msgs_equipe}</td>
                 <td><div className="cell-stack"><span>{formatDateTime(r.last_message_at)}</span><span className="muted">{FROM_LABEL[r.last_message_from ?? ""] ?? ""}</span></div></td>
-                <td><MeetingSelect leadId={r.lead_id} leadName={r.lead_name ?? "lead"} status={r.reuniao_status} origem={r.reuniao_origem} /></td>
+                <td>{manager
+                  ? <MeetingSelect leadId={r.lead_id} leadName={r.lead_name ?? "lead"} status={r.reuniao_status} origem={r.reuniao_origem} />
+                  : <MeetingStatusText status={r.reuniao_status} origem={r.reuniao_origem} />}</td>
                 <td><a href={`https://app.poli.digital/chat/${r.poli_contact_uuid}`} target="_blank" rel="noreferrer" aria-label={`Abrir chat de ${r.lead_name ?? "lead"} no Poli`}>Abrir no Poli</a></td>
               </tr>
             ))}

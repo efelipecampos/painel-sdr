@@ -39,3 +39,14 @@ export function MeetingSelect({ leadId, leadName, status, origem }: {
     </div>
   );
 }
+
+/** Só leitura (papel sdr): o SDR vê o status, mas não muda. */
+export function MeetingStatusText({ status, origem }: { status: MeetingStatus | null; origem: "hubspot" | "manual" | null }) {
+  const label = OPTIONS.find((o) => o.value === (status ?? ""))?.label ?? "Sem reunião";
+  return (
+    <div className="cell-stack">
+      <span style={{ fontWeight: status ? 600 : 400 }}>{label}</span>
+      <span className="muted">{origem === "hubspot" ? "Via HubSpot" : origem === "manual" ? "Marcado à mão" : ""}</span>
+    </div>
+  );
+}

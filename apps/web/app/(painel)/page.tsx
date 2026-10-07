@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getMe } from "@/lib/supabase/server";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Metric, staleLabel } from "@/components/Metric";
 import { PeriodFilter } from "@/components/PeriodFilter";
@@ -21,6 +23,9 @@ function pct(n: number, base: number): string {
 
 export default async function Home({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const sp = await searchParams;
+  // SDR não vê o painel do time: vai para os próprios chats (o banco também recusa team_metrics para ele).
+  const me = await getMe();
+  if (me?.role === "sdr") redirect(`/sdr/${me.sdrId}`);
   const period = resolvePeriod(sp);
   const sortKey = sp.ordem && SORTS[sp.ordem] ? sp.ordem : "aguardando";
   const [team, sdrs, settings] = await Promise.all([getTeamMetrics(period), getSdrMetrics(period), getSettings()]);
