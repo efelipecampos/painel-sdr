@@ -59,6 +59,7 @@ Até aqui o painel só lê dados. Com este módulo ele passa a **operar**: SDRs 
 - **Extensão do HubSpot ligada à agenda dos closers (2026-10-07):** hoje ela cria reuniões sozinha a partir dos convites (causa das duplicações). O Felipe vai desligá-la assim que o painel assumir o agendamento. Até lá, no piloto, pode haver duplicação vinda da extensão.
 - **Troca de marca (2026-10-07):** "Passar para CH" / "Passar para Poli" muda a reunião de carrossel (mesmo porte na outra marca): o débito sai do carrossel antigo e vai para o novo. Muda o nome no painel e no Google na hora; no HubSpot, na rodada das 17:55.
 - **Closer como usuário (2026-10-07):** o closer entra no painel e vê **só as próprias reuniões**.
+- **Status → HubSpot (2026-10-07):** campo `hs_meeting_outcome` da Reunião: Agendada → `SCHEDULED` (Programados); Validada → `COMPLETED` (Concluído); No show → `NO_SHOW` (Não compareceu); Cancelada → `CANCELED` (Cancelado); Invalidada → `INVALIDADO` (Invalidado, opção criada pela Poli). `RESCHEDULED` (Reprogramado) não é usado pelo painel: reagendar só atualiza data e hora da mesma Reunião.
 
 ## 3. Quem usa
 
@@ -231,7 +232,6 @@ Navegação do gestor e do admin: Painel · Reuniões · Carrosséis · Usuário
 | (A) Closer como usuário: também marca validada/invalidada/no show? (já decidido: vê só as próprias reuniões) | 10e |
 | (A) Formato do nome da reunião (ex.: "Poli \| Empresa \| Closer") | 10c |
 | Editar: só no mesmo dia e com o mesmo closer? | 10d |
-| (B) Correspondência de cada status com os campos da Reunião no HubSpot (o Felipe vai enviar) | Antes da 10e |
 | Liberar escrita de Reuniões (meetings) e associações no token do HubSpot | Antes da 10e |
 | Criar o webhook do espaço "Gestão SDR" no Google Chat (o Felipe cria e cola no `.env`) | 10e |
 | Quem pode reagendar e cancelar: SDR dono, closer, gestor | 10e |
