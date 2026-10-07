@@ -52,6 +52,18 @@ Até aqui o painel só lê dados. Com este módulo ele passa a **operar**: SDRs 
 - **Aviso de pedido de troca de closer (2026-10-07):** vai para o espaço **"Gestão SDR"** do Google Chat (webhook do espaço no `.env`), além da fila no painel.
 - **Disponibilidade da Poli Agenda (2026-10-07):** não há casos reais documentados. Seguir as hipóteses da seção 0 e validar no piloto, registrando toda falha de agenda com horário, closer e a resposta do Google.
 - **Padrões aprovados para a 10b (2026-10-07):** equilíbrio por **mês**; No show e Cancelada **devolvem** a vez, Invalidada **não**; antecedência mínima **2 h**; janela **10 dias úteis**; intervalo entre reuniões **15 min**; durações **30, 45 e 60 min**; lead preso ao mesmo closer por **30 dias**.
+- **Reagendar (2026-10-07):** o SDR roda o processo de agendamento de novo (pode trocar dia e horário), mas **reaproveita o convite anterior**: o mesmo evento do Google é movido (mesmo link do Meet, mesmas informações) e a **mesma Reunião do HubSpot** é atualizada. Nunca cria evento nem reunião nova. O sistema tenta primeiro o **mesmo closer**; se ele não tiver o horário, o **carrossel escolhe outro** às cegas (o SDR não escolhe). Se o closer mudar, o débito sai do antigo (estorno) e vai para o novo, como numa troca.
+- **Reagendar reunião cancelada (2026-10-07):** mantém tudo (mesmo evento, que volta da agenda de arquivo para a do closer; mesma Reunião do HubSpot) e só altera as informações do novo agendamento.
+- **Editar (2026-10-07):** na lista do SDR, "Editar" (no lugar de "Abrir Meet") muda o **horário no mesmo dia**, no mesmo evento e na mesma Reunião do HubSpot. Pode **mudar o closer** sem aprovação de gestor: tenta o mesmo closer e, se ele não estiver livre no novo horário, o carrossel escolhe outro às cegas (como no reagendar; o SDR não escolhe o closer). Para mudar o dia, usa-se Reagendar.
+- **HubSpot (2026-10-07):** a **Reunião do HubSpot é criada na hora do agendamento**, associada ao Lead, ao contato, ao closer e ao SDR; os **status são enviados todo dia às 17:55**. **Não mover mais o Lead** de etapa (substitui "mover para Garantir Agendamento"). Uma reunião do painel = uma Reunião no HubSpot, para sempre (guardar o id; só atualizar). A correspondência de cada status com os campos do HubSpot será enviada pelo Felipe.
+- **Extensão do HubSpot ligada à agenda dos closers (2026-10-07):** hoje ela cria reuniões sozinha a partir dos convites (causa das duplicações). O Felipe vai desligá-la assim que o painel assumir o agendamento. Até lá, no piloto, pode haver duplicação vinda da extensão.
+- **Troca de marca (2026-10-07):** "Passar para CH" / "Passar para Poli" muda a reunião de carrossel (mesmo porte na outra marca): o débito sai do carrossel antigo e vai para o novo. Muda o nome no painel e no Google na hora; no HubSpot, na rodada das 17:55.
+- **Closer como usuário (2026-10-07):** o closer entra no painel, vê **só as próprias reuniões** e **marca o status** delas (validada, invalidada, no show, cancelada), além de "Passar para CH/Poli".
+- **Nome da reunião (2026-10-07):** `Marca | Empresa | Closer` (ex.: "Poli | Empresa X | Closer"), no painel e no Google; atualizado na troca de marca e de closer.
+- **Status → HubSpot (2026-10-07):** campo `hs_meeting_outcome` da Reunião: Agendada → `SCHEDULED` (Programados); Validada → `COMPLETED` (Concluído); No show → `NO_SHOW` (Não compareceu); Cancelada → `CANCELED` (Cancelado); Invalidada → `INVALIDADO` (Invalidado, opção criada pela Poli). `RESCHEDULED` (Reprogramado) não é usado pelo painel: reagendar só atualiza data e hora da mesma Reunião.
+- **Campos da Reunião no HubSpot (2026-10-07):** `hubspot_owner_id` ("Atividade atribuída a") = **closer**; `atividade_criada_por` ("Atividade criada pelo SDR", campo da Poli, lista de usuários) = **SDR** que agendou; `hs_meeting_title` = nome do painel (`Marca | Empresa | Closer`); `hs_meeting_outcome` = status; `hs_meeting_start_time` / `hs_meeting_end_time` = início e fim; `hs_meeting_location` ("Local da reunião") = link do Google Meet (aprovado pelo Felipe em 2026-10-07). Associações: contato e Lead. Ids de closer e SDR achados pelo e-mail (`painel.hubspot_owners`). Campo `sdr_quem_agendou_a_reuniao` (sim/não) não é usado. Atualizados na criação, no editar/reagendar/trocar e na rodada das 17:55.
+- **SDR como convidado no Google (2026-10-07):** por enquanto o SDR entra como convidado no evento para ver a reunião na agenda dele; fica numa configuração para o Felipe desligar quando quiser (ele pretende acabar com isso).
+- **Escopos do token do HubSpot (2026-10-07):** o Felipe acrescentou `crm.objects.contacts.write` e `crm.objects.leads.write` ao app privado (necessários para criar Reuniões e associá-las). Primeiro teste de escrita só na 10e, num contato de teste.
 
 ## 3. Quem usa
 
@@ -78,7 +90,7 @@ Até aqui o painel só lê dados. Com este módulo ele passa a **operar**: SDRs 
    1. Trava a distribuição, escolhe o closer pelo carrossel, confere de novo se ele continua livre e grava a reunião.
    2. Cria o evento na Google Agenda do closer, com link do Meet, convidando o lead (se houver e-mail).
    3. Marca o lead como **Agendada** no painel (origem `painel`), com data, hora e closer.
-   4. Move o Lead no HubSpot para "Garantir Agendamento".
+   4. Cria a Reunião no HubSpot, associada ao Lead, ao contato, ao closer e ao SDR (decisão de 2026-10-07; o Lead não é mais movido de etapa).
    Se o passo 2 falhar, desfaz o 1 e avisa o SDR. Se o 4 falhar, mantém a reunião e tenta de novo em segundo plano.
 5. Só então a tela mostra o closer e o link do Meet.
 
@@ -141,8 +153,9 @@ Caminho B (cada closer conecta a própria agenda uma vez), com um projeto NOVO n
 - Se for criado fora da organização (tipo Externo, em modo de teste), o Google derruba a conexão de cada closer a cada 7 dias e limita a 100 usuários. A agenda "some" sem aviso. Não usar esse modo. É uma causa provável dos problemas de disponibilidade de hoje (hipótese, não verificada).
 - Todos os closers reconectam a agenda uma vez, pela tela de Usuários ("Enviar link de conexão").
 - O caminho A (conta de serviço com delegação no domínio) continua como melhoria futura.
+- **Confirmado pelo Felipe em 2026-10-07**, já sabendo que ele é o administrador do Workspace e que o caminho A seria possível: **cada closer conecta a própria agenda** (caminho B).
 
-Manter também a **agenda de arquivo**: reuniões canceladas, no show e reagendadas são movidas para ela, para o histórico não sumir da agenda.
+Manter também a **agenda de arquivo**: reuniões canceladas, no show e reagendadas são movidas para ela, para o histórico não sumir da agenda. **Decisão (2026-10-07):** é uma agenda extra na conta do Felipe, "Arquivo de reuniões" (sem licença nova).
 
 Em qualquer caminho:
 - Permissões mínimas: ler disponibilidade (free/busy) e criar/alterar eventos. Nada de ler o conteúdo dos eventos dos closers.
@@ -156,8 +169,10 @@ Em qualquer caminho:
 ## 7. HubSpot
 
 - Consulta ao vivo do lead ao abrir o agendamento (seção 4): Contato e Lead associado, por link ou ID. Só leitura.
-- Ao agendar: mover o Lead para "Garantir Agendamento" (etapa já mapeada em `settings.hubspot_agendado_stages`). O token do app privado precisa de **escrita** em Leads; hoje só lê.
-- O objeto Reunião do HubSpot continua fora (decisão de 2026-10-07), salvo decisão nova do Felipe.
+- Ao agendar: **criar a Reunião no HubSpot** associada ao Lead, ao contato, ao closer e ao SDR, e guardar o id (decisão de 2026-10-07). Reagendar, editar e trocar de marca atualizam a mesma Reunião.
+- Todo dia às **17:55**: enviar os status das reuniões (correspondência a ser enviada pelo Felipe).
+- O Lead **não** é mais movido de etapa pelo painel.
+- O token do app privado precisa de escrita em Reuniões e associações; hoje só lê.
 - A regra "o HubSpot nunca sobrescreve marcação manual" continua. Reunião criada pelo painel tem origem `painel` e também não é sobrescrita.
 
 ## 8. Dados (rascunho; adaptar ao schema real)
@@ -197,6 +212,16 @@ Navegação do gestor e do admin: Painel · Reuniões · Carrosséis · Usuário
    5. Reuniões já marcadas pela Poli Agenda para depois do corte: continuam valendo na agenda do Google dos closers. No painel novo elas não aparecem na lista nem contam no saldo, a menos que o Felipe peça para lançá-las à mão. Os saldos de todos os carrosséis começam zerados no corte.
    6. Desligar a Poli Agenda.
 
+## 10.1 Pedidos do Felipe em 2026-10-07 (entendimento registrado; detalhes em aberto na seção 11)
+
+**A. Troca de marca durante a reunião ("Passar para CH" / "Passar para Poli").** Durante a reunião o closer entende a situação real do cliente e a reunião muda de empresa. O **closer entra no sistema**, acha a reunião dele na lista e clica num botão só. Isso muda o nome da reunião no painel e no Google Calendar na hora; o HubSpot é atualizado no fim do dia (item B). Consequência: **closer passa a ser usuário do painel** (antes: "closers não entram nesta fase"), vendo só as próprias reuniões.
+
+**B. HubSpot: reunião criada no agendamento + atualização diária às 17:55.** Toda reunião agendada gera uma **Reunião no HubSpot associada** ao Lead, ao contato, ao closer e ao SDR. Todo dia às **17:55** o painel envia ao HubSpot os status do dia (validada, invalidada, no show, cancelada etc.). Motivo: a Poli Agenda e a extensão do HubSpot atualizam tudo na hora e geram **reuniões duplicadas**, e o time recontava as reuniões à mão todo dia. Regra de ouro: **uma reunião do painel = uma reunião no HubSpot, para sempre** (guardar o id e sempre atualizar, nunca criar de novo). Substitui a decisão de 2026-10-07 "objeto Reunião do HubSpot fica fora". Decidido: criar na hora; status às 17:55; Lead não é mais movido (seção 2).
+
+**C. "Editar" e "Reagendar" na lista do SDR.** Em vez de "Abrir Meet", a linha tem **Editar**: mudar o **horário** da reunião. **Reagendar**: mudar o **dia** (e talvez o closer). Reagendar **move o convite** na agenda (o mesmo evento), e **não pode duplicar no HubSpot** de jeito nenhum.
+
+**D. Reaproveitar a reunião do lead.** Lead cancelou e volta dias depois: em vez de nova reunião, o SDR acha a reunião anterior e clica em **Reagendar** (a nova substitui a antiga; no HubSpot continua sendo a mesma reunião). Na tela **Agendar**, mostrar de forma simples **"Reuniões já agendadas com este lead"**: data, closer e resultado (validada, invalidada...), com atalho para reagendar.
+
 ## 11. Pendências para decidir com o Felipe
 
 | Pendência | Quando |
@@ -207,8 +232,6 @@ Navegação do gestor e do admin: Painel · Reuniões · Carrosséis · Usuário
 | Prazo para o pedido de troca expirar antes da reunião (padrão 2 h) | 10e |
 | Lead sem e-mail: bloquear ou permitir (padrão: permitir) | 10d |
 | Por onde o closer recebe a passagem de bastão: e-mail separado ou Google Chat | 10c |
-| O SDR entra como convidado no evento? | 10c |
-| Liberar escrita de Leads no token do HubSpot | Antes da 10e |
 | Criar o webhook do espaço "Gestão SDR" no Google Chat (o Felipe cria e cola no `.env`) | 10e |
 | Quem pode reagendar e cancelar: SDR dono, closer, gestor | 10e |
 

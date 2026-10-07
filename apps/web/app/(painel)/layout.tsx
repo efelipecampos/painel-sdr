@@ -23,9 +23,11 @@ export default async function PainelLayout({ children }: { children: ReactNode }
         <Link href={me.role === "sdr" ? `/sdr/${me.sdrId}` : "/"} className="brand">Painel SDR</Link>
         <nav className="group" aria-label="Navegação">
           {isManager(me) && <Link href="/" className="btn small">Painel</Link>}
+          {isManager(me) && <Link href="/carrosseis" className="btn small">Carrosséis</Link>}
           {me.role === "sdr" && <Link href={`/sdr/${me.sdrId}`} className="btn small">Meus chats</Link>}
         </nav>
         <span className="spacer" />
+        {me.canManageUsers && <Link href="/usuarios" className="btn small">Usuários</Link>}
         {me.role === "admin" && <Link href="/configuracoes" className="btn small">Configurações</Link>}
         <span className="user">{me.name}</span>
         <form action="/sair" method="post"><button className="btn small" type="submit">Sair</button></form>
