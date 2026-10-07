@@ -28,6 +28,7 @@ export default async function PainelLayout({ children }: { children: ReactNode }
           {me.role === "closer" && <Link href="/agenda" className="btn small">Minha agenda</Link>}
           {(me.role === "sdr" || isManager(me)) && <Link href="/agendar" className="btn small">Agendar</Link>}
           <Link href="/reunioes" className="btn small">Reuniões</Link>
+          {isManager(me) && <Link href="/relatorio" className="btn small">Relatório</Link>}
         </nav>
         <span className="spacer" />
         {me.canManageUsers && <Link href="/usuarios" className="btn small">Usuários</Link>}

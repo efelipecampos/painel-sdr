@@ -28,6 +28,9 @@ async function syncGoogle(): Promise<void> {
 /** Devolve false quando não era hora de sincronizar. */
 /** Reuniões do painel no HubSpot: cria/atualiza a cada rodada; status uma vez por dia (17:55). */
 async function syncHubspotMeetings(): Promise<void> {
+  // pedidos de troca de closer que passaram do prazo (2 h antes da reunião) expiram
+  const { data: expirados } = await db.schema("painel").rpc("expirar_pedidos_troca");
+  if (expirados) console.log(`[worker] ${expirados} pedidos de troca de closer expirados`);
   if (!hubspot) return;
   const r = await syncMeetings(db, hubspot);
   if (r.criadas || r.atualizadas || r.erros) console.log(`[worker] HubSpot reuniões: ${r.criadas} criadas, ${r.atualizadas} atualizadas, ${r.erros} com erro`);
