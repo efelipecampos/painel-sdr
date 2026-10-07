@@ -3,7 +3,7 @@
 // Tela de teste da agenda (só admin): cria, altera, arquiva, traz de volta e apaga um evento de teste na
 // agenda de um closer conectado. O único convidado é o próprio admin. Tudo fica no registro de chamadas.
 import { redirect } from "next/navigation";
-import { ARCHIVE_COLOR } from "@painel/shared/google";
+import { ARCHIVE_COLOR, activeTitle, archiveTitle } from "@painel/shared/google";
 import { APP_URL, calendarOf, withLog } from "@/lib/google";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getMe } from "@/lib/supabase/server";
@@ -42,7 +42,7 @@ export async function criarTeste(form: FormData) {
     const { data: s } = await createAdminClient().schema("painel").from("sdrs").select("name").eq("id", closer).single();
     const start = localToDate(`${dia}T${hora}`);
     r = await withLog(closer, "criar", () => cal.insert({
-      title: `TESTE | Painel SDR | ${s?.name ?? "Closer"}`,
+      title: "Apresentação Poli - TESTE do Painel SDR",
       description: `Evento de teste do Painel SDR. Pode ser apagado.\n\nPassagem de bastão (equipe): ${APP_URL}/agenda-teste`,
       start, end: new Date(start.getTime() + 30 * 60_000),
       attendees: u.user?.email ? [u.user.email] : [],
@@ -76,13 +76,17 @@ export async function operarTeste(form: FormData) {
       }, here));
     } else if (op === "arquivar") {
       if (!arq) throw new Error("Cadastre o ID da agenda de arquivo em Configurações.");
+      const cur = await cal.get(ev, "primary");
+      const { data: c } = await createAdminClient().schema("painel").from("sdrs").select("name").eq("id", closer).single();
       await withLog(closer, "mover", () => cal.move(ev, arq, "primary"));
-      await withLog(closer, "alterar", () => cal.patch(ev, { colorId: ARCHIVE_COLOR.cancelada }, arq, false));
+      // no arquivo o título ganha o closer no final (decisão de 2026-10-07)
+      await withLog(closer, "alterar", () => cal.patch(ev, { colorId: ARCHIVE_COLOR.cancelada, title: archiveTitle(cur?.summary ?? "", c?.name ?? "") }, arq, false));
       next = "arquivo";
     } else if (op === "voltar") {
       const dest = await closerEmail(closer); // id da agenda principal do closer = e-mail dele
       await withLog(closer, "mover", () => cal.move(ev, dest, arq));
-      await withLog(closer, "alterar", () => cal.patch(ev, { colorId: null }, dest, false));
+      const cur = await cal.get(ev, dest);
+      await withLog(closer, "alterar", () => cal.patch(ev, { colorId: null, title: activeTitle(cur?.summary ?? "") }, dest, false));
       next = "closer";
     } else if (op === "apagar") {
       await withLog(closer, "apagar", () => cal.remove(ev, here));

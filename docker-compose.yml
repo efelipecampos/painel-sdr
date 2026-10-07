@@ -15,7 +15,7 @@ services:
     restart: unless-stopped
     # Variáveis públicas + as do servidor para o Google Agenda (Fase 10c). A service_role e as chaves do Google
     # ficam só no processo do servidor (nomes sem NEXT_PUBLIC_: o Next nunca as envia ao navegador) e são usadas
-    # só para guardar e usar a conexão da agenda dos closers (apps/web/lib/supabase/admin.ts).
+    # só para guardar e usar a conexão da agenda dos closers e para agendar (apps/web/lib/supabase/admin.ts).
     environment:
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
@@ -23,6 +23,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_TOKEN_KEY: ${GOOGLE_TOKEN_KEY:-}
+      HUBSPOT_PRIVATE_APP_TOKEN: ${HUBSPOT_PRIVATE_APP_TOKEN:-}  # consulta do lead na hora de agendar (Fase 10d)
     networks:
       - coolify
     labels:
