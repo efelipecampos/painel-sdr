@@ -54,11 +54,12 @@ Até aqui o painel só lê dados. Com este módulo ele passa a **operar**: SDRs 
 - **Padrões aprovados para a 10b (2026-10-07):** equilíbrio por **mês**; No show e Cancelada **devolvem** a vez, Invalidada **não**; antecedência mínima **2 h**; janela **10 dias úteis**; intervalo entre reuniões **15 min**; durações **30, 45 e 60 min**; lead preso ao mesmo closer por **30 dias**.
 - **Reagendar (2026-10-07):** o SDR roda o processo de agendamento de novo (pode trocar dia e horário), mas **reaproveita o convite anterior**: o mesmo evento do Google é movido (mesmo link do Meet, mesmas informações) e a **mesma Reunião do HubSpot** é atualizada. Nunca cria evento nem reunião nova. O sistema tenta primeiro o **mesmo closer**; se ele não tiver o horário, o **carrossel escolhe outro** às cegas (o SDR não escolhe). Se o closer mudar, o débito sai do antigo (estorno) e vai para o novo, como numa troca.
 - **Reagendar reunião cancelada (2026-10-07):** mantém tudo (mesmo evento, que volta da agenda de arquivo para a do closer; mesma Reunião do HubSpot) e só altera as informações do novo agendamento.
-- **Editar (2026-10-07):** na lista do SDR, "Editar" (no lugar de "Abrir Meet") muda o horário da reunião, no mesmo evento e na mesma Reunião do HubSpot.
+- **Editar (2026-10-07):** na lista do SDR, "Editar" (no lugar de "Abrir Meet") muda o **horário no mesmo dia**, no mesmo evento e na mesma Reunião do HubSpot. Pode **mudar o closer** sem aprovação de gestor: tenta o mesmo closer e, se ele não estiver livre no novo horário, o carrossel escolhe outro às cegas (como no reagendar; o SDR não escolhe o closer). Para mudar o dia, usa-se Reagendar.
 - **HubSpot (2026-10-07):** a **Reunião do HubSpot é criada na hora do agendamento**, associada ao Lead, ao contato, ao closer e ao SDR; os **status são enviados todo dia às 17:55**. **Não mover mais o Lead** de etapa (substitui "mover para Garantir Agendamento"). Uma reunião do painel = uma Reunião no HubSpot, para sempre (guardar o id; só atualizar). A correspondência de cada status com os campos do HubSpot será enviada pelo Felipe.
 - **Extensão do HubSpot ligada à agenda dos closers (2026-10-07):** hoje ela cria reuniões sozinha a partir dos convites (causa das duplicações). O Felipe vai desligá-la assim que o painel assumir o agendamento. Até lá, no piloto, pode haver duplicação vinda da extensão.
 - **Troca de marca (2026-10-07):** "Passar para CH" / "Passar para Poli" muda a reunião de carrossel (mesmo porte na outra marca): o débito sai do carrossel antigo e vai para o novo. Muda o nome no painel e no Google na hora; no HubSpot, na rodada das 17:55.
-- **Closer como usuário (2026-10-07):** o closer entra no painel e vê **só as próprias reuniões**.
+- **Closer como usuário (2026-10-07):** o closer entra no painel, vê **só as próprias reuniões** e **marca o status** delas (validada, invalidada, no show, cancelada), além de "Passar para CH/Poli".
+- **Nome da reunião (2026-10-07):** `Marca | Empresa | Closer` (ex.: "Poli | Empresa X | Closer"), no painel e no Google; atualizado na troca de marca e de closer.
 - **Status → HubSpot (2026-10-07):** campo `hs_meeting_outcome` da Reunião: Agendada → `SCHEDULED` (Programados); Validada → `COMPLETED` (Concluído); No show → `NO_SHOW` (Não compareceu); Cancelada → `CANCELED` (Cancelado); Invalidada → `INVALIDADO` (Invalidado, opção criada pela Poli). `RESCHEDULED` (Reprogramado) não é usado pelo painel: reagendar só atualiza data e hora da mesma Reunião.
 
 ## 3. Quem usa
@@ -229,9 +230,6 @@ Navegação do gestor e do admin: Painel · Reuniões · Carrosséis · Usuário
 | Por onde o closer recebe a passagem de bastão: e-mail separado ou Google Chat | 10c |
 | O SDR entra como convidado no evento? | 10c |
 | Liberar escrita de Leads no token do HubSpot | Antes da 10e |
-| (A) Closer como usuário: também marca validada/invalidada/no show? (já decidido: vê só as próprias reuniões) | 10e |
-| (A) Formato do nome da reunião (ex.: "Poli \| Empresa \| Closer") | 10c |
-| Editar: só no mesmo dia e com o mesmo closer? | 10d |
 | Liberar escrita de Reuniões (meetings) e associações no token do HubSpot | Antes da 10e |
 | Criar o webhook do espaço "Gestão SDR" no Google Chat (o Felipe cria e cola no `.env`) | 10e |
 | Quem pode reagendar e cancelar: SDR dono, closer, gestor | 10e |
