@@ -60,6 +60,12 @@ export class Monitor {
     await this.report("hubspot", !err, config.alertHubspotMinutes, `Último erro: ${this.lastError.get("hubspot") ?? ""}`);
   }
 
+  /** Resultado de uma rodada do score de qualidade. */
+  async score(err: unknown | null): Promise<void> {
+    if (err) this.lastError.set("score", short(err));
+    await this.report("score", !err, config.alertScoreMinutes, `Último erro: ${this.lastError.get("score") ?? ""}`);
+  }
+
   /** Verificações periódicas (fila, Poli, painel no ar). Roda no máximo a cada `alertCheckMinutes`. */
   async check(): Promise<void> {
     if (this.now() - this.lastCheck < config.alertCheckMinutes * 60_000) return;
