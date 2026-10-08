@@ -18,6 +18,8 @@ function emailList(name: string): Set<string> {
 
 export type TeamRole = "sdr" | "closer" | "gestor";
 
+import { parseTimes } from "./score/schedule.js";
+
 export const config = {
   supabaseUrl: required("NEXT_PUBLIC_SUPABASE_URL"),
   serviceRoleKey: required("SUPABASE_SERVICE_ROLE_KEY"),
@@ -34,8 +36,8 @@ export const config = {
   hubspotToken: process.env.HUBSPOT_PRIVATE_APP_TOKEN?.trim() || null,
   /** Intervalo do sync de Leads do HubSpot. */
   hubspotEveryMinutes: Number(process.env.HUBSPOT_SYNC_MINUTES ?? 15),
-  /** Hora da rodada diária do score (fuso de São Paulo) e máximo de leads por rodada (controle de custo). */
-  scoreTime: process.env.SCORE_HORA?.trim() || "05:00",
+  /** Horários das rodadas do score (fuso de São Paulo) e máximo de leads por rodada (controle de custo). */
+  scoreTimes: parseTimes(process.env.SCORE_HORARIOS),
   scoreMaxPerRound: Number(process.env.SCORE_MAX_POR_RODADA ?? 300),
   /** Score: 0 = avisa já na rodada diária que falhar. */
   alertScoreMinutes: Number(process.env.ALERTA_SCORE_MIN ?? 0),
