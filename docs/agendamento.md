@@ -174,6 +174,14 @@ Em qualquer caminho:
 
 **Decisões de 2026-10-07 (10e):** o aviso do pedido de troca de closer vai para o espaço "Gestão SDR" pelo mesmo webhook dos alertas da Fase 8 (`GOOGLE_CHAT_WEBHOOK_URL_ALERTAS`). O aprovador principal continua o Iago Leal; qualquer gestor ou admin também aprova.
 
+**Decisões de 2026-10-07 (duplicidade no HubSpot, o maior problema de hoje):**
+- **Uma reunião por lead.** Em Agendar, se o lead (pelo lead do painel ou pelo contato do HubSpot) já tem reunião do painel **agendada** (futura, ou passada ainda sem resultado) ou **cancelada / no show** dentro do prazo, o painel não cria outra: mostra **"Reagendar"**, que reaproveita o mesmo evento do Google e **a mesma Reunião do HubSpot**. Validada ou Invalidada: pode criar nova (é outra reunião). O servidor confere a regra na confirmação.
+- **Prazo:** "este mês" (a reunião anterior é do mês corrente), com opção em Configurações para "últimos 30 dias" (o Felipe quer poder trocar se algo der errado).
+- Em Agendar, o painel também mostra as Reuniões que o contato já tem **no HubSpot fora do painel** (Poli Agenda, extensão), para o SDR não duplicar sem saber.
+- **Status vai ao HubSpot só às 17:55** (inclusive a volta de cancelada para agendada).
+- **Rodada das 17:55 confere as reuniões dos últimos 5 dias**: relê cada Reunião no HubSpot e corrige o que estiver diferente (resultado, título, horário, responsável, SDR, ligações); recria a que foi apagada; aponta possível duplicada (outra Reunião do mesmo contato no mesmo dia, fora do painel). Resumo no "Gestão SDR".
+- Falha ao gravar no HubSpot por mais de 15 min: alerta no "Gestão SDR" e aviso na linha em Reuniões (gestores).
+
 ## 7. HubSpot
 
 - Consulta ao vivo do lead ao abrir o agendamento (seção 4): Contato e Lead associado, por link ou ID. Só leitura.
