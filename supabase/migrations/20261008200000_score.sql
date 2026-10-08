@@ -31,7 +31,7 @@ alter table painel.lead_scores add column status text not null default 'avaliado
   check (status in ('avaliado', 'sem_informacao', 'ja_e_cliente', 'abaixo_do_corte'));
 alter table painel.lead_scores add constraint lead_scores_score_status check ((status = 'avaliado') = (score is not null));
 
--- 3. Leads a avaliar (worker). Candidato: o lead escreveu depois da última avaliação feita com esta versão dos
+-- 3. Leads a avaliar (worker, uma vez por dia). Candidato: o lead escreveu depois da última avaliação feita com esta versão dos
 --    critérios (ou nunca foi avaliado com ela), a conversa está parada há p_idle_minutes, e o responsável pelo
 --    chat mais recente é um SDR (não closer, gestor nem robô). Os mais recentes primeiro.
 create function painel.score_candidatos(p_version text, p_limit integer, p_idle_minutes integer default 60)
