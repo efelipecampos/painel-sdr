@@ -80,7 +80,7 @@ Atualize esta lista conforme avança.
   - [x] 10b — Carrossel sem Google, tela Usuários e remover closer. No ar e no `main` desde 07/10/2026.
   - [x] 10c — Google Agenda: papel closer, conexão da agenda pela tela do closer, livre/ocupado, criar/alterar/arquivar/restaurar evento, conferência no worker a cada 10 min, tela Teste da agenda (admin). No ar e no `main` desde 07/10/2026. Testado pelo Felipe com o Calil (agenda conectada; ocupado bateu com a agenda real; Meet, convite, arquivo vermelho e volta conferidos). O app web passou a receber a service_role (só no servidor, para a conexão do Google). Logins de closer: Calil e Alessandra.
   - [x] 10d — Agendar (10d.1 agendar pelo painel; 10d.2 Reuniões, status com arquivo, mudar horário/reagendar). No ar e no `main` desde 07/10/2026, testadas pelo Felipe.
-  - [ ] 10e — HubSpot e trocas. 10e.1 (Reunião no HubSpot: criação, atualização, status às 17:55) no ar e no `main` desde 07/10/2026, conferida pelo Felipe. 10e.2 (pedido de troca de closer com fila e aviso no Gestão SDR, troca direta, Passar para CH/Poli, relatório) aplicada e no ar em 07/10/2026, branch `fase-10`; falta o teste do Felipe (com a reunião de teste "Apresentação Poli - Poli Digital", que depois é apagada do painel, do Google e do HubSpot) e o merge.
+  - [x] 10e — HubSpot e trocas: Reunião no HubSpot (criação, atualização, status às 17:55), pedido de troca de closer com fila e aviso no Gestão SDR, troca direta, Passar para CH/Poli, relatório. No ar e no `main` desde 07/10/2026, testadas pelo Felipe (reuniões de teste apagadas do painel, do Google e do HubSpot).
   - [ ] Virada da Poli Agenda.
 
 ## 5. O que já se sabe sobre a integração PoliChat-Hubspot
