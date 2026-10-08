@@ -31,8 +31,8 @@ const Chevron = ({ left }: { left?: boolean }) => (
   </svg>
 );
 
-export function AgendarForm({ carousels, initialLead, sdrs }: {
-  carousels: CarouselOption[]; initialLead: string | null; sdrs: { id: string; name: string }[] | null;
+export function AgendarForm({ carousels, initialLead, sdrs, voltar }: {
+  carousels: CarouselOption[]; initialLead: string | null; sdrs: { id: string; name: string }[] | null; voltar: string | null;
 }) {
   const [, start] = useTransition();
   const [loading, setLoading] = useState(false);
@@ -153,7 +153,7 @@ export function AgendarForm({ carousels, initialLead, sdrs }: {
     : "Busque entre os seus leads pelo nome ou telefone. Link ou ID do HubSpot só se o lead não aparecer.";
 
   const reset = () => {
-    window.location.href = "/agendar";
+    window.location.href = voltar ? `/agendar?${new URLSearchParams({ voltar })}` : "/agendar";
   };
 
   return (

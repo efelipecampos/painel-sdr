@@ -5,7 +5,7 @@ import { AgendarForm, type CarouselOption } from "./AgendarForm";
 
 export const metadata = { title: "Agendar reunião — Painel SDR" };
 
-export default async function AgendarPage({ searchParams }: { searchParams: Promise<{ lead?: string }> }) {
+export default async function AgendarPage({ searchParams }: { searchParams: Promise<{ lead?: string; voltar?: string }> }) {
   const me = await getMe();
   if (!me || !(me.role === "sdr" || isManager(me))) redirect("/");
   const sp = await searchParams;
@@ -18,15 +18,19 @@ export default async function AgendarPage({ searchParams }: { searchParams: Prom
   const sdrOptions = ((sdrs.data ?? []) as { sdr_id: string | null; name: string; papel: string; active: boolean; is_bot: boolean }[])
     .filter((u) => u.sdr_id && u.papel === "sdr" && u.active && !u.is_bot)
     .map((u) => ({ id: u.sdr_id!, name: u.name }));
+  // Volta para a lista do SDR de onde veio (com filtros e página); só aceita /sdr/..., nunca outro site.
+  const voltar = sp.voltar && /^\/sdr\/[0-9a-f-]+(\?.*)?$/i.test(sp.voltar) ? sp.voltar : null;
+  const backHref = voltar ?? (me.role === "sdr" ? `/sdr/${me.sdrId}` : "/");
+  const backLabel = voltar || me.role === "sdr" ? (me.role === "sdr" ? "Voltar aos meus chats" : "Voltar à lista do SDR") : "Voltar ao painel";
   return (
     <main className="page">
       <div className="page-head">
-        <Link href={me.role === "sdr" ? `/sdr/${me.sdrId}` : "/"} className="ag-back" aria-label={me.role === "sdr" ? "Voltar aos meus chats" : "Voltar ao painel"}>
+        <Link href={backHref} className="ag-back" aria-label={backLabel}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 6l-6 6l6 6" /></svg>
         </Link>
         <h1 className="title">Agendar reunião</h1>
       </div>
-      <AgendarForm carousels={(cars.data ?? []) as CarouselOption[]} initialLead={sp.lead ?? null} sdrs={isManager(me) ? sdrOptions : null} />
+      <AgendarForm carousels={(cars.data ?? []) as CarouselOption[]} initialLead={sp.lead ?? null} voltar={voltar} sdrs={isManager(me) ? sdrOptions : null} />
     </main>
   );
 }
