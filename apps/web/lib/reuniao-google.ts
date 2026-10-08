@@ -87,3 +87,16 @@ export async function moveEvent(before: MeetingRow, after: MeetingRow): Promise<
     google_event_id: ev.id, google_calendar_id: await closerCalendarId(after.closer_id), meet_url: ev.hangoutLink ?? null, google_state: "ok",
   }).eq("id", after.id);
 }
+
+/** Título novo (troca de marca): na agenda do closer o título puro; no arquivo, com o closer no final. */
+export async function renameEvent(m: MeetingRow): Promise<void> {
+  if (!m.google_event_id || !m.title) return;
+  const cal = await calendarOf(m.closer_id);
+  const arq = await archiveId().catch(() => "");
+  let title = m.title;
+  if (arq && m.google_calendar_id === arq) {
+    const { data: c } = await admin().from("sdrs").select("name").eq("id", m.closer_id).single();
+    title = archiveTitle(m.title, c?.name ?? "");
+  }
+  await withLog(m.closer_id, "alterar", () => cal.patch(m.google_event_id!, { title }, m.google_calendar_id || "primary", false), m.id);
+}

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient, getMe } from "@/lib/supabase/server";
 import { addDays, formatDateTime, formatTime, localDay, localToDate } from "@/lib/time";
 import { StatusActions } from "./StatusActions";
+import { FilaPedidos, RowTrocas, type Pedido } from "./Trocas";
 
 export const metadata = { title: "Reuniões — Painel SDR" };
 
@@ -11,7 +12,7 @@ const AVISO: Record<string, string> = { removida: "Removida no Google", recusada
 
 interface Row {
   id: string; starts_at: string; ends_at: string; status: string; title: string | null; lead_name: string | null; company: string | null;
-  carousel: string | null; closer: string | null; sdr: string | null; fora_do_padrao: boolean; google_state: string | null; permissao: string;
+  carousel: string | null; brand: string | null; closer: string | null; sdr: string | null; fora_do_padrao: boolean; google_state: string | null; permissao: string;
 }
 
 export default async function ReunioesPage({ searchParams }: { searchParams: Promise<{ ver?: string; mudou?: string }> }) {
@@ -26,6 +27,10 @@ export default async function ReunioesPage({ searchParams }: { searchParams: Pro
   });
   if (error) throw new Error(`Não foi possível ler as reuniões: ${error.message}`);
   const rows = (data ?? []) as Row[];
+  const pedidosRes = me.role === "closer" ? { data: [] } : await (await createClient()).schema("painel").rpc("pedidos_troca", { p_status: me.role === "sdr" ? null : "pendente" });
+  const pedidos = (pedidosRes.data ?? []) as Pedido[];
+  const STATUS_PEDIDO: Record<string, string> = { pendente: "pendente", aprovado: "aprovado", recusado: "recusado", expirado: "expirado" };
+  const agora = Date.now();
   const avisos = rows.filter((r) => r.status === "agendada" && r.google_state && r.google_state !== "ok");
 
   return (
@@ -43,6 +48,16 @@ export default async function ReunioesPage({ searchParams }: { searchParams: Pro
         <div className="alert" role="alert">
           {avisos.length === 1 ? "1 reunião precisa" : `${avisos.length} reuniões precisam`} de atenção: o Google avisou mudança feita fora do painel. Confira abaixo.
         </div>
+      )}
+      {me.role !== "sdr" && me.role !== "closer" && pedidos.length > 0 && <FilaPedidos pedidos={pedidos} />}
+      {me.role === "sdr" && pedidos.length > 0 && (
+        <section className="card" style={{ gap: 6 }} aria-labelledby="meus-pedidos">
+          <h2 id="meus-pedidos" className="card-title">Seus pedidos de troca de closer</h2>
+          {pedidos.slice(0, 10).map((p) => (
+            <span key={p.id}>{p.lead_name ?? "—"} · {formatDateTime(p.starts_at)} · <strong>{STATUS_PEDIDO[p.status]}</strong>
+              {p.status === "aprovado" && p.para ? ` · novo closer ${p.para}` : ""}{p.decision_note ? ` · ${p.decision_note}` : ""}</span>
+          ))}
+        </section>
       )}
       <div className="card">
         <div className="table-wrap">
@@ -64,7 +79,10 @@ export default async function ReunioesPage({ searchParams }: { searchParams: Pro
                   <td>{r.sdr ?? "—"}</td>
                   <td><div className="cell-stack"><span>{STATUS[r.status] ?? r.status}</span>
                     {r.status === "agendada" && r.google_state && r.google_state !== "ok" && <strong style={{ color: "var(--danger, #e5484d)" }}>{AVISO[r.google_state]}</strong>}</div></td>
-                  <td><StatusActions id={r.id} status={r.status} permissao={r.permissao} aviso={r.status === "agendada" ? r.google_state : null} /></td>
+                  <td><div className="cell-stack" style={{ gap: 6 }}>
+                    <StatusActions id={r.id} status={r.status} permissao={r.permissao} aviso={r.status === "agendada" ? r.google_state : null} />
+                    <RowTrocas id={r.id} status={r.status} futura={Date.parse(r.starts_at) > agora} permissao={r.permissao} brand={r.brand} />
+                  </div></td>
                 </tr>
               ))}
             </tbody>

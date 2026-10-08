@@ -30,7 +30,7 @@ async function tables(): Promise<{ schema: string; name: string; rls: boolean }[
 describe("segurança do banco", () => {
   it("todas as tabelas de public e painel têm RLS ligado", async () => {
     const all = await tables();
-    expect(all.length).toBe(25);
+    expect(all.length).toBe(26);
     expect(all.filter((t) => !t.rls)).toEqual([]);
   });
 

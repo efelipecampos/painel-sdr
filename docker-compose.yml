@@ -24,6 +24,7 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_TOKEN_KEY: ${GOOGLE_TOKEN_KEY:-}
       HUBSPOT_PRIVATE_APP_TOKEN: ${HUBSPOT_PRIVATE_APP_TOKEN:-}  # consulta do lead na hora de agendar (Fase 10d)
+      GOOGLE_CHAT_WEBHOOK_URL_ALERTAS: ${GOOGLE_CHAT_WEBHOOK_URL_ALERTAS:-}  # aviso de pedido de troca no "Gestão SDR" (Fase 10e)
     networks:
       - coolify
     labels:

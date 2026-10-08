@@ -24,6 +24,7 @@ export default async function SucessoPage({ params }: { params: Promise<{ id: st
         </p>
         <div className="group">
           <Link className="btn" href={`/reuniao/${id}`}>Ver passagem de bastão</Link>
+          <Link className="btn" href="/reunioes">Pedir troca de closer</Link>
           <Link className="btn primary" href="/agendar">Agendar outra</Link>
         </div>
       </section>
