@@ -1,7 +1,7 @@
 // Score de qualidade (Fase 7): montagem do pedido ao modelo e cálculo da nota. Sem banco nem rede, para testar.
 // LGPD: telefone e e-mail são mascarados antes de qualquer texto sair para a API; nada disto vai para log.
 // Decisões do Felipe (07/10/2026): só leads com 2+ mensagens escritas por eles; critério sem informação fica fora
-// da média; só conversas com SDR como responsável; a justificativa pode citar nomes.
+// da média; só conversas com SDR como responsável; a justificativa pode citar nomes; quem já é cliente fica sem nota.
 import { createHash } from "node:crypto";
 
 export interface Criterion {
@@ -38,8 +38,8 @@ export const DEFAULT_CONTEXT =
   "distribuição de conversas entre setores, chatbot e integração com CRM. O cliente ideal é uma empresa com 3 ou mais " +
   "pessoas atendendo clientes pelo WhatsApp, que hoje sofre com desorganização, demora para responder, perda de conversas " +
   "ou falta de controle sobre o time. A Poli não vende para quem tem menos de 3 usuários nem para autônomos. Ela também " +
-  "não é ferramenta de disparo em massa, catálogo ou divulgação. O objetivo do SDR é qualificar o lead e marcar uma " +
-  "reunião com o closer.";
+  "não é ferramenta de disparo em massa, catálogo ou divulgação. A Poli funciona no computador, não em aplicativo de " +
+  "celular. O objetivo do SDR é qualificar o lead e marcar uma reunião com o closer.";
 
 /** Resposta que chega em até 10 s depois de uma mensagem nossa é tratada como automática (WhatsApp Business). */
 const AUTO_REPLY_SECONDS = 10;
@@ -134,6 +134,7 @@ export function systemPrompt(context: string, criteria: Criterion[]): string {
     "- Use apenas o que está na conversa. Não suponha o que não foi dito.",
     "- Justificativa: uma frase curta em português, citando o fato da conversa que levou à nota.",
     "- Resumo: uma frase sobre o lead como um todo.",
+    "- Se a conversa mostra que o contato já é cliente da empresa (suporte, implantação, cobrança, uso do produto), marque ja_e_cliente = true.",
   ].join("\n");
 }
 
@@ -142,8 +143,9 @@ export function outputSchema(criteria: Criterion[]): { [key: string]: unknown } 
   return {
     type: "object",
     additionalProperties: false,
-    required: ["criterios", "resumo"],
+    required: ["ja_e_cliente", "criterios", "resumo"],
     properties: {
+      ja_e_cliente: { type: "boolean" },
       criterios: {
         type: "array",
         items: {
@@ -164,6 +166,7 @@ export function outputSchema(criteria: Criterion[]): { [key: string]: unknown } 
 }
 
 export interface ModelAnswer {
+  ja_e_cliente: boolean;
   criterios: { criterio: string; sem_informacao: boolean; nota: number; justificativa: string }[];
   resumo: string;
 }
@@ -173,7 +176,7 @@ export interface CriterionScore { criterion_id: string; score: number | null; ju
 
 /**
  * Converte a resposta do modelo na nota de cada critério e na nota final: média ponderada só dos critérios
- * com informação (0 a 100). `score` null quando nenhum critério tem informação.
+ * com informação (0 a 100). `score` null quando nenhum critério tem informação ou o contato já é cliente.
  * Falha se faltar critério: melhor não gravar do que gravar nota parcial.
  */
 export function scoreFromAnswer(criteria: Criterion[], answer: ModelAnswer): { score: number | null; criteria_scores: CriterionScore[] } {
@@ -192,7 +195,7 @@ export function scoreFromAnswer(criteria: Criterion[], answer: ModelAnswer): { s
     weight += criteria[i].weight;
     sum += cs.score * criteria[i].weight;
   });
-  return { score: weight > 0 ? Math.round(sum / weight) : null, criteria_scores };
+  return { score: weight > 0 && !answer.ja_e_cliente ? Math.round(sum / weight) : null, criteria_scores };
 }
 
 /** Versão dos critérios + contexto: mudou, todos os leads são reavaliados. */

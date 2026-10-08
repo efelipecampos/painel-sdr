@@ -84,7 +84,7 @@ for (const [i, leadId] of picked.entries()) {
     total += r.cost;
     ok++;
     if (r.score !== null) scores.push(r.score);
-    console.log(`${head}\n   NOTA ${r.score ?? "sem informação"} — ${r.summary}`);
+    console.log(`${head}\n   NOTA ${r.existingCustomer ? "sem nota (já é cliente)" : r.score ?? "sem informação"} — ${r.summary}`);
     r.criteria_scores.forEach((c, j) => console.log(`   ${names[j]}: ${c.score ?? "sem informação"} — ${c.justificativa}`));
     console.log(`   tokens: ${r.usage.input_tokens} entrada, ${r.usage.output_tokens} saída · US$ ${r.cost.toFixed(4)}\n`);
   } catch (err) {

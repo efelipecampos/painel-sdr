@@ -8,6 +8,7 @@ export interface LeadScore {
   score: number | null;
   criteria_scores: CriterionScore[];
   summary: string;
+  existingCustomer: boolean;
   usage: Usage;
   cost: number;
 }
@@ -28,5 +29,5 @@ export async function scoreConversation(
   if (!text) throw new Error("resposta do modelo sem texto");
   const answer = JSON.parse(text) as ModelAnswer;
   const { score, criteria_scores } = scoreFromAnswer(criteria, answer);
-  return { score, criteria_scores, summary: answer.resumo, usage: res.usage, cost: costUSD(res.usage) };
+  return { score, criteria_scores, summary: answer.resumo, existingCustomer: answer.ja_e_cliente, usage: res.usage, cost: costUSD(res.usage) };
 }

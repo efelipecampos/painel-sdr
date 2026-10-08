@@ -69,6 +69,7 @@ describe("scoreFromAnswer", () => {
   const answer = (notas: (number | null)[]) => ({
     criterios: notas.map((nota, i) => ({ criterio: `c${i + 1}`, sem_informacao: nota === null, nota: nota ?? 0, justificativa: "x" })),
     resumo: "r",
+    ja_e_cliente: false,
   });
 
   it("nota final é a média ponderada (pesos 3, 3, 2, 2, 2)", () => {
@@ -85,6 +86,9 @@ describe("scoreFromAnswer", () => {
   });
   it("sem informação em nenhum critério: sem nota", () => {
     expect(scoreFromAnswer(DEFAULT_CRITERIA, answer([null, null, null, null, null])).score).toBeNull();
+  });
+  it("quem já é cliente fica sem nota", () => {
+    expect(scoreFromAnswer(DEFAULT_CRITERIA, { ...answer([90, 90, 90, 90, 90]), ja_e_cliente: true }).score).toBeNull();
   });
   it("limita cada nota entre 0 e 100", () => {
     const r = scoreFromAnswer(DEFAULT_CRITERIA, answer([150, -10, 50, 50, 50]));
