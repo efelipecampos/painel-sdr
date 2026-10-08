@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  DEFAULT_CRITERIA, buildTranscript, costUSD, criteriaVersion, maskPII, outputSchema, scoreFromAnswer, systemPrompt,
+  DEFAULT_CRITERIA, buildTranscript, leadMessageCount, costUSD, criteriaVersion, maskPII, outputSchema, scoreFromAnswer, systemPrompt,
   type TranscriptMessage,
 } from "./rules";
 
@@ -49,9 +49,25 @@ describe("buildTranscript", () => {
   });
 });
 
+describe("leadMessageCount", () => {
+  const at = (s: number) => new Date(Date.parse("2026-10-07T13:00:00Z") + s * 1000).toISOString();
+  it("conta só mensagens do lead", () => {
+    expect(leadMessageCount([msg("template", null, at(0), "x"), msg("lead", "oi", at(60)), msg("sdr", "olá", at(120)), msg("lead", "tudo bem?", at(180))])).toBe(2);
+  });
+  it("resposta em até 10 s depois de mensagem nossa é automática", () => {
+    expect(leadMessageCount([msg("template", null, at(0), "x"), msg("lead", "Obrigado pelo contato! Já te respondemos.", at(3)), msg("lead", "oi", at(600))])).toBe(1);
+  });
+  it("texto repetido conta uma vez; mídia sem texto conta", () => {
+    expect(leadMessageCount([msg("lead", "Olá!", at(0)), msg("lead", "olá!", at(100)), msg("lead", null, at(200))])).toBe(2);
+  });
+  it("eventos do sistema não contam como mensagem nossa", () => {
+    expect(leadMessageCount([msg("lead", "a", at(0)), msg("system", "transferido", at(100)), msg("lead", "b", at(105))])).toBe(2);
+  });
+});
+
 describe("scoreFromAnswer", () => {
-  const answer = (notas: number[]) => ({
-    criterios: notas.map((nota, i) => ({ criterio: `c${i + 1}`, nota, justificativa: "x" })),
+  const answer = (notas: (number | null)[]) => ({
+    criterios: notas.map((nota, i) => ({ criterio: `c${i + 1}`, sem_informacao: nota === null, nota: nota ?? 0, justificativa: "x" })),
     resumo: "r",
   });
 
@@ -60,6 +76,15 @@ describe("scoreFromAnswer", () => {
     // (300 + 150 + 0 + 200 + 100) / 12 = 62,5 → 63
     expect(r.score).toBe(63);
     expect(r.criteria_scores.map((c) => c.criterion_id)).toEqual(["engajamento", "porte", "dor", "intencao", "encaixe"]);
+  });
+  it("critério sem informação fica fora da média", () => {
+    // só Engajamento (3) = 20 e Intenção (2) = 70 têm informação: (60 + 140) / 5 = 40
+    const r = scoreFromAnswer(DEFAULT_CRITERIA, answer([20, null, null, 70, null]));
+    expect(r.score).toBe(40);
+    expect(r.criteria_scores.map((c) => c.score)).toEqual([20, null, null, 70, null]);
+  });
+  it("sem informação em nenhum critério: sem nota", () => {
+    expect(scoreFromAnswer(DEFAULT_CRITERIA, answer([null, null, null, null, null])).score).toBeNull();
   });
   it("limita cada nota entre 0 e 100", () => {
     const r = scoreFromAnswer(DEFAULT_CRITERIA, answer([150, -10, 50, 50, 50]));

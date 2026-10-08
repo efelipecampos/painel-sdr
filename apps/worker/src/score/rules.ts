@@ -1,5 +1,7 @@
 // Score de qualidade (Fase 7): montagem do pedido ao modelo e cálculo da nota. Sem banco nem rede, para testar.
 // LGPD: telefone e e-mail são mascarados antes de qualquer texto sair para a API; nada disto vai para log.
+// Decisões do Felipe (07/10/2026): só leads com 2+ mensagens escritas por eles; critério sem informação fica fora
+// da média; só conversas com SDR como responsável; a justificativa pode citar nomes.
 import { createHash } from "node:crypto";
 
 export interface Criterion {
@@ -38,6 +40,35 @@ export const DEFAULT_CONTEXT =
   "ou falta de controle sobre o time. A Poli não vende para quem tem menos de 3 usuários nem para autônomos. Ela também " +
   "não é ferramenta de disparo em massa, catálogo ou divulgação. O objetivo do SDR é qualificar o lead e marcar uma " +
   "reunião com o closer.";
+
+/** Resposta que chega em até 10 s depois de uma mensagem nossa é tratada como automática (WhatsApp Business). */
+const AUTO_REPLY_SECONDS = 10;
+
+/**
+ * Mensagens escritas pelo lead: ignora respostas automáticas (chegam em até 10 s depois de uma mensagem nossa)
+ * e textos repetidos. Mídia sem texto (áudio, foto) conta.
+ */
+export function leadMessageCount(msgs: TranscriptMessage[]): number {
+  let count = 0;
+  let lastOursAt = -Infinity;
+  const seen = new Set<string>();
+  for (const m of msgs) {
+    const at = Date.parse(m.sent_at);
+    if (m.sender === "system") continue;
+    if (m.sender !== "lead") { lastOursAt = at; continue; }
+    if (at - lastOursAt <= AUTO_REPLY_SECONDS * 1000) continue;
+    const text = m.body?.trim().toLowerCase().replace(/\s+/g, " ");
+    if (text) {
+      if (seen.has(text)) continue;
+      seen.add(text);
+    }
+    count++;
+  }
+  return count;
+}
+
+/** Ponto de corte: abaixo disto o lead fica sem avaliação. */
+export const MIN_LEAD_MESSAGES = 2;
 
 /** Troca e-mails e números de telefone por marcadores. */
 export function maskPII(text: string): string {
@@ -94,14 +125,14 @@ export function systemPrompt(context: string, criteria: Criterion[]): string {
     context,
     "",
     "## Critérios",
-    "Dê a cada critério uma nota de 0 a 100 (0 = muito ruim, 50 = sem informação suficiente, 100 = excelente).",
+    "Dê a cada critério uma nota de 0 a 100 (0 = muito ruim, 100 = excelente).",
+    "Se a conversa não traz informação sobre um critério, marque sem_informacao = true (a nota desse critério é ignorada).",
     ...criteria.map((c, i) => `- ${keys[i]} — ${c.name}: ${c.description}`),
     "",
     "## Regras",
     "- Avalie o lead, não o SDR. Mensagens do SDR, do robô e de modelos só dão contexto.",
     "- Use apenas o que está na conversa. Não suponha o que não foi dito.",
     "- Justificativa: uma frase curta em português, citando o fato da conversa que levou à nota.",
-    "- Nunca escreva nome de pessoa, telefone ou e-mail na justificativa nem no resumo.",
     "- Resumo: uma frase sobre o lead como um todo.",
   ].join("\n");
 }
@@ -118,9 +149,10 @@ export function outputSchema(criteria: Criterion[]): { [key: string]: unknown } 
         items: {
           type: "object",
           additionalProperties: false,
-          required: ["criterio", "nota", "justificativa"],
+          required: ["criterio", "sem_informacao", "nota", "justificativa"],
           properties: {
             criterio: { type: "string", enum: criterionKeys(criteria) },
+            sem_informacao: { type: "boolean" },
             nota: { type: "integer" },
             justificativa: { type: "string" },
           },
@@ -132,28 +164,35 @@ export function outputSchema(criteria: Criterion[]): { [key: string]: unknown } 
 }
 
 export interface ModelAnswer {
-  criterios: { criterio: string; nota: number; justificativa: string }[];
+  criterios: { criterio: string; sem_informacao: boolean; nota: number; justificativa: string }[];
   resumo: string;
 }
 
-export interface CriterionScore { criterion_id: string; score: number; justificativa: string }
+/** score null = sem informação na conversa (fica fora da média). */
+export interface CriterionScore { criterion_id: string; score: number | null; justificativa: string }
 
 /**
- * Converte a resposta do modelo na nota de cada critério e na nota final (média ponderada, 0 a 100).
+ * Converte a resposta do modelo na nota de cada critério e na nota final: média ponderada só dos critérios
+ * com informação (0 a 100). `score` null quando nenhum critério tem informação.
  * Falha se faltar critério: melhor não gravar do que gravar nota parcial.
  */
-export function scoreFromAnswer(criteria: Criterion[], answer: ModelAnswer): { score: number; criteria_scores: CriterionScore[] } {
+export function scoreFromAnswer(criteria: Criterion[], answer: ModelAnswer): { score: number | null; criteria_scores: CriterionScore[] } {
   const keys = criterionKeys(criteria);
   const byKey = new Map(answer.criterios.map((c) => [c.criterio, c]));
   const criteria_scores = criteria.map((c, i) => {
     const a = byKey.get(keys[i]);
     if (!a) throw new Error(`resposta sem o critério ${c.name}`);
-    return { criterion_id: c.id, score: Math.max(0, Math.min(100, Math.round(a.nota))), justificativa: a.justificativa };
+    const score = a.sem_informacao ? null : Math.max(0, Math.min(100, Math.round(a.nota)));
+    return { criterion_id: c.id, score, justificativa: a.justificativa };
   });
-  const totalWeight = criteria.reduce((s, c) => s + c.weight, 0);
-  if (totalWeight <= 0) throw new Error("soma dos pesos é zero");
-  const score = Math.round(criteria_scores.reduce((s, cs, i) => s + cs.score * criteria[i].weight, 0) / totalWeight);
-  return { score, criteria_scores };
+  let weight = 0;
+  let sum = 0;
+  criteria_scores.forEach((cs, i) => {
+    if (cs.score === null) return;
+    weight += criteria[i].weight;
+    sum += cs.score * criteria[i].weight;
+  });
+  return { score: weight > 0 ? Math.round(sum / weight) : null, criteria_scores };
 }
 
 /** Versão dos critérios + contexto: mudou, todos os leads são reavaliados. */

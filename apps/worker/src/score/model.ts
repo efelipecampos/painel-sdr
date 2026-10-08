@@ -5,7 +5,7 @@ import {
 } from "./rules.js";
 
 export interface LeadScore {
-  score: number;
+  score: number | null;
   criteria_scores: CriterionScore[];
   summary: string;
   usage: Usage;
