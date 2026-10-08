@@ -1,19 +1,25 @@
 // Modo teste do score (Fase 7): avalia N leads reais e mostra notas, justificativas e custo. NÃO grava nada.
-// Uso: npm run score-teste -w @painel/worker [-- 20]
+// Uso: npm run score-teste -w @painel/worker [-- 20] [--ia anthropic|celeris|ambas]
+// Sem --ia, usa a IA de SCORE_IA. Com "ambas", avalia os mesmos leads nas duas e mostra lado a lado.
+// Usa os critérios e o contexto gravados no banco (tela de Configurações).
 // Pega os leads que escreveram nos últimos 7 dias, estão parados há 1 h ou mais, têm SDR (não closer nem robô) como
 // responsável e 2+ mensagens escritas por eles; até 2 por SDR, para variar.
 // A saída mostra o número curto do lead e o nome do SDR (sem telefone nem texto de mensagem do lead).
-import Anthropic from "@anthropic-ai/sdk";
-import { config } from "../config.js";
 import { createDb } from "../processor.js";
-import { scoreConversation } from "./model.js";
+import { loadCriteria } from "./job.js";
+import { scoreConversation, scorerFromEnv, type Scorer } from "./model.js";
 import {
-  buildTranscript, criteriaVersion, DEFAULT_CONTEXT, DEFAULT_CRITERIA, leadMessageCount, MIN_LEAD_MESSAGES, type TranscriptMessage,
+  buildTranscript, criteriaVersion, leadMessageCount, MIN_LEAD_MESSAGES, type TranscriptMessage,
 } from "./rules.js";
 
-const n = Number(process.argv[2] ?? 20);
-if (!config.anthropicModel) throw new Error("Defina ANTHROPIC_MODEL no .env (ex.: claude-haiku-4-5).");
-if (!process.env.ANTHROPIC_API_KEY?.trim()) throw new Error("Defina ANTHROPIC_API_KEY no .env.");
+const args = process.argv.slice(2);
+const iaArg = (() => { const i = args.indexOf("--ia"); return i >= 0 ? args[i + 1] : null; })();
+const n = Number(args.find((a) => /^\d+$/.test(a)) ?? 20);
+const scorers: Scorer[] = (iaArg === "ambas" ? ["anthropic", "celeris"] : [iaArg ?? process.env.SCORE_IA ?? "anthropic"]).map((ia) => {
+  const s = scorerFromEnv({ ...process.env, SCORE_IA: ia });
+  if (!s) throw new Error(ia === "celeris" ? "Defina CELERIS_API_KEY no .env." : "Defina ANTHROPIC_API_KEY e ANTHROPIC_MODEL no .env.");
+  return s;
+});
 
 const db = createDb();
 const p = db.schema("painel");
@@ -67,34 +73,47 @@ async function hubspotStage(contact: string | null): Promise<string> {
   return rows.length ? stages.get(rows[0].stage_id ?? "") ?? "etapa desconhecida" : "sem Lead no HubSpot";
 }
 
-// 2. Avalia um por um.
-const client = new Anthropic();
-const names = DEFAULT_CRITERIA.map((c) => c.name);
-console.log(`Modelo ${config.anthropicModel} · critérios versão ${criteriaVersion(DEFAULT_CONTEXT, DEFAULT_CRITERIA)} · ${picked.length} leads\n`);
-let total = 0;
-let ok = 0;
-const scores: number[] = [];
+// 2. Avalia um por um, em cada IA.
+const { context, criteria } = await loadCriteria(db);
+const names = criteria.map((c) => c.name);
+console.log(`${scorers.map((s) => s.model).join(" × ")} · critérios versão ${criteriaVersion(context, criteria)} · ${picked.length} leads\n`);
+const tot = scorers.map(() => ({ custo: 0, ok: 0, notas: [] as number[] }));
+const diffs: number[] = [];
 for (const [i, leadId] of picked.entries()) {
   const msgs = convs.get(leadId)!;
   const fromLead = leadMessageCount(msgs);
   const sdr = sdrs.get(lastByLead.get(leadId)?.sdr_id ?? "") ?? "sem SDR";
-  const head = `#${i + 1} lead ${leadId.slice(0, 8)} · ${sdr} · ${msgs.length} mensagens (${fromLead} escritas pelo lead) · HubSpot: ${await hubspotStage(contactOf.get(leadId) ?? null)}`;
-  try {
-    const r = await scoreConversation(client, config.anthropicModel, DEFAULT_CONTEXT, DEFAULT_CRITERIA, buildTranscript(msgs));
-    total += r.cost;
-    ok++;
-    if (r.score !== null) scores.push(r.score);
-    console.log(`${head}\n   NOTA ${r.existingCustomer ? "sem nota (já é cliente)" : r.score ?? "sem informação"} — ${r.summary}`);
-    r.criteria_scores.forEach((c, j) => console.log(`   ${names[j]}: ${c.score ?? "sem informação"} — ${c.justificativa}`));
-    console.log(`   tokens: ${r.usage.input_tokens} entrada, ${r.usage.output_tokens} saída · US$ ${r.cost.toFixed(4)}\n`);
-  } catch (err) {
-    console.log(`${head}\n   ERRO: ${err instanceof Error ? err.message : err}\n`);
+  console.log(`#${i + 1} lead ${leadId.slice(0, 8)} · ${sdr} · ${msgs.length} mensagens (${fromLead} escritas pelo lead) · HubSpot: ${await hubspotStage(contactOf.get(leadId) ?? null)}`);
+  const notas: (number | null)[] = [];
+  for (const [j, scorer] of scorers.entries()) {
+    try {
+      const t0 = Date.now();
+      const r = await scoreConversation(scorer, context, criteria, buildTranscript(msgs));
+      tot[j].custo += r.cost;
+      tot[j].ok++;
+      if (r.score !== null) tot[j].notas.push(r.score);
+      notas.push(r.score);
+      console.log(`  [${scorer.model}] NOTA ${r.existingCustomer ? "sem nota (já é cliente)" : r.score ?? "sem informação"} — ${r.summary}`);
+      r.criteria_scores.forEach((c, k) => console.log(`     ${names[k]}: ${c.score ?? "sem informação"} — ${c.justificativa}`));
+      console.log(`     tokens: ${r.usage.input_tokens} entrada, ${r.usage.output_tokens} saída · US$ ${r.cost.toFixed(4)} · ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+    } catch (err) {
+      notas.push(null);
+      console.log(`  [${scorer.model}] ERRO: ${err instanceof Error ? err.message : err}`);
+    }
   }
+  if (notas.length === 2 && notas[0] !== null && notas[1] !== null) diffs.push(Math.abs(notas[0] - notas[1]));
+  console.log("");
 }
 
-// 3. Custo.
-const per = ok ? total / ok : 0;
+// 3. Custo e comparação.
 console.log(`Ficaram de fora pelo corte (menos de ${MIN_LEAD_MESSAGES} mensagens escritas pelo lead): ${belowCut} leads olhados até achar os ${picked.length}`);
-console.log(`Avaliados: ${ok} de ${picked.length} · custo do teste US$ ${total.toFixed(4)} · média US$ ${per.toFixed(4)} por lead`);
-if (scores.length) console.log(`Notas: menor ${Math.min(...scores)}, maior ${Math.max(...scores)}, média ${Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)}`);
-for (const perDay of [156, 250]) console.log(`Projeção com ${perDay} avaliações/dia: US$ ${(per * perDay * 30).toFixed(2)} por mês`);
+for (const [j, scorer] of scorers.entries()) {
+  const t = tot[j];
+  const per = t.ok ? t.custo / t.ok : 0;
+  const media = t.notas.length ? Math.round(t.notas.reduce((a, b) => a + b, 0) / t.notas.length) : null;
+  console.log(`[${scorer.model}] avaliados ${t.ok} de ${picked.length} · custo US$ ${t.custo.toFixed(4)} · média US$ ${per.toFixed(5)} por lead · nota média ${media ?? "—"} · 300 leads/dia por 30 dias: US$ ${(per * 300 * 30).toFixed(2)}`);
+}
+if (diffs.length) {
+  diffs.sort((a, b) => a - b);
+  console.log(`Diferença entre as notas das duas IAs: mediana ${diffs[Math.floor(diffs.length / 2)]} pontos, maior ${diffs[diffs.length - 1]} · até 10 pontos em ${diffs.filter((d) => d <= 10).length} de ${diffs.length} leads`);
+}

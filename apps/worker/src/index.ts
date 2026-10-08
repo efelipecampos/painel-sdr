@@ -9,8 +9,8 @@ import { HubspotClient, resetLeadsCursor, syncLeads, syncOwners, syncStages } fr
 import { dailyCheck, dueDailyRun, stuckMeetings, syncMeetings } from "./hubspot/meetings.js";
 import { checkGoogle } from "./google.js";
 import { createDb, processBatch, rebuildAll, syncRoles } from "./processor.js";
-import Anthropic from "@anthropic-ai/sdk";
 import { scoreRound } from "./score/job.js";
+import { scorerFromEnv } from "./score/model.js";
 
 const once = process.argv.includes("--once");
 const rebuild = process.argv.includes("--rebuild-all");
@@ -22,21 +22,21 @@ let lastGoogleCheck = 0;
 // Score de qualidade (Fase 7): uma rodada por dia às 05:00 (decisão do Felipe, 07/10/2026), em paralelo com o resto
 // do worker (a rodada leva minutos e não pode segurar a leitura dos eventos da Poli). Se o worker sobe depois do
 // horário, espera o dia seguinte (deploy durante o dia não dispara rodada).
-// Só liga com o modelo e a chave da Anthropic no .env.
-const anthropic = config.anthropicModel && process.env.ANTHROPIC_API_KEY?.trim() ? new Anthropic() : null;
+// A IA vem de SCORE_IA (anthropic ou celeris); sem a chave dela no .env, o score não roda.
+const scorer = scorerFromEnv();
 let lastScoreDay = (() => { const d = dueDailyRun(new Date(), config.scoreTime, ""); return d.due ? d.today : ""; })();
 let scoreRunning = false;
 
 function startScore(monitor: Monitor): void {
-  if (!anthropic || !config.anthropicModel || scoreRunning) return;
+  if (!scorer || scoreRunning) return;
   const { due, today } = dueDailyRun(new Date(), config.scoreTime, lastScoreDay);
   if (!due) return;
   lastScoreDay = today;
   scoreRunning = true;
   void (async () => {
     try {
-      const r = await scoreRound(db, anthropic, config.anthropicModel!, config.scoreMaxPerRound);
-      console.log(`[worker] score: ${r.candidatos} candidatos, ${r.avaliados} avaliados, ${r.semNota} sem nota, ${r.erros} com erro, US$ ${r.custo.toFixed(3)}`);
+      const r = await scoreRound(db, scorer, config.scoreMaxPerRound);
+      console.log(`[worker] score (${scorer.model}): ${r.candidatos} candidatos, ${r.avaliados} avaliados, ${r.semNota} sem nota, ${r.erros} com erro, US$ ${r.custo.toFixed(3)}`);
       if (r.erros && r.erros === r.candidatos) throw new Error(`todas as ${r.erros} avaliações falharam`);
       await monitor.score(null);
     } catch (err) {

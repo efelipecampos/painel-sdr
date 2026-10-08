@@ -1,9 +1,8 @@
 // Job do score (Fase 7b): de hora em hora, avalia os leads com mensagem nova e grava em painel.lead_scores.
-// Critérios e contexto vêm do banco (tela de Configurações). Liga só com ANTHROPIC_MODEL e ANTHROPIC_API_KEY no .env.
+// Critérios e contexto vêm do banco (tela de Configurações). A IA (Claude ou Celeris) vem de SCORE_IA no .env.
 // LGPD: o log só tem contagens e o id curto do lead; nunca texto de mensagem nem telefone.
-import Anthropic from "@anthropic-ai/sdk";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { scoreConversation } from "./model.js";
+import { scoreConversation, type Scorer } from "./model.js";
 import { buildTranscript, criteriaVersion, leadMessageCount, MIN_LEAD_MESSAGES, type Criterion, type TranscriptMessage } from "./rules.js";
 
 function check<T>(res: { data: T | null; error: { message: string } | null }, what: string): T {
@@ -22,7 +21,7 @@ export async function loadCriteria(db: SupabaseClient): Promise<{ context: strin
 }
 
 /** Uma rodada: até `limit` leads, um por vez (o volume é pequeno e evita estourar o limite da API). */
-export async function scoreRound(db: SupabaseClient, client: Anthropic, model: string, limit: number): Promise<ScoreRound> {
+export async function scoreRound(db: SupabaseClient, scorer: Scorer, limit: number): Promise<ScoreRound> {
   const p = db.schema("painel");
   const { context, criteria } = await loadCriteria(db);
   const version = criteriaVersion(context, criteria);
@@ -40,18 +39,18 @@ export async function scoreRound(db: SupabaseClient, client: Anthropic, model: s
         r.semNota++;
         continue;
       }
-      const s = await scoreConversation(client, model, context, criteria, buildTranscript(msgs));
+      const s = await scoreConversation(scorer, context, criteria, buildTranscript(msgs));
       const status = s.existingCustomer ? "ja_e_cliente" : s.score === null ? "sem_informacao" : "avaliado";
       check(await p.from("lead_scores").insert({
         ...base, status, score: status === "avaliado" ? s.score : null, criteria_scores: s.criteria_scores, summary: s.summary,
-        model, input_tokens: s.usage.input_tokens, output_tokens: s.usage.output_tokens,
+        model: scorer.model, input_tokens: s.usage.input_tokens, output_tokens: s.usage.output_tokens,
       }), "gravar nota");
       r.custo += s.cost;
       if (status === "avaliado") r.avaliados++; else r.semNota++;
     } catch (err) {
       r.erros++;
       console.error(`[score] lead ${c.lead_id.slice(0, 8)}: ${err instanceof Error ? err.message : err}`);
-      if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError) throw err;
+      if (scorer.fatal(err)) throw err;
     }
   }
   return r;
