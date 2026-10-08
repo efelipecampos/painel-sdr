@@ -7,6 +7,7 @@ import { PeriodFilter } from "@/components/PeriodFilter";
 import { NotaLead, QualidadeCarteira } from "@/components/Qualidade";
 import { getCarteira, getLeadNotas, getSdrChats, getSdrMetrics, getSettings, initials, type ChatRow } from "@/lib/data";
 import { formatDateTime, formatDuration, resolvePeriod } from "@/lib/time";
+import { FinalizarButton } from "./FinalizarButton";
 import { MeetingSelect, MeetingStatusText } from "./MeetingSelect";
 
 const PAGE = 50;
@@ -139,7 +140,10 @@ export default async function SdrPage({ params, searchParams }: {
             {rows.map((r) => (
               <tr key={r.lead_id}>
                 <td><div className="cell-stack"><span>{r.lead_name ?? "(sem nome)"}</span><span className="muted">{r.phone_masked ?? "sem telefone"}</span></div></td>
-                <td><Situacao r={r} /></td>
+                <td><div className="cell-stack" style={{ alignItems: "flex-start" }}><Situacao r={r} />
+                  {manager && r.situacao === "aguardando" && <FinalizarButton leadId={r.lead_id} leadName={r.lead_name ?? "lead"} />}
+                  {manager && r.situacao === "fora_do_funil" && r.fora_motivo === "Finalizado (painel)" && <FinalizarButton leadId={r.lead_id} leadName={r.lead_name ?? "lead"} desfazer />}
+                </div></td>
                 <td>{r.origem === "lead" ? "Lead" : r.origem === "poli" ? "Poli" : "—"}</td>
                 <td>{r.templates}</td>
                 <td>{formatDuration(r.primeira_resposta_s)}</td>
