@@ -6,7 +6,7 @@
 import { Monitor, postToGoogleChat } from "./alerts.js";
 import { config } from "./config.js";
 import { HubspotClient, resetLeadsCursor, syncLeads, syncOwners, syncStages } from "./hubspot/leads.js";
-import { dailyStatusRun, syncMeetings } from "./hubspot/meetings.js";
+import { dailyCheck, stuckMeetings, syncMeetings } from "./hubspot/meetings.js";
 import { checkGoogle } from "./google.js";
 import { createDb, processBatch, rebuildAll, syncRoles } from "./processor.js";
 
@@ -34,8 +34,15 @@ async function syncHubspotMeetings(): Promise<void> {
   if (!hubspot) return;
   const r = await syncMeetings(db, hubspot);
   if (r.criadas || r.atualizadas || r.erros) console.log(`[worker] HubSpot reuniões: ${r.criadas} criadas, ${r.atualizadas} atualizadas, ${r.erros} com erro`);
-  const n = await dailyStatusRun(db, hubspot);
-  if (n !== null) console.log(`[worker] HubSpot: rodada diária de status, ${n} reuniões atualizadas`);
+  for (const m of await stuckMeetings(db)) {
+    await postToGoogleChat(`⚠️ *Painel SDR:* a reunião "${m.title ?? "sem título"}" não foi gravada no HubSpot há mais de 15 min. Erro: ${m.error ?? "—"}. O painel continua tentando.`);
+  }
+  const d = await dailyCheck(db, hubspot);
+  if (d) {
+    console.log(`[worker] HubSpot 17:55: ${d.conferidas} conferidas, ${d.corrigidas} corrigidas, ${d.recriadas} recriadas, ${d.duplicadas.length} possíveis duplicadas`);
+    await postToGoogleChat(`📋 *HubSpot, conferência das 17:55* (reuniões do painel dos últimos 5 dias)\n${d.conferidas} conferidas · ${d.corrigidas} corrigidas · ${d.recriadas} recriadas (tinham sido apagadas)`
+      + (d.duplicadas.length ? `\n⚠️ Possível reunião duplicada no HubSpot (outra reunião do mesmo contato no mesmo dia, criada fora do painel):\n${d.duplicadas.map((x) => `• ${x}`).join("\n")}` : "\nNenhuma reunião duplicada encontrada."));
+  }
 }
 
 async function syncHubspot(force: boolean): Promise<boolean> {

@@ -43,6 +43,7 @@ export async function saveSettings(form: FormData) {
       { key: "holidays_off", value: form.get("holidays_off") === "on", updated_at: now, updated_by: me!.id },
       { key: "google_archive_calendar_id", value: archive, updated_at: now, updated_by: me!.id },
       { key: "google_invite_sdr", value: form.get("google_invite_sdr") === "on", updated_at: now, updated_by: me!.id },
+      { key: "reuse_window", value: form.get("reuse_window") === "30d" ? "30d" : "mes", updated_at: now, updated_by: me!.id },
     ]),
   ];
   for (const r of await Promise.all(steps)) if (r.error) return back(`Não foi possível salvar: ${r.error.message}`);

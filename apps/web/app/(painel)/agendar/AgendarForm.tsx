@@ -15,6 +15,7 @@ export interface CarouselOption {
 }
 
 const BRAND = { poli: "Poli", chatshub: "ChatsHub" } as const;
+const OUTCOME: Record<string, string> = { SCHEDULED: "Agendada", COMPLETED: "Realizada", NO_SHOW: "No show", CANCELED: "Cancelada", RESCHEDULED: "Reagendada", INVALIDADO: "Invalidada" };
 const STATUS: Record<string, string> = { agendada: "Agendada", validada: "Validada", noshow: "No show", invalidada: "Invalidada", cancelada: "Cancelada" };
 const DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const dayLabel = (d: string) => `${DIAS[new Date(`${d}T12:00:00Z`).getUTCDay()]} ${d.slice(8, 10)}/${d.slice(5, 7)}`;
@@ -204,6 +205,15 @@ export function AgendarForm({ carousels, initialLead, sdrs }: {
               <div><dt>Dono no HubSpot</dt><dd>{info.ownerName ?? "—"}{info.ownerIsMe ? " (você)" : ""}</dd></div>
               <div><dt>Etapa do Lead</dt><dd>{info.stageLabel ?? "—"}</dd></div>
             </dl>
+            {lead?.hubspotFora && lead.hubspotFora.length > 0 && (
+              <div role="status" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                <span className="ag-warn">Reuniões deste contato no HubSpot feitas fora do painel</span>
+                {lead.hubspotFora.map((r, i) => (
+                  <span key={i} className="ag-hint">{r.start ? fmtWhen(r.start) : "—"} · {r.title ?? "Reunião"} · {OUTCOME[r.outcome ?? ""] ?? r.outcome ?? "sem resultado"}</span>
+                ))}
+                <span className="ag-hint">Confira se não é a mesma reunião antes de agendar, para não duplicar no HubSpot.</span>
+              </div>
+            )}
             {lead?.reunioes && lead.reunioes.length > 0 && (
               <div role="status" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 <span className="ag-warn">Reuniões já agendadas com este lead</span>
@@ -274,7 +284,22 @@ export function AgendarForm({ carousels, initialLead, sdrs }: {
       </section>
 
       <div className="ag-col">
-        {!ok && (
+        {!ok && lead?.reaproveitar && (
+          <section className="card" style={{ gap: 12, borderColor: "var(--stale)" }} aria-labelledby="sec-reap">
+            <h2 id="sec-reap" className="card-title">Este lead já tem reunião</h2>
+            <p style={{ margin: 0 }}>
+              {STATUS[lead.reaproveitar.status] ?? lead.reaproveitar.status} para {fmtWhen(lead.reaproveitar.starts_at)}
+              {lead.reaproveitar.closer ? ` com ${lead.reaproveitar.closer}` : ""}{lead.reaproveitar.sdr ? ` · SDR ${lead.reaproveitar.sdr}` : ""}.
+            </p>
+            <p className="ag-hint" style={{ margin: 0 }}>
+              Para não duplicar a reunião no HubSpot, reagende esta mesma reunião: o convite do Google, o link do Meet e a Reunião do HubSpot continuam os mesmos.
+            </p>
+            {lead.reaproveitar.podeReagendar
+              ? <div><Link href={`/reunioes/${lead.reaproveitar.id}/horario`} className="btn primary" style={{ fontWeight: 600 }}>Reagendar</Link></div>
+              : <p className="ag-warn" style={{ margin: 0 }}>Esta reunião é de outro SDR. Peça a um gestor para reagendar.</p>}
+          </section>
+        )}
+        {!ok && !lead?.reaproveitar && (
           <>
             {/* 2. Horário */}
             <section className="card" style={{ gap: 16 }} aria-labelledby="sec-slot">
@@ -400,7 +425,7 @@ export function AgendarForm({ carousels, initialLead, sdrs }: {
             </div>
             <p style={{ margin: 0 }}>{email ? "Convite enviado ao lead." : "O lead não tem e-mail: copie o link do Meet na sua agenda e mande pelo WhatsApp."}</p>
             {ok.aviso && <p className="ag-warn" style={{ margin: 0 }}>Fora do horário padrão: {ok.aviso}. Fica marcado para os gestores.</p>}
-            <p className="ag-hint" style={{ margin: 0 }}>Se precisar mudar o horário, use Mudar horário em Reuniões: a reunião continua com o mesmo closer, se ele estiver livre. Cancelar e agendar de novo para o mesmo lead também mantém o closer.</p>
+            <p className="ag-hint" style={{ margin: 0 }}>Se precisar mudar o horário, use Reagendar em Reuniões: é a mesma reunião (mesmo convite, mesmo Meet e mesma Reunião no HubSpot) e continua com o mesmo closer, se ele estiver livre.</p>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               <Link href="/reunioes" className="btn primary" style={{ fontWeight: 600 }}>Ver minhas reuniões</Link>
               <button type="button" className="btn" onClick={reset}>Agendar outra</button>

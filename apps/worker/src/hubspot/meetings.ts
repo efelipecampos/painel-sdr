@@ -64,7 +64,9 @@ async function load(db: SupabaseClient, filter: (q: any) => any): Promise<Meetin
   }));
 }
 
-/** Cria as Reuniões que faltam e atualiza as marcadas (horário/closer mudou). */
+const is404 = (e: unknown) => /HTTP 404/.test(String((e as Error)?.message));
+
+/** Cria as Reuniões que faltam e atualiza as marcadas (horário/closer mudou). Apagada no HubSpot: recria. */
 export async function syncMeetings(db: SupabaseClient, hs: HubspotClient): Promise<{ criadas: number; atualizadas: number; erros: number }> {
   const p = db.schema("painel");
   const out = { criadas: 0, atualizadas: 0, erros: 0 };
@@ -85,30 +87,106 @@ export async function syncMeetings(db: SupabaseClient, hs: HubspotClient): Promi
       }
     } catch (e) {
       out.erros++;
-      await p.from("meetings").update({ hubspot_error: String((e as Error).message).slice(0, 200) }).eq("id", m.id);
+      if (m.hubspot_meeting_id && is404(e)) {
+        // alguém apagou a Reunião no HubSpot: cria de novo na próxima rodada
+        await p.from("meetings").update({ hubspot_meeting_id: null, hubspot_sync_needed: true, hubspot_error: "apagada no HubSpot; recriando" }).eq("id", m.id);
+      } else {
+        await p.from("meetings").update({ hubspot_error: String((e as Error).message).slice(0, 200) }).eq("id", m.id);
+      }
     }
   }
   return out;
 }
 
-/** Rodada das 17:55: envia o status (e título/horário) de toda reunião cujo status mudou desde o último envio. */
-export async function dailyStatusRun(db: SupabaseClient, hs: HubspotClient, now = new Date()): Promise<number | null> {
+/** Reuniões que não chegam ao HubSpot há mais de N minutos (para o alerta). Primeira falha vista em memória. */
+const failingSince = new Map<string, number>();
+const alerted = new Set<string>();
+export async function stuckMeetings(db: SupabaseClient, minutes = 15, now = Date.now()): Promise<{ id: string; title: string | null; error: string | null }[]> {
+  const { data } = await db.schema("painel").from("meetings").select("id, title, hubspot_error")
+    .eq("source", "painel").not("google_event_id", "is", null).not("hubspot_error", "is", null);
+  const failing = new Set((data ?? []).map((m: { id: string }) => m.id));
+  for (const id of [...failingSince.keys()]) if (!failing.has(id)) { failingSince.delete(id); alerted.delete(id); }
+  const out = [];
+  for (const m of (data ?? []) as { id: string; title: string | null; hubspot_error: string | null }[]) {
+    if (!failingSince.has(m.id)) failingSince.set(m.id, now);
+    if (now - failingSince.get(m.id)! >= minutes * 60_000 && !alerted.has(m.id)) {
+      alerted.add(m.id);
+      out.push({ id: m.id, title: m.title, error: m.hubspot_error });
+    }
+  }
+  return out;
+}
+
+const READ_PROPS = ["hs_timestamp", "hs_meeting_title", "hs_meeting_start_time", "hs_meeting_end_time", "hs_meeting_outcome", "hs_meeting_location", "hubspot_owner_id", "atividade_criada_por"];
+
+/** Campos diferentes entre o que o painel espera e o que está no HubSpot (datas comparadas pelo instante). */
+export function diffMeeting(expected: Record<string, string>, actual: Record<string, string | null | undefined>): string[] {
+  const out: string[] = [];
+  for (const [k, v] of Object.entries(expected)) {
+    const a = actual[k];
+    const same = /_time$|^hs_timestamp$/.test(k) ? !!a && Date.parse(a) === Date.parse(v) : (a ?? "") === v;
+    if (!same) out.push(k);
+  }
+  return out;
+}
+
+export interface DailyResult { conferidas: number; corrigidas: number; recriadas: number; duplicadas: string[] }
+
+/**
+ * Rodada das 17:55 (decisões de 2026-10-07): para toda reunião dos últimos 5 dias (e as futuras), e para as
+ * mais antigas cujo status mudou, relê a Reunião no HubSpot, corrige o que estiver diferente (inclusive o
+ * resultado), recria a apagada e aponta possível duplicada (outra Reunião do mesmo contato no mesmo dia).
+ */
+export async function dailyCheck(db: SupabaseClient, hs: HubspotClient, now = new Date(), days = 5): Promise<DailyResult | null> {
   const p = db.schema("painel");
   const { data: st } = await p.from("settings").select("key, value").in("key", ["hubspot_status_sync_time", "hubspot_status_sync_day"]);
   const v = new Map((st ?? []).map((r: { key: string; value: unknown }) => [r.key, String(r.value ?? "")]));
   const { due, today } = dueDailyRun(now, v.get("hubspot_status_sync_time") || "17:55", v.get("hubspot_status_sync_day") ?? "");
   if (!due) return null;
-  const rows = await load(db, (q) => q.not("hubspot_meeting_id", "is", null));
-  let n = 0;
-  for (const m of rows.filter((r) => r.hubspot_status_synced !== r.status)) {
+  const since = new Date(now.getTime() - days * 86400_000).toISOString();
+  const rows = (await load(db, (q) => q.not("hubspot_meeting_id", "is", null)))
+    .filter((m) => m.starts_at >= since || m.hubspot_status_synced !== m.status);
+  const ours = new Set(rows.map((m) => m.hubspot_meeting_id));
+  const out: DailyResult = { conferidas: 0, corrigidas: 0, recriadas: 0, duplicadas: [] };
+  const dayOf = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: BUSINESS_TIMEZONE });
+  for (const m of rows) {
     try {
-      await hs.call(`/crm/v3/objects/meetings/${m.hubspot_meeting_id}`, { properties: meetingProps(m, true) }, "PATCH");
+      let cur: { properties: Record<string, string | null>; associations?: Record<string, { results: { id: string }[] }> };
+      try {
+        cur = await hs.call(`/crm/v3/objects/meetings/${m.hubspot_meeting_id}?properties=${READ_PROPS.join(",")}&associations=contacts,leads`);
+      } catch (e) {
+        if (!is404(e)) throw e;
+        await p.from("meetings").update({ hubspot_meeting_id: null, hubspot_sync_needed: true, hubspot_error: "apagada no HubSpot; recriando" }).eq("id", m.id);
+        out.recriadas++;
+        continue;
+      }
+      out.conferidas++;
+      const expected = meetingProps(m, true);
+      const diff = diffMeeting(expected, cur.properties);
+      if (diff.length) {
+        await hs.call(`/crm/v3/objects/meetings/${m.hubspot_meeting_id}`, { properties: expected }, "PATCH");
+        out.corrigidas++;
+      }
+      const has = (t: string, id: string | null) => !id || (cur.associations?.[t]?.results ?? []).some((x) => String(x.id) === id);
+      if (!has("contacts", m.hubspot_contact_id)) await hs.call(`/crm/v4/objects/meetings/${m.hubspot_meeting_id}/associations/default/contacts/${m.hubspot_contact_id}`, {}, "PUT");
+      if (!has("leads", m.hubspot_lead_id)) await hs.call(`/crm/v4/objects/meetings/${m.hubspot_meeting_id}/associations/default/leads/${m.hubspot_lead_id}`, {}, "PUT");
+      // possível duplicada: outra Reunião do mesmo contato no mesmo dia, criada fora do painel
+      if (m.hubspot_contact_id) {
+        const a = await hs.call<{ results: { toObjectId: number | string }[] }>(`/crm/v4/objects/contacts/${m.hubspot_contact_id}/associations/meetings`);
+        const others = (a.results ?? []).map((x) => String(x.toObjectId)).filter((id) => !ours.has(id));
+        if (others.length) {
+          const r = await hs.call<{ results: { id: string; properties: Record<string, string | null> }[] }>(
+            "/crm/v3/objects/meetings/batch/read", { inputs: others.map((id) => ({ id })), properties: ["hs_meeting_start_time"] });
+          if ((r.results ?? []).some((o) => o.properties.hs_meeting_start_time && dayOf(o.properties.hs_meeting_start_time) === dayOf(m.starts_at))) {
+            out.duplicadas.push(`${m.title ?? "Reunião"} (${dayOf(m.starts_at).split("-").reverse().join("/")})`);
+          }
+        }
+      }
       await p.from("meetings").update({ hubspot_status_synced: m.status, hubspot_synced_at: new Date().toISOString(), hubspot_error: null }).eq("id", m.id);
-      n++;
     } catch (e) {
       await p.from("meetings").update({ hubspot_error: String((e as Error).message).slice(0, 200) }).eq("id", m.id);
     }
   }
   await p.from("settings").upsert({ key: "hubspot_status_sync_day", value: today, updated_at: new Date().toISOString() });
-  return n;
+  return out;
 }

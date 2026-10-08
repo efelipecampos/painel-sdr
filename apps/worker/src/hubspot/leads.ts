@@ -20,7 +20,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export class HubspotClient {
   constructor(private token: string) {}
 
-  async call<T>(path: string, body?: unknown, method?: "POST" | "PATCH"): Promise<T> {
+  async call<T>(path: string, body?: unknown, method?: "POST" | "PATCH" | "PUT"): Promise<T> {
     for (let attempt = 0; ; attempt++) {
       const res = await fetch(API + path, {
         method: method ?? (body ? "POST" : "GET"),

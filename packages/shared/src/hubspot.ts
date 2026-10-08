@@ -54,7 +54,7 @@ export class HubspotLive {
     return this.call<Obj>(`/crm/v3/objects/contacts/${id}?properties=${CONTACT_PROPS.join(",")}`);
   }
 
-  private async assoc(from: "contacts" | "leads", id: string, to: "leads" | "contacts"): Promise<string[]> {
+  private async assoc(from: "contacts" | "leads", id: string, to: "leads" | "contacts" | "meetings"): Promise<string[]> {
     const j = await this.call<{ results: { toObjectId: number | string }[] }>(`/crm/v4/objects/${from}/${id}/associations/${to}`);
     return (j?.results ?? []).map((x) => String(x.toObjectId));
   }
@@ -63,6 +63,18 @@ export class HubspotLive {
     if (!ids.length) return [];
     const j = await this.call<{ results: Obj[] }>("/crm/v3/objects/leads/batch/read", { inputs: ids.map((id) => ({ id })), properties: LEAD_PROPS });
     return j?.results ?? [];
+  }
+
+  /** Reuniões do contato no HubSpot (para avisar duplicidade): id, título, início e resultado. */
+  async meetingsOfContact(contactId: string): Promise<{ id: string; title: string | null; start: string | null; outcome: string | null }[]> {
+    const ids = await this.assoc("contacts", contactId, "meetings");
+    if (!ids.length) return [];
+    const j = await this.call<{ results: Obj[] }>("/crm/v3/objects/meetings/batch/read", {
+      inputs: ids.slice(0, 100).map((id) => ({ id })), properties: ["hs_meeting_title", "hs_meeting_start_time", "hs_meeting_outcome"],
+    });
+    return (j?.results ?? []).map((m) => ({
+      id: m.id, title: m.properties.hs_meeting_title ?? null, start: m.properties.hs_meeting_start_time ?? null, outcome: m.properties.hs_meeting_outcome ?? null,
+    }));
   }
 
   /**

@@ -67,6 +67,7 @@ export interface Settings {
   holidays_off: boolean;
   google_archive_calendar_id: string;
   google_invite_sdr: boolean;
+  reuse_window: "mes" | "30d";
 }
 
 function fail(what: string, error: { message: string }): never {
@@ -85,6 +86,7 @@ export async function getSettings(): Promise<Settings> {
     holidays_off: v.get("holidays_off") !== false,
     google_archive_calendar_id: String(v.get("google_archive_calendar_id") ?? ""),
     google_invite_sdr: v.get("google_invite_sdr") !== false,
+    reuse_window: v.get("reuse_window") === "30d" ? "30d" : "mes",
   };
 }
 
