@@ -116,6 +116,8 @@ export async function upsertEvents(db: SupabaseClient, events: (PoliEvent & { ra
       chat_id: chatIds.get(e.attendanceUuid),
       lead_id: leadIds.get(e.contact.uuid),
       sdr_id: e.owner ? (sdrIds.get(e.owner.uuid) ?? null) : null,
+      // dono segundo a Poli; rebuild_leads recalcula sdr_id (dono efetivo) nas transferências
+      poli_sdr_id: e.owner ? (sdrIds.get(e.owner.uuid) ?? null) : null,
       sender: e.sender,
       template_name: e.templateName,
       body: e.body,

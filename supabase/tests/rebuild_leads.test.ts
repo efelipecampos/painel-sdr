@@ -252,3 +252,72 @@ describe("rebuild_leads: estado do chat", () => {
     expect((await chat(s.chats.get("A")!)).sdr_id).toBe(s.sdrs.get("Y"));
   });
 });
+
+describe("transferência entre SDRs (decisão de 2026-10-08)", () => {
+  async function estado(chatId: string) {
+    return (await db.query<{ status: string; sdr_id: string; waiting_since: string | null }>(
+      "select status::text, sdr_id, to_char(waiting_since at time zone 'UTC', 'YYYY-MM-DD HH24:MI:SS') as waiting_since from painel.chats where id = $1", [chatId],
+    )).rows[0];
+  }
+  async function donoDaMensagemDoLead(lead: string) {
+    return (await db.query<{ sdr_id: string; poli_sdr_id: string }>(
+      "select sdr_id, poli_sdr_id from painel.chat_messages where lead_id = $1 and sender = 'lead'", [lead],
+    )).rows;
+  }
+  const at = (sec: number) => new Date(T0 + sec * 1000).toISOString().replace("T", " ").replace(".000Z", "");
+
+  it("caso real (Samuel Marques): lead escreve com J e é transferido para S; a espera vai para S, desde a mensagem do lead", async () => {
+    const { lead, sdrs, chats } = await scenario([
+      ["template", 0, "A", "I"],
+      ["system:ATTENDANCE_REDIRECTED", 10, "B", "J"],
+      ["lead", 500, "B", "J"],
+      ["system:ATTENDANCE_REDIRECTED", 546, "C", "S"],
+    ]);
+    expect(await estado(chats.get("B")!)).toMatchObject({ status: "closed", sdr_id: sdrs.get("J"), waiting_since: null });
+    expect(await estado(chats.get("C")!)).toMatchObject({ status: "open", sdr_id: sdrs.get("S"), waiting_since: at(500) });
+    expect(await donoDaMensagemDoLead(lead)).toEqual([{ sdr_id: sdrs.get("S"), poli_sdr_id: sdrs.get("J") }]);
+  });
+
+  it("a resposta de quem recebeu conta como 1ª resposta dele, desde a mensagem do lead", async () => {
+    const { lead, sdrs, chats } = await scenario([
+      ["system:ATTENDANCE_REDIRECTED", 0, "B", "J"],
+      ["lead", 500, "B", "J"],
+      ["system:ATTENDANCE_REDIRECTED", 546, "C", "S"],
+      ["sdr", 900, "C", "S"],
+    ]);
+    expect(await responses(lead)).toMatchObject([{ chat: chats.get("B"), sdr: sdrs.get("S"), secs: 400, first: true }]);
+    expect((await estado(chats.get("C")!)).waiting_since).toBeNull();
+  });
+
+  it("lead já respondido antes da transferência continua com quem respondeu", async () => {
+    const { lead, sdrs, chats } = await scenario([
+      ["lead", 0, "B", "J"],
+      ["sdr", 60, "B", "J"],
+      ["system:ATTENDANCE_REDIRECTED", 120, "C", "S"],
+    ]);
+    expect(await donoDaMensagemDoLead(lead)).toEqual([{ sdr_id: sdrs.get("J"), poli_sdr_id: sdrs.get("J") }]);
+    expect(await responses(lead)).toMatchObject([{ sdr: sdrs.get("J"), secs: 60 }]);
+    expect(await estado(chats.get("B")!)).toMatchObject({ status: "closed" });
+    expect(await estado(chats.get("C")!)).toMatchObject({ status: "open", waiting_since: null });
+  });
+
+  it("várias transferências seguidas: fica com o último que recebeu antes da resposta", async () => {
+    const { lead, sdrs, chats } = await scenario([
+      ["lead", 0, "A", "J"],
+      ["system:ATTENDANCE_REDIRECTED", 100, "B", "S"],
+      ["system:ATTENDANCE_REDIRECTED", 200, "C", "M"],
+    ]);
+    expect(await donoDaMensagemDoLead(lead)).toEqual([{ sdr_id: sdrs.get("M"), poli_sdr_id: sdrs.get("J") }]);
+    expect(await estado(chats.get("C")!)).toMatchObject({ status: "open", waiting_since: at(0) });
+    for (const k of ["A", "B"]) expect(await estado(chats.get(k)!)).toMatchObject({ status: "closed", waiting_since: null });
+  });
+
+  it("recalcular de novo dá o mesmo resultado", async () => {
+    const { lead, sdrs } = await scenario([
+      ["lead", 0, "A", "J"],
+      ["system:ATTENDANCE_REDIRECTED", 100, "B", "S"],
+    ]);
+    await db.query("select painel.rebuild_leads($1::uuid[])", [[lead]]);
+    expect(await donoDaMensagemDoLead(lead)).toEqual([{ sdr_id: sdrs.get("S"), poli_sdr_id: sdrs.get("J") }]);
+  });
+});
