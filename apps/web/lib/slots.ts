@@ -90,3 +90,33 @@ export function interval(local: string, duration: number): { start: Date; end: D
   return { start, end: new Date(start.getTime() + duration * 60_000) };
 }
 
+
+export interface DiaGrade { day: string; label: string; closed: string | null; slots: { start: string; count: number }[] }
+
+/**
+ * Semanas da janela de agendamento (seg a sex), para a grade do desenho "Agendar": cada dia útil da janela
+ * com seus horários; feriado, fim da janela e dias passados aparecem fechados.
+ */
+export function semanasDaJanela(windowDays: string[], holidays: Set<string>): { label: string; days: { day: string; closed: string | null }[] }[] {
+  if (!windowDays.length) return [];
+  const MESES = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+  const inWindow = new Set(windowDays);
+  const mondayOf = (d: string) => { const wd = new Date(`${d}T12:00:00Z`).getUTCDay(); return addDays(d, wd === 0 ? -6 : 1 - wd); };
+  const weeks: { label: string; days: { day: string; closed: string | null }[] }[] = [];
+  for (let mon = mondayOf(windowDays[0]); mon <= windowDays[windowDays.length - 1]; mon = addDays(mon, 7)) {
+    const days = [0, 1, 2, 3, 4].map((i) => {
+      const day = addDays(mon, i);
+      const closed = inWindow.has(day) ? null
+        : holidays.has(day) ? "Feriado. Sem agendamento."
+        : day < windowDays[0] ? "Já passou."
+        : "Fora da janela de agendamento.";
+      return { day, closed };
+    });
+    const fri = addDays(mon, 4);
+    const m1 = Number(mon.slice(5, 7)) - 1, m2 = Number(fri.slice(5, 7)) - 1;
+    const label = m1 === m2 ? `${mon.slice(8, 10)} a ${fri.slice(8, 10)} de ${MESES[m2]}` : `${mon.slice(8, 10)} de ${MESES[m1]} a ${fri.slice(8, 10)} de ${MESES[m2]}`;
+    weeks.push({ label, days });
+  }
+  return weeks;
+}
+

@@ -2,12 +2,11 @@
 
 // Ações do agendamento (Fase 10d). Todas conferem o papel (SDR, gestor, admin) e só devolvem ao navegador
 // contagens de closers, nunca nome ou id, até a confirmação.
-import { redirect } from "next/navigation";
 import { GoogleError } from "@painel/shared/google";
 import { HubspotLive, parseHubspotRef, suggestCarousel, type LeadInfo } from "@painel/shared/hubspot";
 import { APP_URL, calendarOf, logCalendar } from "@/lib/google";
-import { busyOf, candidates, countByStart, freeAt, loadRules } from "@/lib/agendar";
-import { checkManual, gridSlots, interval, windowDays } from "@/lib/slots";
+import { busyOf, candidates, countWeek, freeAt, loadRules } from "@/lib/agendar";
+import { checkManual, gridSlots, interval, semanasDaJanela, windowDays, type DiaGrade } from "@/lib/slots";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getMe, isManager, type Me } from "@/lib/supabase/server";
 
@@ -38,7 +37,7 @@ export async function buscarLeads(q: string): Promise<LeadResult[]> {
 export interface LeadLoaded {
   erro?: string;
   leadId?: string | null;
-  info?: LeadInfo & { ownerName: string | null; stageLabel: string | null };
+  info?: LeadInfo & { ownerName: string | null; ownerIsMe: boolean; stageLabel: string | null };
   sugestao?: { poli: string | null; chatshub: string | null };
   reunioes?: { id: string; starts_at: string; status: string; carousel: string | null; closer: string | null; sdr: string | null }[];
 }
@@ -72,7 +71,7 @@ export async function carregarLead(input: { leadId?: string; ref?: string }): Pr
   // Usou o link para um lead que tem chat sem contato ligado: grava a ligação para não pedir de novo.
   if (leadId && !contactId) await db.from("leads").update({ hubspot_contact_id: info.contactId }).eq("id", leadId);
   const [owner, stage, cars, reunioes] = await Promise.all([
-    info.ownerId ? db.from("hubspot_owners").select("name").eq("owner_id", info.ownerId).maybeSingle() : Promise.resolve({ data: null }),
+    info.ownerId ? db.from("hubspot_owners").select("name, email").eq("owner_id", info.ownerId).maybeSingle() : Promise.resolve({ data: null }),
     info.stageId ? db.from("hubspot_stages").select("label").eq("stage_id", info.stageId).maybeSingle() : Promise.resolve({ data: null }),
     db.from("carousels").select("id, brand, suggest_min_users, suggest_max_users").eq("active", true),
     (await createClient()).schema("painel").rpc("reunioes_do_lead", { p_lead: leadId, p_hubspot_contact_id: info.contactId }),
@@ -80,7 +79,12 @@ export async function carregarLead(input: { leadId?: string; ref?: string }): Pr
   const cs = (cars.data ?? []) as { id: string; brand: string; suggest_min_users: number | null; suggest_max_users: number | null }[];
   return {
     leadId,
-    info: { ...info, ownerName: (owner.data as { name?: string } | null)?.name ?? null, stageLabel: (stage.data as { label?: string } | null)?.label ?? null },
+    info: {
+      ...info, phone: maskPhone(info.phone),
+      ownerName: (owner.data as { name?: string } | null)?.name ?? null,
+      ownerIsMe: !!me.sdrId && String((owner.data as { email?: string } | null)?.email ?? "").toLowerCase() === (await myEmail(me.sdrId)),
+      stageLabel: (stage.data as { label?: string } | null)?.label ?? null,
+    },
     sugestao: { poli: suggestCarousel(info.users, "poli", cs)?.id ?? null, chatshub: suggestCarousel(info.users, "chatshub", cs)?.id ?? null },
     reunioes: (reunioes.data ?? []) as LeadLoaded["reunioes"],
   };
@@ -88,21 +92,39 @@ export async function carregarLead(input: { leadId?: string; ref?: string }): Pr
 
 const admin = () => createAdminClient().schema("painel");
 
-export interface Dias { dias: string[] }
-
-export async function diasDoCarrossel(carouselId: string): Promise<string[]> {
-  await who();
-  const { rules } = await loadRules(carouselId);
-  return windowDays(new Date(), rules);
+/** Telefone mascarado como na tabela do SDR: "(64) 9••••-2093" (LGPD). */
+function maskPhone(phone: string | null): string | null {
+  const d = String(phone ?? "").replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "");
+  if (d.length < 8) return phone ? "••••" : null;
+  return d.length >= 10 ? `(${d.slice(0, 2)}) ${d.slice(2, 3)}••••-${d.slice(-4)}` : `••••-${d.slice(-4)}`;
 }
 
-/** Horários da grade de um dia com a quantidade de closers disponíveis (nunca quem). */
-export async function horarios(p: { carouselId: string; leadId: string | null; contactId: string | null; day: string; duration: number }) {
+async function myEmail(sdrId: string): Promise<string> {
+  const { data } = await admin().from("sdrs").select("poli_email").eq("id", sdrId).maybeSingle();
+  return String(data?.poli_email ?? "").toLowerCase();
+}
+
+/** Semanas da janela de agendamento do carrossel (seg a sex), para a grade. */
+export async function semanas(carouselId: string) {
+  await who();
+  const { rules } = await loadRules(carouselId);
+  return semanasDaJanela(windowDays(new Date(), rules), rules.holidays);
+}
+
+/** Horários de uma semana com a quantidade de closers disponíveis em cada um (nunca quem). */
+export async function horariosSemana(p: { carouselId: string; leadId: string | null; contactId: string | null; days: { day: string; closed: string | null }[]; duration: number }): Promise<DiaGrade[]> {
   await who();
   const { carousel, rules } = await loadRules(p.carouselId);
-  if (!windowDays(new Date(), rules).includes(p.day)) return [];
-  const starts = gridSlots(p.day, p.duration, rules, new Date());
-  return countByStart(p.carouselId, p.leadId, p.contactId, p.day, starts, p.duration, carousel.gap_minutes);
+  const now = new Date();
+  const days = p.days.map((d) => ({ ...d, starts: d.closed ? [] : gridSlots(d.day, p.duration, rules, now) }));
+  const counts = await countWeek(await candidates(p.carouselId, p.leadId, p.contactId), days, p.duration, carousel.gap_minutes);
+  const DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  return days.map((d) => ({
+    day: d.day,
+    label: `${DIAS[new Date(`${d.day}T12:00:00Z`).getUTCDay()]} ${d.day.slice(8, 10)}/${d.day.slice(5, 7)}`,
+    closed: d.closed ?? (d.starts.length ? null : "Sem horário neste dia."),
+    slots: (counts.get(d.day) ?? []).filter((x) => x.count > 0),
+  }));
 }
 
 /** Confere um horário ajustado à mão: quantos closers estão livres e os avisos. */
@@ -116,7 +138,10 @@ export async function conferir(p: { carouselId: string; leadId: string | null; c
   return { ...check, count: freeAt(busy, start, end, carousel.gap_minutes).length };
 }
 
-export interface ConfirmState { erro?: string }
+export interface ConfirmState {
+  erro?: string;
+  ok?: { meetingId: string; closer: string; closerIni: string; quando: string; aviso: string | null };
+}
 
 /** Confirma: confere tudo de novo no servidor, distribui, cria o evento e só então mostra o closer. */
 export async function confirmar(_: ConfirmState, form: FormData): Promise<ConfirmState> {
@@ -132,6 +157,10 @@ export async function confirmar(_: ConfirmState, form: FormData): Promise<Confir
   if (!carouselId || !local) return { erro: "Escolha o carrossel e o horário." };
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { erro: "O e-mail do lead parece inválido. Corrija ou deixe em branco." };
   if (handoff.length > 4000) return { erro: "A passagem de bastão está longa demais (máximo 4.000 caracteres)." };
+  const guests = s("guests").split(/[,;\s]+/).map((x) => x.trim().toLowerCase()).filter(Boolean);
+  if (guests.length > 10) return { erro: "No máximo 10 outros convidados." };
+  const badGuest = guests.find((g) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(g));
+  if (badGuest) return { erro: `E-mail de convidado inválido: ${badGuest}` };
 
   // SDR responsável: o próprio SDR; gestor/admin escolhe na tela.
   const sdrId = me.role === "sdr" ? me.sdrId! : (s("sdrId") || null);
@@ -171,7 +200,8 @@ export async function confirmar(_: ConfirmState, form: FormData): Promise<Confir
   ]);
   // Título do evento: "Apresentação Poli - Empresa" (decisão do Felipe em 2026-10-07; sem o nome do closer).
   const title = `Apresentação ${BRAND_LABEL[ctx.carousel.brand]} - ${company}`;
-  const attendees = [email, ctx.inviteSdr ? (sdr as { poli_email?: string } | null)?.poli_email : null].filter((x): x is string => !!x);
+  const attendees = [...new Set([email, ...guests, ctx.inviteSdr ? (sdr as { poli_email?: string } | null)?.poli_email : null]
+    .filter((x): x is string => !!x))];
 
   try {
     const cal = await calendarOf(closerId);
@@ -194,5 +224,14 @@ export async function confirmar(_: ConfirmState, form: FormData): Promise<Confir
     await db.rpc("desfazer_reserva", { p_meeting: meetingId });
     return { erro: "Não foi possível criar o evento na agenda do closer. Nada foi agendado. Tente de novo; se continuar, avise o gestor." };
   }
-  redirect(`/agendar/sucesso/${meetingId}`);
+  const { data: cl } = await db.from("sdrs").select("name").eq("id", closerId).single();
+  const name = String(cl?.name ?? "Closer");
+  const DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const hhmm = (d: Date) => d.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
+  const dl = local.slice(0, 10);
+  return { ok: {
+    meetingId, closer: name, closerIni: name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase(),
+    quando: `${DIAS[new Date(`${dl}T12:00:00Z`).getUTCDay()]} ${dl.slice(8, 10)}/${dl.slice(5, 7)}, ${hhmm(start)}–${hhmm(end)} · ${company} · ${title.split(" - ")[0].replace("Apresentação ", "")}, ${ctx.carousel.name}`,
+    aviso: check.foraDoPadrao ? check.avisos.join("; ") : null,
+  } };
 }

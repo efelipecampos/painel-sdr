@@ -89,3 +89,14 @@ export async function countByStart(carouselId: string, leadId: string | null, hs
     return { start: hhmm, count: freeAt(busy, s, new Date(s.getTime() + duration * 60_000), gap).length };
   });
 }
+
+/** Contagem às cegas de uma semana inteira, com uma consulta ao Google por closer. */
+export async function countWeek(closers: string[], days: { day: string; starts: string[] }[], duration: number, gap: number, ignoreMeeting: string | null = null) {
+  const open = days.filter((d) => d.starts.length);
+  if (!open.length) return new Map<string, { start: string; count: number }[]>();
+  const busy = await busyOf(closers, localToDate(`${open[0].day}T00:00`), localToDate(`${addDays(open[open.length - 1].day, 1)}T00:00`), ignoreMeeting);
+  return new Map(open.map((d) => [d.day, d.starts.map((hhmm) => {
+    const s = localToDate(`${d.day}T${hhmm}`);
+    return { start: hhmm, count: freeAt(busy, s, new Date(s.getTime() + duration * 60_000), gap).length };
+  })]));
+}

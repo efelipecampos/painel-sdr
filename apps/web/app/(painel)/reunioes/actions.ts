@@ -126,11 +126,11 @@ async function outrosLivres(meetingId: string): Promise<{ livres: string[]; m: A
   return { livres: freeAt(await busyOf(outros, start, end, meetingId), start, end, carousel.gap_minutes), m };
 }
 
-export async function pedirTroca(id: string, reason: string): Promise<{ erro?: string; ok?: boolean }> {
+export async function pedirTroca(id: string, reason: string): Promise<{ erro?: string; ok?: boolean; semOutro?: boolean }> {
   if (!reason.trim()) return { erro: "Escreva a justificativa." };
   if ((await permissao(id)) !== "sdr") return { erro: "Só o SDR da reunião pede troca de closer." };
   const { livres } = await outrosLivres(id);
-  if (!livres.length) return { erro: "Não há outro closer disponível neste horário. O pedido não foi enviado. Se precisar, mude o horário da reunião." };
+  if (!livres.length) return { semOutro: true, erro: "Não há outro closer disponível neste horário neste carrossel. Por isso o pedido de troca não pode ser enviado." };
   const { error } = await (await createClient()).schema("painel").rpc("pedir_troca_closer", { p_meeting: id, p_reason: reason.slice(0, 1000) });
   if (error) return { erro: error.message };
   const { data: d } = await (await createClient()).schema("painel").rpc("reuniao_detalhe", { p_id: id });

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient, getMe, isManager } from "@/lib/supabase/server";
 import { AgendarForm, type CarouselOption } from "./AgendarForm";
@@ -19,7 +20,12 @@ export default async function AgendarPage({ searchParams }: { searchParams: Prom
     .map((u) => ({ id: u.sdr_id!, name: u.name }));
   return (
     <main className="page">
-      <div className="page-head"><h1 className="title">Agendar reunião</h1></div>
+      <div className="page-head">
+        <Link href={me.role === "sdr" ? `/sdr/${me.sdrId}` : "/"} className="ag-back" aria-label={me.role === "sdr" ? "Voltar aos meus chats" : "Voltar ao painel"}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 6l-6 6l6 6" /></svg>
+        </Link>
+        <h1 className="title">Agendar reunião</h1>
+      </div>
       <AgendarForm carousels={(cars.data ?? []) as CarouselOption[]} initialLead={sp.lead ?? null} sdrs={isManager(me) ? sdrOptions : null} />
     </main>
   );
