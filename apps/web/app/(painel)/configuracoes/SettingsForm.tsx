@@ -102,6 +102,12 @@ export function SettingsForm({ hours, holidays, settings }: { hours: Hour[]; hol
         <p className="muted" style={{ margin: 0 }}>
           Reuniões canceladas e no show vão para essa agenda. No Google Agenda: Configurações da agenda "Arquivo de reuniões" → Integrar agenda → ID da agenda.
         </p>
+        <label className="lbl" htmlFor="reuse_window">Uma reunião por lead: reagendar a reunião anterior (em vez de criar outra no HubSpot) quando ela foi</label>
+        <select id="reuse_window" name="reuse_window" className="field" style={{ maxWidth: 420 }} defaultValue={settings.reuse_window}>
+          <option value="mes">cancelada ou no show neste mês</option>
+          <option value="30d">cancelada ou no show nos últimos 30 dias</option>
+        </select>
+        <p className="muted" style={{ margin: 0 }}>Reunião ainda agendada sempre é reagendada. Validada ou invalidada libera uma reunião nova.</p>
         <label className="switch">
           <input type="checkbox" name="google_invite_sdr" defaultChecked={settings.google_invite_sdr} />
           Convidar o SDR que agendou para o evento da reunião

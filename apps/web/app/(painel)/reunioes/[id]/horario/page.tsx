@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatTime } from "@/lib/time";
 import { HorarioForm } from "./HorarioForm";
 
-export const metadata = { title: "Mudar horário — Painel SDR" };
+export const metadata = { title: "Reagendar — Painel SDR" };
 
 // Editar (mesmo dia) e Reagendar (outro dia) usam o mesmo fluxo: o mesmo evento e o mesmo link do Meet.
 export default async function HorarioPage({ params }: { params: Promise<{ id: string }> }) {
@@ -15,7 +15,7 @@ export default async function HorarioPage({ params }: { params: Promise<{ id: st
   const duration = Math.round((Date.parse(m.ends_at) - Date.parse(m.starts_at)) / 60_000);
   return (
     <main className="page">
-      <div className="page-head"><h1 className="title">{m.status === "cancelada" ? "Reagendar" : "Mudar horário"}</h1></div>
+      <div className="page-head"><h1 className="title">Reagendar</h1></div>
       <p style={{ margin: 0 }}><strong>{m.title}</strong> · hoje marcada para {formatDateTime(m.starts_at)}–{formatTime(new Date(m.ends_at))}</p>
       <p className="muted" style={{ margin: 0 }}>
         O convite é o mesmo (mesmo link do Meet). O sistema tenta manter o mesmo closer; se ele não estiver livre no novo horário, o carrossel escolhe outro.

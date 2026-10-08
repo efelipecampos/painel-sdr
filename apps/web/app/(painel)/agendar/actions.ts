@@ -7,6 +7,7 @@ import { HubspotLive, parseHubspotRef, suggestCarousel, type LeadInfo } from "@p
 import { APP_URL, calendarOf, logCalendar } from "@/lib/google";
 import { busyOf, candidates, countWeek, freeAt, loadRules } from "@/lib/agendar";
 import { checkManual, gridSlots, interval, semanasDaJanela, windowDays, type DiaGrade } from "@/lib/slots";
+import { reuniaoReaproveitavel } from "@/lib/reaproveitar";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getMe, isManager, type Me } from "@/lib/supabase/server";
 
@@ -40,6 +41,10 @@ export interface LeadLoaded {
   info?: LeadInfo & { ownerName: string | null; ownerIsMe: boolean; stageLabel: string | null };
   sugestao?: { poli: string | null; chatshub: string | null };
   reunioes?: { id: string; starts_at: string; status: string; carousel: string | null; closer: string | null; sdr: string | null }[];
+  /** Reunião do painel que deve ser reagendada em vez de criar outra (uma reunião por lead). */
+  reaproveitar?: { id: string; status: string; starts_at: string; closer: string | null; sdr: string | null; podeReagendar: boolean } | null;
+  /** Reuniões do contato no HubSpot criadas fora do painel (Poli Agenda, extensão), recentes ou futuras. */
+  hubspotFora?: { title: string | null; start: string | null; outcome: string | null }[];
 }
 
 /** Carrega o lead do HubSpot na hora: pelo lead do painel (contato já ligado) ou por link/id. */
@@ -77,6 +82,20 @@ export async function carregarLead(input: { leadId?: string; ref?: string }): Pr
     (await createClient()).schema("painel").rpc("reunioes_do_lead", { p_lead: leadId, p_hubspot_contact_id: info.contactId }),
   ]);
   const cs = (cars.data ?? []) as { id: string; brand: string; suggest_min_users: number | null; suggest_max_users: number | null }[];
+  const reap = await reuniaoReaproveitavel(leadId, info.contactId);
+  // Reuniões do contato no HubSpot que não são do painel (aviso de duplicidade)
+  let hubspotFora: LeadLoaded["hubspotFora"] = [];
+  try {
+    const { data: nossas } = await db.from("meetings").select("hubspot_meeting_id").eq("hubspot_contact_id", info.contactId).not("hubspot_meeting_id", "is", null);
+    const ids = new Set((nossas ?? []).map((x: { hubspot_meeting_id: string }) => x.hubspot_meeting_id));
+    const limite = Date.now() - 30 * 86400_000;
+    hubspotFora = (await hubspot().meetingsOfContact(info.contactId))
+      .filter((x) => !ids.has(x.id) && x.start && Date.parse(x.start) >= limite)
+      .sort((a, b) => String(b.start).localeCompare(String(a.start)))
+      .map(({ title, start, outcome }) => ({ title, start, outcome }));
+  } catch {
+    hubspotFora = [];
+  }
   return {
     leadId,
     info: {
@@ -87,6 +106,11 @@ export async function carregarLead(input: { leadId?: string; ref?: string }): Pr
     },
     sugestao: { poli: suggestCarousel(info.users, "poli", cs)?.id ?? null, chatshub: suggestCarousel(info.users, "chatshub", cs)?.id ?? null },
     reunioes: (reunioes.data ?? []) as LeadLoaded["reunioes"],
+    reaproveitar: reap ? {
+      id: reap.id, status: reap.status, starts_at: reap.starts_at, closer: reap.closer, sdr: reap.sdr,
+      podeReagendar: isManager(me) || (!!me.sdrId && reap.sdr_id === me.sdrId) || reap.created_by === me.id,
+    } : null,
+    hubspotFora,
   };
 }
 
@@ -167,6 +191,9 @@ export async function confirmar(_: ConfirmState, form: FormData): Promise<Confir
   const loaded = await carregarLead(s("leadId") ? { leadId: s("leadId") } : { ref: s("contactId") });
   if (loaded.erro || !loaded.info) return { erro: loaded.erro ?? "Lead não encontrado no HubSpot." };
   const info = loaded.info;
+  if (loaded.reaproveitar) {
+    return { erro: "Este lead já tem uma reunião no painel. Para não duplicar no HubSpot, use Reagendar nessa reunião em vez de agendar outra." };
+  }
 
   let ctx: Awaited<ReturnType<typeof loadRules>>;
   try {

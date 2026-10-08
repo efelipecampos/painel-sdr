@@ -75,7 +75,7 @@ export function StatusCell({ id, status, permissao, problema, company }: { id: s
   );
 }
 
-/** Ações: Reagendar/Mudar horário, Trocar closer (gestor) ou Pedir troca (SDR), Passar para CH/Poli, Abrir Meet. */
+/** Ações: Reagendar, Trocar closer (gestor) ou Pedir troca (SDR), Passar para CH/Poli, Abrir Meet. */
 export function ActionsCell({ id, status, futura, permissao, brand, meetUrl, pedidoPendente, company }: {
   id: string; status: string; futura: boolean; permissao: string; brand: string | null; meetUrl: string | null; pedidoPendente: boolean; company: string;
 }) {
@@ -89,7 +89,7 @@ export function ActionsCell({ id, status, futura, permissao, brand, meetUrl, ped
   return (
     <div className="cell-stack" style={{ alignItems: "flex-end" }}>
       <div className="rn-actions">
-        {podeHorario && <Link href={`/reunioes/${id}/horario`} aria-label={`Reagendar reunião com ${company}`}>{status === "cancelada" ? "Reagendar" : "Mudar horário"}</Link>}
+        {podeHorario && <Link href={`/reunioes/${id}/horario`} aria-label={`Reagendar reunião com ${company}`}>Reagendar</Link>}
         {permissao === "gestor" && ativa && (
           <button type="button" className="link" aria-label={`Trocar o closer da reunião com ${company}`}
             onClick={() => { const o = open === "trocar" ? null : "trocar"; setOpen(o); if (o) { setClosers(null); closersLivres(id).then(setClosers); } }}>Trocar closer</button>
