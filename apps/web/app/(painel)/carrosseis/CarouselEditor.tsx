@@ -13,13 +13,20 @@ export interface MemberRow {
   recebidas: number; esperado: number; saldo: number;
 }
 
-export function CarouselEditor({ carousel, members, closers, periodLabel }: {
+const ini = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+const fmt = (n: number) => (Math.round(n * 10) / 10).toString().replace(".", ",");
+
+export function CarouselEditor({ carousel, members, closers, periodLabel, agenda }: {
   carousel: CarouselRow; members: MemberRow[]; closers: { id: string; name: string }[]; periodLabel: string;
+  agenda: Record<string, string>;  // closer_id -> conectada | desconectada
 }) {
   const [rows, setRows] = useState(members.map((m) => ({ closer_id: m.closer_id, name: m.name, weight: m.weight, active: m.active })));
   const [add, setAdd] = useState("");
   const stats = new Map(members.map((m) => [m.closer_id, m]));
-  const totalWeight = rows.filter((r) => r.active && r.weight > 0).reduce((a, r) => a + r.weight, 0);
+  // fatia = peso ÷ soma dos pesos de quem está recebendo (ativo, peso > 0 e agenda conectada), como o banco calcula
+  const totalWeight = rows.filter((r) => r.active && r.weight > 0 && agenda[r.closer_id] === "conectada").reduce((a, r) => a + r.weight, 0);
+  const totalRecebidas = members.reduce((a, m) => a + Number(m.recebidas), 0);
+  const scale = Math.max(1, totalRecebidas * 0.5, ...members.map((m) => Number(m.recebidas)), ...members.map((m) => Number(m.esperado)));
   const available = closers.filter((c) => !rows.some((r) => r.closer_id === c.id));
   const set = (id: string, patch: Partial<{ weight: number; active: boolean }>) =>
     setRows(rows.map((r) => (r.closer_id === id ? { ...r, ...patch } : r)));
@@ -55,18 +62,32 @@ export function CarouselEditor({ carousel, members, closers, periodLabel }: {
           <table>
             <thead><tr>
               <th scope="col">Closer</th><th scope="col">No carrossel</th><th scope="col">Peso</th>
-              <th scope="col">Fatia</th><th scope="col">Recebidas</th><th scope="col">Esperado</th>
+              <th scope="col">Fatia</th><th scope="col">Recebidas</th><th scope="col">Esperado</th><th scope="col">Recebidas × esperado</th>
               <th scope="col"><span className="sr-only">Remover</span></th>
             </tr></thead>
             <tbody>
-              {rows.length === 0 && <tr><td colSpan={7} className="muted">Nenhum closer neste carrossel.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={8} className="muted">Nenhum closer neste carrossel.</td></tr>}
               {rows.map((r) => {
                 const st = stats.get(r.closer_id);
-                const fatia = r.active && r.weight > 0 && totalWeight > 0 ? r.weight / totalWeight : null;
+                const conectada = agenda[r.closer_id] === "conectada";
+                const naRoda = r.active && r.weight > 0 && conectada;
+                const fatia = naRoda && totalWeight > 0 ? r.weight / totalWeight : null;
+                const recebidas = st ? Number(st.recebidas) : 0;
+                const esperado = st ? Number(st.esperado) : 0;
+                const diff = esperado - recebidas;
+                const saldo = !naRoda ? "Fora do carrossel" : Math.abs(diff) < 0.5 ? "Na fatia"
+                  : diff > 0 ? `${fmt(diff)} abaixo: recebe as próximas` : `${fmt(-diff)} acima: espera os outros`;
+                const note = !conectada ? (agenda[r.closer_id] === "desconectada" ? "Agenda desconectada" : "Agenda não conectada")
+                  : !r.active ? "Pausado pelo gestor" : "Agenda conectada";
                 return (
                   <tr key={r.closer_id}>
-                    <td>{r.name}</td>
-                    <td><input type="checkbox" checked={r.active} onChange={(e) => set(r.closer_id, { active: e.target.checked })} aria-label={`${r.name} no carrossel`} /></td>
+                    <td><div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div className="us-avatar">{ini(r.name)}</div>
+                      <div className="rn-stack"><span style={{ fontWeight: 600 }}>{r.name}</span>
+                        <span className={conectada ? "ag-hint" : "ag-warn"}>{note}</span></div>
+                    </div></td>
+                    <td><button type="button" role="switch" aria-checked={r.active} aria-label={`${r.name} participa do carrossel`} className="switch-btn"
+                      onClick={() => set(r.closer_id, { active: !r.active })}><span /></button></td>
                     <td>
                       <div className="group">
                         <button type="button" className="btn small" onClick={() => set(r.closer_id, { weight: Math.max(0, r.weight - 1) })} aria-label={`Diminuir peso de ${r.name}`}>−</button>
@@ -75,8 +96,16 @@ export function CarouselEditor({ carousel, members, closers, periodLabel }: {
                       </div>
                     </td>
                     <td>{fatia == null ? "—" : `${Math.round(fatia * 100)}%`}</td>
-                    <td>{st ? Number(st.recebidas) : 0}</td>
-                    <td>{st ? Number(st.esperado).toFixed(1) : "0.0"}</td>
+                    <td>{recebidas}</td>
+                    <td>{naRoda ? fmt(esperado) : "—"}</td>
+                    <td><div className="rn-stack" style={{ gap: 6 }}>
+                      <div role="img" aria-label={`${r.name}: ${recebidas} recebidas, ${fmt(esperado)} esperadas`}
+                        style={{ position: "relative", width: 200, height: 8, borderRadius: 9999, background: "var(--surface-icon)" }}>
+                        <div style={{ position: "absolute", left: 0, top: 0, height: 8, borderRadius: 9999, background: "var(--accent-heading)", width: `${Math.min(100, (recebidas / scale) * 100)}%` }} />
+                        {naRoda && <div style={{ position: "absolute", top: -3, width: 2, height: 14, background: "var(--text-primary)", left: `${Math.min(100, (esperado / scale) * 100)}%` }} />}
+                      </div>
+                      <span className="ag-hint">{saldo}</span>
+                    </div></td>
                     <td>
                       <button type="button" className="btn small" aria-label={`Remover ${r.name} do carrossel`}
                         onClick={() => setRows(rows.filter((x) => x.closer_id !== r.closer_id))}>Remover</button>
@@ -86,6 +115,12 @@ export function CarouselEditor({ carousel, members, closers, periodLabel }: {
               })}
             </tbody>
           </table>
+        </div>
+        <div className="rn-footer" style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", borderTop: "none", padding: "0" }}>
+          <span>{rows.filter((r) => r.active && r.weight > 0 && agenda[r.closer_id] === "conectada").length} closers recebendo · soma dos pesos {totalWeight} · {totalRecebidas} reuniões distribuídas · {periodLabel}</span>
+          <span className="spacer" />
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ display: "inline-block", width: 16, height: 8, borderRadius: 9999, background: "var(--accent-heading)" }} />Recebidas</span>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ display: "inline-block", width: 2, height: 12, background: "var(--text-primary)" }} />Esperado pelo peso</span>
         </div>
         <div className="group">
           <select className="field" value={add} onChange={(e) => setAdd(e.target.value)} aria-label="Adicionar closer">

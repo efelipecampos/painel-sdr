@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getMe, isManager } from "@/lib/supabase/server";
 import { dateToLocal } from "@/lib/time";
 import { CarouselEditor, type CarouselRow, type MemberRow } from "./CarouselEditor";
@@ -42,6 +43,9 @@ export default async function CarrosseisPage({ searchParams }: { searchParams: P
         db.rpc("closers_para_carrossel"),
       ])
     : [{ data: [] }, { data: [] }];
+  // Situação da agenda do Google de cada closer (closer sem agenda conectada não recebe nem acumula vez).
+  const { data: conns } = await createAdminClient().schema("painel").from("google_connections").select("closer_id, status");
+  const agenda = Object.fromEntries(((conns ?? []) as { closer_id: string; status: string }[]).map((c) => [c.closer_id, c.status]));
 
   return (
     <main className="page">
@@ -87,6 +91,7 @@ export default async function CarrosseisPage({ searchParams }: { searchParams: P
             members={(resumo.data ?? []) as MemberRow[]}
             closers={(closers.data ?? []) as { id: string; name: string }[]}
             periodLabel={period ? months.find((m) => m.key === period)!.label : "Semana atual"}
+            agenda={agenda}
           />
         ) : <p className="muted">Nenhum carrossel cadastrado.</p>}
       </div>

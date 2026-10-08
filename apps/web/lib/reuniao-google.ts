@@ -100,3 +100,32 @@ export async function renameEvent(m: MeetingRow): Promise<void> {
   }
   await withLog(m.closer_id, "alterar", () => cal.patch(m.google_event_id!, { title }, m.google_calendar_id || "primary", false), m.id);
 }
+
+/**
+ * Evento apagado no Google ("Removida no Google"): tenta desfazer a exclusão (mesmo evento e mesmo Meet);
+ * se o Google não tiver mais o evento, cria um novo na agenda do closer, convidando o lead e o SDR.
+ */
+export async function recreateEvent(m: MeetingRow, inviteSdr: boolean, sdrEmail: string | null): Promise<void> {
+  const cal = await calendarOf(m.closer_id);
+  const where = m.google_calendar_id || "primary";
+  if (m.google_event_id) {
+    try {
+      const ev = await withLog(m.closer_id, "alterar", () => cal.patch(m.google_event_id!, { status: "confirmed" }, where), m.id);
+      if (ev.status !== "cancelled") {
+        await admin().from("meetings").update({ google_state: "ok", meet_url: ev.hangoutLink ?? null }).eq("id", m.id);
+        return;
+      }
+    } catch {
+      // segue para criar um novo
+    }
+  }
+  const attendees = [m.lead_email, inviteSdr ? sdrEmail : null].filter((x): x is string => !!x);
+  const ev = await withLog(m.closer_id, "criar", () => cal.insert({
+    title: m.title ?? "Reunião", start: new Date(m.starts_at), end: new Date(m.ends_at), attendees,
+    description: `Reunião agendada pelo Painel SDR.\n\nPassagem de bastão (equipe Poli, precisa de login): ${APP_URL}/reuniao/${m.id}`,
+  }), m.id);
+  await admin().from("meetings").update({
+    google_event_id: ev.id, google_calendar_id: await closerCalendarId(m.closer_id), meet_url: ev.hangoutLink ?? null, google_state: "ok",
+    hubspot_sync_needed: true,
+  }).eq("id", m.id);
+}

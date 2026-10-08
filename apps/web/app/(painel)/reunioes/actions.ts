@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { busyOf, freeAt, loadRules } from "@/lib/agendar";
 import { postGestaoSdr } from "@/lib/chat";
 import { APP_URL } from "@/lib/google";
-import { loadMeeting, moveEvent, renameEvent, syncEventWithStatus } from "@/lib/reuniao-google";
+import { loadMeeting, moveEvent, recreateEvent, renameEvent, syncEventWithStatus } from "@/lib/reuniao-google";
 import { checkManual, gridSlots, interval, windowDays } from "@/lib/slots";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -225,5 +225,21 @@ export async function passarMarca(id: string): Promise<{ erro?: string }> {
   } catch (e) {
     return { erro: `Marca trocada no painel, mas o título no Google não foi atualizado (${(e as Error).message}).` };
   }
+  return {};
+}
+
+/** "Recriar evento" (fila Com problema): SDR da reunião, closer dela, gestor e admin. */
+export async function recriarEvento(id: string): Promise<{ erro?: string }> {
+  if (!(await permissao(id))) return { erro: "Você não pode alterar esta reunião." };
+  const m = await loadMeeting(id);
+  if (!m || m.status !== "agendada") return { erro: "Só dá para recriar o evento de reunião agendada." };
+  const { data: st } = await admin().from("settings").select("value").eq("key", "google_invite_sdr").maybeSingle();
+  const { data: sdr } = m.sdr_id ? await admin().from("sdrs").select("poli_email").eq("id", m.sdr_id).maybeSingle() : { data: null };
+  try {
+    await recreateEvent(m, st?.value !== false, (sdr as { poli_email?: string } | null)?.poli_email ?? null);
+  } catch (e) {
+    return { erro: `Não foi possível recriar o evento: ${(e as Error).message}` };
+  }
+  revalidatePath("/reunioes");
   return {};
 }

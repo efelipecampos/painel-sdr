@@ -185,7 +185,7 @@ export class GoogleCalendar {
   }
 
   /** Muda horário, título ou cor do mesmo evento (o link do Meet continua o mesmo). */
-  patch(eventId: string, p: { start?: Date; end?: Date; title?: string; colorId?: string | null }, calendarId = "primary", notify = true): Promise<CalendarEvent> {
+  patch(eventId: string, p: { start?: Date; end?: Date; title?: string; colorId?: string | null; status?: "confirmed" }, calendarId = "primary", notify = true): Promise<CalendarEvent> {
     return this.call("alterar", `${API}/calendars/${enc(calendarId)}/events/${enc(eventId)}?sendUpdates=${notify ? "all" : "none"}`, {
       method: "PATCH",
       body: JSON.stringify({
@@ -193,6 +193,7 @@ export class GoogleCalendar {
         ...(p.end ? { end: { dateTime: p.end.toISOString(), timeZone: "America/Sao_Paulo" } } : {}),
         ...(p.title ? { summary: p.title } : {}),
         ...(p.colorId !== undefined ? { colorId: p.colorId } : {}), // null volta à cor padrão
+        ...(p.status ? { status: p.status } : {}),                  // "confirmed" desfaz um evento apagado
       }),
     });
   }
