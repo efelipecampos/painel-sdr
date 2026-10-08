@@ -6,9 +6,11 @@
 import { Monitor, postToGoogleChat } from "./alerts.js";
 import { config } from "./config.js";
 import { HubspotClient, resetLeadsCursor, syncLeads, syncOwners, syncStages } from "./hubspot/leads.js";
-import { dailyCheck, stuckMeetings, syncMeetings } from "./hubspot/meetings.js";
+import { dailyCheck, dueDailyRun, stuckMeetings, syncMeetings } from "./hubspot/meetings.js";
 import { checkGoogle } from "./google.js";
 import { createDb, processBatch, rebuildAll, syncRoles } from "./processor.js";
+import Anthropic from "@anthropic-ai/sdk";
+import { scoreRound } from "./score/job.js";
 
 const once = process.argv.includes("--once");
 const rebuild = process.argv.includes("--rebuild-all");
@@ -17,6 +19,23 @@ const db = createDb();
 const hubspot = config.hubspotToken ? new HubspotClient(config.hubspotToken) : null;
 let lastHubspotSync = 0;
 let lastGoogleCheck = 0;
+let lastScoreDay = "";
+// Score de qualidade (Fase 7): uma rodada por dia, de madrugada (decisão do Felipe, 07/10/2026).
+// Só liga com o modelo e a chave da Anthropic no .env. Se o worker reiniciar no mesmo dia, a rodada repete, mas só
+// avalia quem escreveu depois da anterior (não gasta de novo com os mesmos leads).
+const anthropic = config.anthropicModel && process.env.ANTHROPIC_API_KEY?.trim() ? new Anthropic() : null;
+
+/** Devolve false quando não era hora de avaliar. */
+async function runScore(): Promise<boolean> {
+  if (!anthropic || !config.anthropicModel) return false;
+  const { due, today } = dueDailyRun(new Date(), config.scoreTime, lastScoreDay);
+  if (!due) return false;
+  lastScoreDay = today;
+  const r = await scoreRound(db, anthropic, config.anthropicModel, config.scoreMaxPerRound);
+  console.log(`[worker] score: ${r.candidatos} candidatos, ${r.avaliados} avaliados, ${r.semNota} sem nota, ${r.erros} com erro, US$ ${r.custo.toFixed(3)}`);
+  if (r.erros && r.erros === r.candidatos) throw new Error(`todas as ${r.erros} avaliações falharam`);
+  return true;
+}
 
 async function syncGoogle(): Promise<void> {
   if (!config.google || Date.now() - lastGoogleCheck < config.googleEveryMinutes * 60_000) return;
@@ -104,6 +123,12 @@ if (process.argv.includes("--testar-alerta")) {
       await syncHubspotMeetings();
     } catch (err) {
       console.error("[worker] erro nas reuniões do HubSpot:", err instanceof Error ? err.message : err);
+    }
+    try {
+      if (await runScore()) await monitor.score(null);
+    } catch (err) {
+      console.error("[worker] erro no score:", err instanceof Error ? err.message : err);
+      await monitor.score(err);
     }
     await monitor.check();
     await new Promise((r) => setTimeout(r, config.pollSeconds * 1000));

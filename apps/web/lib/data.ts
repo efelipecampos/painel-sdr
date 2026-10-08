@@ -60,6 +60,27 @@ export interface ChatRow {
   total: number;
 }
 
+/** Carteira do SDR (estado atual). sdr_id null = linha do time (só gestor e admin). */
+export interface Carteira {
+  sdr_id: string | null;
+  carteira: number;
+  avaliados: number;
+  sem_avaliacao: number;
+  qualidade: number | null;
+}
+
+export type NotaStatus = "avaliado" | "sem_informacao" | "ja_e_cliente" | "abaixo_do_corte";
+
+/** Avaliação mais recente de um lead. */
+export interface LeadNota {
+  lead_id: string;
+  status: NotaStatus;
+  score: number | null;
+  summary: string | null;
+  criteria_scores: { criterio: string | null; peso: number | null; nota: string | null; justificativa: string }[];
+  scored_at: string;
+}
+
 export interface Settings {
   stale_minutes: number;
   stale_business_only: boolean;
@@ -114,6 +135,21 @@ export async function getSdrChats(
   });
   if (error) fail("Não foi possível carregar os chats", error);
   return data as ChatRow[];
+}
+
+export async function getCarteira(): Promise<Carteira[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.schema("painel").rpc("carteira");
+  if (error) fail("Não foi possível calcular a carteira", error);
+  return data as Carteira[];
+}
+
+export async function getLeadNotas(leadIds: string[]): Promise<Map<string, LeadNota>> {
+  if (!leadIds.length) return new Map();
+  const supabase = await createClient();
+  const { data, error } = await supabase.schema("painel").rpc("lead_notas", { p_leads: leadIds });
+  if (error) fail("Não foi possível carregar as notas dos leads", error);
+  return new Map((data as LeadNota[]).map((n) => [n.lead_id, n]));
 }
 
 export function initials(name: string): string {

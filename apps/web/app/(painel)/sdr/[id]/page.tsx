@@ -4,7 +4,8 @@ import { getMe, isManager } from "@/lib/supabase/server";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Metric, staleLabel } from "@/components/Metric";
 import { PeriodFilter } from "@/components/PeriodFilter";
-import { getSdrChats, getSdrMetrics, getSettings, initials, type ChatRow } from "@/lib/data";
+import { NotaLead, QualidadeCarteira } from "@/components/Qualidade";
+import { getCarteira, getLeadNotas, getSdrChats, getSdrMetrics, getSettings, initials, type ChatRow } from "@/lib/data";
 import { formatDateTime, formatDuration, resolvePeriod } from "@/lib/time";
 import { MeetingSelect, MeetingStatusText } from "./MeetingSelect";
 
@@ -48,7 +49,9 @@ export default async function SdrPage({ params, searchParams }: {
   // Busca os dados em paralelo com a conferência do usuário (cada ida ao banco custa ~200 ms).
   const data = Promise.all([
     getSdrMetrics(period), getSettings(),
-    getSdrChats(id, period, { filter, search, limit: PAGE, offset: (page - 1) * PAGE }),
+    getSdrChats(id, period, { filter, search, limit: PAGE, offset: (page - 1) * PAGE })
+      .then(async (rows) => [rows, await getLeadNotas(rows.map((r) => r.lead_id))] as const),
+    getCarteira(),
   ]);
   data.catch(() => {}); // se o SDR pediu a tela de outro, o banco recusa; ele é redirecionado abaixo
   // SDR só abre a própria tela (o banco também recusa sdr_chats de outro SDR).
@@ -56,7 +59,7 @@ export default async function SdrPage({ params, searchParams }: {
   if (me?.role === "sdr" && me.sdrId !== id) redirect(`/sdr/${me.sdrId}`);
   if (me?.role === "closer") redirect("/agenda");
   const manager = isManager(me);
-  const [all, settings, rows] = await data;
+  const [all, settings, [rows, notas], carteiras] = await data;
   const s = all.find((x) => x.sdr_id === id);
   if (!s) notFound();
   const total = rows[0]?.total ?? 0;
@@ -92,6 +95,7 @@ export default async function SdrPage({ params, searchParams }: {
           <Metric label="Agendados" value={s.agendados}
             sub={s.leads_abordados > 0 ? `${Math.round((s.agendados / s.leads_abordados) * 100)}% dos abordados` : "—"} />
           <Metric label="Descartados" value={s.descartados} />
+          <QualidadeCarteira c={carteiras.find((c) => c.sdr_id === id)} />
         </div>
       </section>
 
@@ -124,13 +128,14 @@ export default async function SdrPage({ params, searchParams }: {
               <th scope="col">Resposta (mediana)</th>
               <th scope="col">Mensagens (lead / equipe)</th>
               <th scope="col">Última mensagem</th>
+              <th scope="col">Qualidade</th>
               <th scope="col">Reunião</th>
               <th scope="col"><span className="muted">Ações</span></th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={10} className="muted">Nenhum lead com mensagem neste período.</td></tr>
+              <tr><td colSpan={11} className="muted">Nenhum lead com mensagem neste período.</td></tr>
             )}
             {rows.map((r) => (
               <tr key={r.lead_id}>
@@ -142,6 +147,7 @@ export default async function SdrPage({ params, searchParams }: {
                 <td>{formatDuration(r.resposta_s)}</td>
                 <td>{r.msgs_lead} / {r.msgs_equipe}</td>
                 <td><div className="cell-stack"><span>{formatDateTime(r.last_message_at)}</span><span className="muted">{FROM_LABEL[r.last_message_from ?? ""] ?? ""}</span></div></td>
+                <td><NotaLead n={notas.get(r.lead_id)} /></td>
                 <td>{manager
                   ? <MeetingSelect leadId={r.lead_id} leadName={r.lead_name ?? "lead"} status={r.reuniao_status} origem={r.reuniao_origem} />
                   : <MeetingStatusText status={r.reuniao_status} origem={r.reuniao_origem} />}
