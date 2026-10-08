@@ -18,14 +18,14 @@ export function QualityForm({ context, criteria }: { context: string; criteria: 
   return (
     <form action={saveQuality} style={{ display: "flex", flexDirection: "column", gap: 16 }}
       onSubmit={(e) => {
-        if (!confirm("Ao salvar, todos os leads voltam para a fila e são avaliados de novo com os critérios novos, até 300 por dia, na rodada das 05:00. Continuar?")) e.preventDefault();
+        if (!confirm("Ao salvar, todos os leads voltam para a fila e são avaliados de novo com os critérios novos, até 300 por rodada, a partir da próxima (de 2 em 2 horas, das 8h às 18h). Continuar?")) e.preventDefault();
       }}>
       <input type="hidden" name="criteria" value={JSON.stringify(list.map(({ id, name, description, weight }) => ({ id, name, description, weight })))} />
 
       <section className="card" aria-labelledby="ql">
         <h2 id="ql" className="card-title">Qualidade do lead</h2>
         <p className="muted" style={{ margin: 0 }}>
-          Uma vez por dia, às 05:00, a IA (Celeris) lê as conversas com mensagem nova do lead e dá uma nota de 0 a 100 conforme os critérios abaixo.
+          De 2 em 2 horas, das 8h às 18h, a IA (Celeris) lê as conversas com mensagem nova do lead e dá uma nota de 0 a 100 conforme os critérios abaixo.
           A qualidade da carteira é a média das notas dos leads do SDR.
         </p>
 

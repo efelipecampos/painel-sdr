@@ -6,11 +6,12 @@
 import { Monitor, postToGoogleChat } from "./alerts.js";
 import { config } from "./config.js";
 import { HubspotClient, resetLeadsCursor, syncLeads, syncOwners, syncStages } from "./hubspot/leads.js";
-import { dailyCheck, dueDailyRun, stuckMeetings, syncMeetings } from "./hubspot/meetings.js";
+import { dailyCheck, stuckMeetings, syncMeetings } from "./hubspot/meetings.js";
 import { checkGoogle } from "./google.js";
 import { createDb, processBatch, rebuildAll, syncRoles } from "./processor.js";
 import { scoreRound } from "./score/job.js";
 import { scorerFromEnv } from "./score/model.js";
+import { currentSlot } from "./score/schedule.js";
 
 const once = process.argv.includes("--once");
 const rebuild = process.argv.includes("--rebuild-all");
@@ -19,19 +20,19 @@ const db = createDb();
 const hubspot = config.hubspotToken ? new HubspotClient(config.hubspotToken) : null;
 let lastHubspotSync = 0;
 let lastGoogleCheck = 0;
-// Score de qualidade (Fase 7): uma rodada por dia às 05:00 (decisão do Felipe, 07/10/2026), em paralelo com o resto
-// do worker (a rodada leva minutos e não pode segurar a leitura dos eventos da Poli). Se o worker sobe depois do
-// horário, espera o dia seguinte (deploy durante o dia não dispara rodada).
+// Score de qualidade (Fase 7): de 2 em 2 horas, das 08:00 às 18:00 (decisão do Felipe, 08/10/2026; SCORE_HORARIOS),
+// em paralelo com o resto do worker (a rodada leva minutos e não pode segurar a leitura dos eventos da Poli).
+// Se o worker sobe no meio do intervalo, espera o próximo horário (deploy não dispara rodada).
 // A IA vem de SCORE_IA (anthropic ou celeris); sem a chave dela no .env, o score não roda.
 const scorer = scorerFromEnv();
-let lastScoreDay = (() => { const d = dueDailyRun(new Date(), config.scoreTime, ""); return d.due ? d.today : ""; })();
+let lastScoreSlot = currentSlot(new Date(), config.scoreTimes);
 let scoreRunning = false;
 
 function startScore(monitor: Monitor): void {
   if (!scorer || scoreRunning) return;
-  const { due, today } = dueDailyRun(new Date(), config.scoreTime, lastScoreDay);
-  if (!due) return;
-  lastScoreDay = today;
+  const slot = currentSlot(new Date(), config.scoreTimes);
+  if (!slot || slot === lastScoreSlot) return;
+  lastScoreSlot = slot;
   scoreRunning = true;
   void (async () => {
     try {
