@@ -17,7 +17,7 @@ Dono do projeto: Felipe (Head of Revenue). Usuários da V1: Felipe e, depois, os
 - Banco, Auth e RLS: Supabase (projeto gerenciado, região São Paulo).
 - App web: Next.js (App Router) + TypeScript.
 - Worker (processamento de eventos, sync HubSpot, score): Node + TypeScript, processo separado.
-- IA do score: API da Anthropic (SDK oficial). Modelo em variável de ambiente.
+- IA do score: Celeris (`celeris-1-magnus`), escolhida por `SCORE_IA=celeris` no `.env`; o Claude (API da Anthropic, SDK oficial) continua como alternativa (`SCORE_IA=anthropic`). Modelo e chave em variáveis de ambiente. As conversas vão mascaradas (decisão do Felipe, 2026-10-08).
 - Deploy: VPS Hostinger que já roda **Coolify**. O Traefik do Coolify cuida de domínio e HTTPS. Não instale Caddy, Nginx nem nada que use as portas 80/443. Siga o padrão do projeto `PoliChat-Hubspot`: Docker Compose com labels do Traefik na rede `coolify`.
 - Migrations: Supabase CLI (`supabase/migrations`). Nunca altere o banco de produção à mão.
 
