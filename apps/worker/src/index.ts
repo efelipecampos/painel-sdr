@@ -19,22 +19,33 @@ const db = createDb();
 const hubspot = config.hubspotToken ? new HubspotClient(config.hubspotToken) : null;
 let lastHubspotSync = 0;
 let lastGoogleCheck = 0;
-let lastScoreDay = "";
-// Score de qualidade (Fase 7): uma rodada por dia, de madrugada (decisão do Felipe, 07/10/2026).
-// Só liga com o modelo e a chave da Anthropic no .env. Se o worker reiniciar no mesmo dia, a rodada repete, mas só
-// avalia quem escreveu depois da anterior (não gasta de novo com os mesmos leads).
+// Score de qualidade (Fase 7): uma rodada por dia às 05:00 (decisão do Felipe, 07/10/2026), em paralelo com o resto
+// do worker (a rodada leva minutos e não pode segurar a leitura dos eventos da Poli). Se o worker sobe depois do
+// horário, espera o dia seguinte (deploy durante o dia não dispara rodada).
+// Só liga com o modelo e a chave da Anthropic no .env.
 const anthropic = config.anthropicModel && process.env.ANTHROPIC_API_KEY?.trim() ? new Anthropic() : null;
+let lastScoreDay = (() => { const d = dueDailyRun(new Date(), config.scoreTime, ""); return d.due ? d.today : ""; })();
+let scoreRunning = false;
 
-/** Devolve false quando não era hora de avaliar. */
-async function runScore(): Promise<boolean> {
-  if (!anthropic || !config.anthropicModel) return false;
+function startScore(monitor: Monitor): void {
+  if (!anthropic || !config.anthropicModel || scoreRunning) return;
   const { due, today } = dueDailyRun(new Date(), config.scoreTime, lastScoreDay);
-  if (!due) return false;
+  if (!due) return;
   lastScoreDay = today;
-  const r = await scoreRound(db, anthropic, config.anthropicModel, config.scoreMaxPerRound);
-  console.log(`[worker] score: ${r.candidatos} candidatos, ${r.avaliados} avaliados, ${r.semNota} sem nota, ${r.erros} com erro, US$ ${r.custo.toFixed(3)}`);
-  if (r.erros && r.erros === r.candidatos) throw new Error(`todas as ${r.erros} avaliações falharam`);
-  return true;
+  scoreRunning = true;
+  void (async () => {
+    try {
+      const r = await scoreRound(db, anthropic, config.anthropicModel!, config.scoreMaxPerRound);
+      console.log(`[worker] score: ${r.candidatos} candidatos, ${r.avaliados} avaliados, ${r.semNota} sem nota, ${r.erros} com erro, US$ ${r.custo.toFixed(3)}`);
+      if (r.erros && r.erros === r.candidatos) throw new Error(`todas as ${r.erros} avaliações falharam`);
+      await monitor.score(null);
+    } catch (err) {
+      console.error("[worker] erro no score:", err instanceof Error ? err.message : err);
+      await monitor.score(err);
+    } finally {
+      scoreRunning = false;
+    }
+  })();
 }
 
 async function syncGoogle(): Promise<void> {
@@ -124,12 +135,7 @@ if (process.argv.includes("--testar-alerta")) {
     } catch (err) {
       console.error("[worker] erro nas reuniões do HubSpot:", err instanceof Error ? err.message : err);
     }
-    try {
-      if (await runScore()) await monitor.score(null);
-    } catch (err) {
-      console.error("[worker] erro no score:", err instanceof Error ? err.message : err);
-      await monitor.score(err);
-    }
+    startScore(monitor);
     await monitor.check();
     await new Promise((r) => setTimeout(r, config.pollSeconds * 1000));
   }
