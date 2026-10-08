@@ -81,7 +81,7 @@ Atualize esta lista conforme avança.
   - [x] 10c — Google Agenda: papel closer, conexão da agenda pela tela do closer, livre/ocupado, criar/alterar/arquivar/restaurar evento, conferência no worker a cada 10 min, tela Teste da agenda (admin). No ar e no `main` desde 07/10/2026. Testado pelo Felipe com o Calil (agenda conectada; ocupado bateu com a agenda real; Meet, convite, arquivo vermelho e volta conferidos). O app web passou a receber a service_role (só no servidor, para a conexão do Google). Logins de closer: Calil e Alessandra.
   - [x] 10d — Agendar (10d.1 agendar pelo painel; 10d.2 Reuniões, status com arquivo, mudar horário/reagendar). No ar e no `main` desde 07/10/2026, testadas pelo Felipe.
   - [x] 10e — HubSpot e trocas: Reunião no HubSpot (criação, atualização, status às 17:55), pedido de troca de closer com fila e aviso no Gestão SDR, troca direta, Passar para CH/Poli, relatório. No ar e no `main` desde 07/10/2026, testadas pelo Felipe (reuniões de teste apagadas do painel, do Google e do HubSpot).
-  - [ ] Virada da Poli Agenda.
+  - [ ] Virada (em andamento: SDRs começam a agendar pelo painel em 08/10/2026) da Poli Agenda.
 
 ## 5. O que já se sabe sobre a integração PoliChat-Hubspot
 
@@ -185,6 +185,7 @@ Registre aqui toda decisão nova, com data.
 - 2026-10-07 — Backup: só o do Supabase no plano Pro (diário, 7 dias), sem cópia extra fora do Supabase (decisão do Felipe).
 - 2026-10-07 — Supabase já no plano Pro (backup diário). Virada da Poli Agenda: sem piloto de 1 ou 2 SDRs; entram os 7 SDRs de uma vez (decisão do Felipe, para acelerar).
 - 2026-10-07 — Logins ligados: 7 SDRs e 9 closers (Alessandra, Aline, Calil, Jerferson, Larissa Ramos, Larissa Fernandes, Lucas, Mara, Maria Vitoria). Erika Lustosa e Ingrid Ribeiro saíram da empresa: desativadas no painel (dados mantidos).
+- 2026-10-07 — Início do uso pelos SDRs: 08/10/2026 (Felipe). Erika e Ingrid ficam na lista de closers do `.env` (desativadas só no painel).
 - 2026-10-07 — **Lentidão do painel:** a VPS fica em Boston (EUA) e o Supabase em São Paulo; cada ida ao banco custa ~200 ms. Melhorias sem custo no ar: login conferido uma vez por clique, dados em paralelo, tela de carregando, perfil sem ida extra ao servidor de login, telas já vistas guardadas por 30 s no navegador.
 - 2026-10-07 — **Migração da VPS para São Paulo adiada** (sem verba agora; a Hostinger não ofereceu São Paulo na compra). Quando voltar: KVM 4 em São Paulo; migrar só painel SDR, poli-hubspot e api4com-hubspot (Chatwoots, Langfuse, n8n, agents e o postgres `swws40…` não estão em uso e o Felipe recomeça do zero). O disparo do app token é do n8n da própria Poli, não do n8n da VPS. Cópia dos bancos dos serviços não migrados em `~/Backups/vps-boston-20261007` no Mac do Felipe.
 - 2026-10-05 — Sem histórico anterior e sem API da Poli por enquanto: o painel começa em 01/10/2026 07:08 (primeiro evento em `raw_events`). Chats que já existiam antes disso podem ter "quem iniciou" e a primeira resposta imprecisos. A ideia de backfill desde 25/09 foi abandonada.
