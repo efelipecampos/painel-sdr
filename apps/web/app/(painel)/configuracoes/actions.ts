@@ -81,7 +81,7 @@ export async function saveQuality(form: FormData) {
     return back("Não foi possível ler o formulário. Recarregue a página e tente de novo.");
   }
   const context = String(form.get("quality_context") ?? "").trim();
-  if (!context) return back("Escreva o contexto para o Claude.");
+  if (!context) return back("Escreva o contexto para a IA.");
   if (context.length > 3000) return back("O contexto pode ter até 3.000 caracteres.");
   if (!list.length) return back("Mantenha pelo menos um critério.");
   if (list.length > 8) return back("Use no máximo 8 critérios.");
@@ -94,7 +94,7 @@ export async function saveQuality(form: FormData) {
   }));
   for (const c of rows) {
     if (!c.name || c.name.length > 60) return back("Cada critério precisa de um nome de até 60 caracteres.");
-    if (!c.description || c.description.length > 600) return back(`Descreva o que o Claude deve observar em "${c.name}" (até 600 caracteres).`);
+    if (!c.description || c.description.length > 600) return back(`Descreva o que a IA deve observar em "${c.name}" (até 600 caracteres).`);
     if (!Number.isInteger(c.weight) || c.weight < 1 || c.weight > 10) return back(`O peso de "${c.name}" precisa ser um número de 1 a 10.`);
   }
   if (new Set(rows.map((c) => c.name.toLowerCase())).size !== rows.length) return back("Há dois critérios com o mesmo nome.");

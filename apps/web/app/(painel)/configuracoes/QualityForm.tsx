@@ -25,11 +25,11 @@ export function QualityForm({ context, criteria }: { context: string; criteria: 
       <section className="card" aria-labelledby="ql">
         <h2 id="ql" className="card-title">Qualidade do lead</h2>
         <p className="muted" style={{ margin: 0 }}>
-          Uma vez por dia, às 05:00, o Claude lê as conversas com mensagem nova do lead e dá uma nota de 0 a 100 conforme os critérios abaixo.
+          Uma vez por dia, às 05:00, a IA (Celeris) lê as conversas com mensagem nova do lead e dá uma nota de 0 a 100 conforme os critérios abaixo.
           A qualidade da carteira é a média das notas dos leads do SDR.
         </p>
 
-        <label className="lbl" htmlFor="quality_context">Contexto para o Claude</label>
+        <label className="lbl" htmlFor="quality_context">Contexto para a IA</label>
         <textarea id="quality_context" name="quality_context" className="field" rows={6} maxLength={3000} value={ctx} onChange={(e) => setCtx(e.target.value)}
           placeholder="O que a Poli vende, quem é o cliente ideal e o que torna um lead bom ou ruim." />
 
@@ -50,7 +50,7 @@ export function QualityForm({ context, criteria }: { context: string; criteria: 
               <button type="button" className="btn small" disabled={list.length <= 1} aria-label={`Remover critério ${c.name || "sem nome"}`}
                 onClick={() => setList(list.filter((x) => x.key !== c.key))}>Remover</button>
             </div>
-            <label className="lbl" htmlFor={`${c.key}-d`}>O que o Claude deve observar na conversa</label>
+            <label className="lbl" htmlFor={`${c.key}-d`}>O que a IA deve observar na conversa</label>
             <textarea id={`${c.key}-d`} className="field" rows={2} maxLength={600} value={c.description}
               onChange={(e) => set(c.key, { description: e.target.value })} />
           </div>
