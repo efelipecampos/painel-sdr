@@ -55,21 +55,24 @@ afterAll(async () => {
 });
 
 describe("quem vê", () => {
-  it("SDR que agendou, closer dela e gestor veem; outro SDR e outro closer não", async () => {
-    for (const u of [uid.sdrA, uid.closerA, uid.gestor]) {
+  it("qualquer SDR, o closer dela e o gestor veem; outro closer não", async () => {
+    for (const u of [uid.sdrA, uid.sdrB, uid.closerA, uid.gestor]) {
       expect((await as<{ id: string }>(u, "select id from painel.reunioes_lista($1, $2)", [FROM, TO])).map((r) => r.id)).toEqual([id.m]);
     }
-    for (const u of [uid.sdrB, uid.closerB]) expect(await as(u, "select id from painel.reunioes_lista($1, $2)", [FROM, TO])).toEqual([]);
+    expect(await as(uid.closerB, "select id from painel.reunioes_lista($1, $2)", [FROM, TO])).toEqual([]);
+    expect((await as<{ p: string }>(uid.sdrB, "select painel.permissao_reuniao($1) as p", [id.m]))[0].p).toBe("sdr");
     expect((await as<{ p: string }>(uid.closerA, "select painel.permissao_reuniao($1) as p", [id.m]))[0].p).toBe("closer");
     expect((await as<{ p: string | null }>(uid.closerB, "select painel.permissao_reuniao($1) as p", [id.m]))[0].p).toBeNull();
   });
 });
 
 describe("status", () => {
-  it("SDR só confirma cancelamento; outro SDR e outro closer não mexem", async () => {
-    await expect(as(uid.sdrA, "select painel.definir_status_reuniao($1, 'validada')", [id.m])).rejects.toThrow(/só pode confirmar o cancelamento/);
-    await expect(as(uid.sdrB, "select painel.definir_status_reuniao($1, 'cancelada')", [id.m])).rejects.toThrow(/acesso negado/);
+  it("qualquer SDR marca qualquer status, inclusive na reunião de outro SDR; outro closer não mexe", async () => {
+    for (const st of ["validada", "noshow", "invalidada", "agendada"]) {
+      await as(uid.sdrB, "select painel.definir_status_reuniao($1, $2)", [id.m, st]);
+    }
     await expect(as(uid.closerB, "select painel.definir_status_reuniao($1, 'noshow')", [id.m])).rejects.toThrow(/acesso negado/);
+    await db.query("delete from painel.meeting_status_history where meeting_id = $1", [id.m]);
   });
 
   it("cancelada devolve a vez; o closer marca validada e o estorno sai; histórico guarda tudo", async () => {

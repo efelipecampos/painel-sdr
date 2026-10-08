@@ -53,12 +53,11 @@ export default async function SdrPage({ params, searchParams }: {
       .then(async (rows) => [rows, await getLeadNotas(rows.map((r) => r.lead_id))] as const),
     getCarteira(),
   ]);
-  data.catch(() => {}); // se o SDR pediu a tela de outro, o banco recusa; ele é redirecionado abaixo
-  // SDR só abre a própria tela (o banco também recusa sdr_chats de outro SDR).
+  data.catch(() => {}); // closer: o banco recusa; ele é redirecionado abaixo
+  // SDR abre a tela de qualquer SDR e marca reunião, como o gestor (decisão de 2026-10-08).
   const me = await getMe();
-  if (me?.role === "sdr" && me.sdrId !== id) redirect(`/sdr/${me.sdrId}`);
   if (me?.role === "closer") redirect("/agenda");
-  const manager = isManager(me);
+  const manager = isManager(me) || me?.role === "sdr";
   const [all, settings, [rows, notas], carteiras] = await data;
   const s = all.find((x) => x.sdr_id === id);
   if (!s) notFound();

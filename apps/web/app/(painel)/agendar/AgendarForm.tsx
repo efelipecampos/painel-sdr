@@ -31,8 +31,10 @@ const Chevron = ({ left }: { left?: boolean }) => (
   </svg>
 );
 
-export function AgendarForm({ carousels, initialLead, sdrs, voltar }: {
-  carousels: CarouselOption[]; initialLead: string | null; sdrs: { id: string; name: string }[] | null; voltar: string | null;
+export function AgendarForm({ carousels, initialLead, sdrs, meuSdr, voltar }: {
+  carousels: CarouselOption[]; initialLead: string | null; sdrs: { id: string; name: string }[];
+  /** SDR logado (null para gestor/admin): pode pedir troca de closer; é o SDR responsável quando a carteira não tem dono. */
+  meuSdr: string | null; voltar: string | null;
 }) {
   const [, start] = useTransition();
   const [loading, setLoading] = useState(false);
@@ -76,6 +78,8 @@ export function AgendarForm({ carousels, initialLead, sdrs, voltar }: {
     setResults(null);
     setEmail(r.info?.email ?? "");
     setCompany(r.info?.company ?? "");
+    // SDR responsável: o dono da carteira (decisão de 2026-10-08); sem dono, quem está agendando
+    if (r.info) setSdrId(r.donoSdrId ?? meuSdr ?? "");
     const sug = r.sugestao?.[brand] ?? r.sugestao?.poli ?? null;
     if (sug) {
       const c = carousels.find((x) => x.id === sug)!;
@@ -145,7 +149,7 @@ export function AgendarForm({ carousels, initialLead, sdrs, voltar }: {
   };
 
   const endMin = startTime ? toMin(startTime) + duration : 0;
-  const ready = !!info && !!company.trim() && !!carousel && !!day && !!check && !check.erro && check.count > 0 && !checking && (!sdrs || !!sdrId);
+  const ready = !!info && !!company.trim() && !!carousel && !!day && !!check && !check.erro && check.count > 0 && !checking && !!sdrId;
   const summary = day && startTime && check && !check.erro && check.count > 0
     ? `${dayLabel(day)}, ${startTime}–${fmtMin(endMin)} · ${company.trim() || "…"} · ${BRAND[brand]}, ${carousel?.name ?? ""}`
     : "Escolha um horário para continuar";
@@ -263,15 +267,14 @@ export function AgendarForm({ carousels, initialLead, sdrs, voltar }: {
               <input id="guests" className="field" value={guests} onChange={(e) => setGuests(e.target.value)} placeholder="socio@empresa.com.br" />
             </div>
 
-            {sdrs && (
-              <div className="ag-field">
-                <label htmlFor="sdr" className="ag-label">SDR responsável</label>
-                <select id="sdr" className="field" value={sdrId} onChange={(e) => setSdrId(e.target.value)}>
-                  <option value="">Escolha…</option>
-                  {sdrs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-            )}
+            <div className="ag-field">
+              <label htmlFor="sdr" className="ag-label">SDR responsável</label>
+              <select id="sdr" className="field" value={sdrId} onChange={(e) => setSdrId(e.target.value)}>
+                <option value="">Escolha…</option>
+                {sdrs.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <span className="ag-hint">Vem com o dono da carteira. A reunião fica com o SDR escolhido aqui, no painel e no HubSpot.</span>
+            </div>
 
             <div className="ag-field">
               <label htmlFor="notes" className="ag-label">Passagem de bastão para o closer</label>
@@ -389,7 +392,7 @@ export function AgendarForm({ carousels, initialLead, sdrs, voltar }: {
                 <span style={{ fontSize: 14, lineHeight: "22px", fontWeight: 600 }}>{summary}</span>
                 <span className="ag-hint">O closer é definido pelo carrossel e só aparece depois que você confirmar. Ao confirmar, o sistema cria o evento com Google Meet e envia o convite ao lead.</span>
                 {info && !company.trim() && <span className="ag-warn">Preencha o nome da empresa do lead.</span>}
-                {sdrs && info && !sdrId && <span className="ag-warn">Escolha o SDR responsável.</span>}
+                {info && !sdrId && <span className="ag-warn">Escolha o SDR responsável.</span>}
                 {state.erro && <span role="alert" style={{ color: "var(--danger)" }}>{state.erro}</span>}
               </div>
               <button type="submit" className={`btn${ready ? " primary" : ""}`} style={{ height: 44, padding: "0 24px", fontWeight: 600 }} disabled={!ready || confirming}>
@@ -431,7 +434,7 @@ export function AgendarForm({ carousels, initialLead, sdrs, voltar }: {
               <button type="button" className="btn" onClick={reset}>Agendar outra</button>
               <Link href={`/reuniao/${ok.meetingId}`} className="btn">Ver passagem de bastão</Link>
               <span className="spacer" />
-              {swap === "idle" && !sdrs && <button type="button" className="btn" onClick={() => setSwap("form")}>Pedir troca de closer</button>}
+              {swap === "idle" && meuSdr && <button type="button" className="btn" onClick={() => setSwap("form")}>Pedir troca de closer</button>}
             </div>
             {swap === "form" && (
               <div style={{ borderTop: "1px solid var(--border-card)", paddingTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>

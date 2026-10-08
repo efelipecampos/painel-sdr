@@ -86,7 +86,7 @@ describe("quem gerencia usuários", () => {
 
 describe("desativar", () => {
   it("SDR desativado perde o acesso na hora; os dados ficam", async () => {
-    expect((await as(uid.sdrA, "select * from painel.sdr_metrics($1, $2)", [FROM, TO])).length).toBe(1);
+    expect((await as(uid.sdrA, "select * from painel.sdr_metrics($1, $2)", [FROM, TO])).length).toBeGreaterThan(0);
     await as(uid.timoteo, "select painel.definir_usuario_ativo($1, $2, false)", [sdr.A, uid.sdrA]);
     await expect(as(uid.sdrA, "select * from painel.sdr_metrics($1, $2)", [FROM, TO])).rejects.toThrow(/acesso negado/);
     expect((await db.query("select 1 from painel.chat_messages where sdr_id = $1", [sdr.A])).rows).toHaveLength(1);
@@ -115,7 +115,7 @@ describe("desativar", () => {
 
   it("reativar devolve o acesso", async () => {
     await as(uid.admin, "select painel.definir_usuario_ativo($1, $2, true)", [sdr.A, uid.sdrA]);
-    expect((await as(uid.sdrA, "select * from painel.sdr_metrics($1, $2)", [FROM, TO])).length).toBe(1);
+    expect((await as(uid.sdrA, "select * from painel.sdr_metrics($1, $2)", [FROM, TO])).length).toBeGreaterThan(0);
   });
 });
 

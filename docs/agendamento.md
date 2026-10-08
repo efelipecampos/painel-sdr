@@ -68,7 +68,7 @@ Até aqui o painel só lê dados. Com este módulo ele passa a **operar**: SDRs 
 ## 3. Quem usa
 
 - Novo papel `sdr` em `painel.app_role`, ligado ao SDR dele (`profiles.sdr_id`).
-- Toda RPC que a tela do SDR chama precisa restringir pelo SDR do usuário logado **no banco** (não só esconder na tela). SDR não acessa `/`, `/configuracoes` nem a tela de outro SDR.
+- ~~Toda RPC que a tela do SDR chama precisa restringir pelo SDR do usuário logado.~~ **Mudou em 2026-10-08:** o SDR vê tudo de todos (painel do time, tela de qualquer SDR, todas as reuniões), agenda lead de qualquer carteira (a reunião fica com o dono da carteira) e marca qualquer status. Continua sem acesso a Usuários, Carrosséis, Configurações e Relatório, e não decide troca de closer. Ao entrar, cai na própria lista.
 - Admin e gestor continuam vendo tudo e ganham a tela do carrossel.
 - Closers não viram usuários nesta fase. Eles recebem a reunião pela Google Agenda.
 

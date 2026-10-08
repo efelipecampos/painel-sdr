@@ -13,11 +13,9 @@ export default async function AgendarPage({ searchParams }: { searchParams: Prom
   const db = (await createClient()).schema("painel");
   const [cars, sdrs] = await Promise.all([
     db.rpc("carrosseis_para_agendar"),
-    // SDRs com login ativo (para o campo "SDR responsável"). Lido no servidor: a função usuarios() é só de quem
-    // gerencia usuários, e o gestor que agenda (Iago) não tem essa marcação.
-    isManager(me)
-      ? createAdminClient().schema("painel").from("profiles").select("name, sdr_id").eq("role", "sdr").eq("active", true).order("name")
-      : Promise.resolve({ data: [] }),
+    // SDRs com login ativo (campo "SDR responsável", para todos que agendam). Lido no servidor: a função usuarios()
+    // é só de quem gerencia usuários, e o gestor que agenda (Iago) não tem essa marcação.
+    createAdminClient().schema("painel").from("profiles").select("name, sdr_id").eq("role", "sdr").eq("active", true).order("name"),
   ]);
   if (cars.error) throw new Error(`Não foi possível ler os carrosséis: ${cars.error.message}`);
   const sdrOptions = ((sdrs.data ?? []) as { sdr_id: string | null; name: string }[])
@@ -35,7 +33,7 @@ export default async function AgendarPage({ searchParams }: { searchParams: Prom
         </Link>
         <h1 className="title">Agendar reunião</h1>
       </div>
-      <AgendarForm carousels={(cars.data ?? []) as CarouselOption[]} initialLead={sp.lead ?? null} voltar={voltar} sdrs={isManager(me) ? sdrOptions : null} />
+      <AgendarForm carousels={(cars.data ?? []) as CarouselOption[]} initialLead={sp.lead ?? null} voltar={voltar} sdrs={sdrOptions} meuSdr={me.role === "sdr" ? me.sdrId : null} />
     </main>
   );
 }

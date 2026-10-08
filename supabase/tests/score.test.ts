@@ -128,9 +128,11 @@ describe("carteira", () => {
     // time: 5 leads, 3 avaliados (90, 70, 40) → 67
     expect(by.get(null)).toEqual({ sdr_id: null, carteira: 5, avaliados: 3, sem_avaliacao: 2, qualidade: 67 });
   });
-  it("SDR logado só vê a própria linha, sem a do time", async () => {
+  it("SDR logado vê o mesmo que o gestor: todos e a linha do time (decisão de 2026-10-08)", async () => {
     const rows = await as<{ sdr_id: string | null }>(uid.sdrA, "select * from painel.carteira()");
-    expect(rows.map((r) => r.sdr_id)).toEqual([sdr.A]);
+    const gestor = await as<{ sdr_id: string | null }>(uid.gestor, "select * from painel.carteira()");
+    expect(rows.map((r) => r.sdr_id)).toEqual(gestor.map((r) => r.sdr_id));
+    expect(rows.map((r) => r.sdr_id)).toContain(null);
   });
 });
 
@@ -139,9 +141,9 @@ describe("lead_notas", () => {
     const rows = await as<{ lead_id: string; score: number }>(uid.gestor, "select * from painel.lead_notas($1)", [[lead.parado, lead.jaAvaliado]]);
     expect(new Map(rows.map((r) => [r.lead_id, r.score]))).toEqual(new Map([[lead.parado, 90], [lead.jaAvaliado, 70]]));
   });
-  it("SDR não vê nota de lead de outro SDR", async () => {
+  it("SDR vê nota de lead de outro SDR (decisão de 2026-10-08)", async () => {
     const rows = await as<{ lead_id: string }>(uid.sdrA, "select * from painel.lead_notas($1)", [[lead.parado, lead.escreveuDepois]]);
-    expect(rows.map((r) => r.lead_id)).toEqual([lead.parado]);
+    expect(rows.map((r) => r.lead_id).sort()).toEqual([lead.parado, lead.escreveuDepois].sort());
   });
   it("status e nota andam juntos", async () => {
     await expect(nota(lead.parado, "avaliado", null)).rejects.toThrow(/lead_scores_score_status/);

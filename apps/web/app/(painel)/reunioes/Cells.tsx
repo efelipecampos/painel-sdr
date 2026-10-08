@@ -25,12 +25,11 @@ const Feedback = ({ msg }: { msg: Msg }) =>
   msg ? <span role={msg.erro ? "alert" : "status"} className="ag-hint" style={{ color: msg.erro ? "var(--danger)" : "#7fd6a6" }}>{msg.erro ?? msg.ok}</span> : null;
 
 const OPCOES = [["agendada", "Agendada"], ["validada", "Validada"], ["invalidada", "Invalidada"], ["noshow", "No show"], ["cancelada", "Cancelada"]] as const;
-const LABEL: Record<string, string> = Object.fromEntries(OPCOES);
 const PROBLEMA: Record<string, string> = {
   removida: "Evento apagado da agenda do closer", recusada_lead: "Lead recusou o convite no Google", recusada_closer: "Closer recusou o convite no Google",
 };
 
-/** Situação: closer, gestor e admin escolhem; o SDR só cancela. Com problema no Google: aviso e ações. */
+/** Situação: closer, SDR, gestor e admin escolhem. Com problema no Google: aviso e ações. */
 export function StatusCell({ id, status, permissao, problema, company }: { id: string; status: string; permissao: string; problema: string | null; company: string }) {
   const { pending, msg, run } = useAct();
   if (problema) {
@@ -46,20 +45,6 @@ export function StatusCell({ id, status, permissao, problema, company }: { id: s
             Marcar como cancelada
           </button>
         </div>
-        <Feedback msg={msg} />
-      </div>
-    );
-  }
-  if (permissao === "sdr") {
-    return (
-      <div className="cell-stack" style={{ gap: 4, alignItems: "flex-start" }}>
-        <span style={{ fontWeight: status === "agendada" ? 400 : 600 }}>{LABEL[status] ?? status}</span>
-        {status === "agendada" && (
-          <button type="button" className="rn-mini ghost" disabled={pending}
-            onClick={() => { if (confirm(`Confirmar que a reunião com ${company} foi cancelada? O evento sai da agenda do closer.`)) run(() => mudarStatus(id, "cancelada"), "Cancelada."); }}>
-            Cancelar
-          </button>
-        )}
         <Feedback msg={msg} />
       </div>
     );

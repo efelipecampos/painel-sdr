@@ -61,10 +61,10 @@ afterAll(async () => {
 });
 
 describe("busca de lead", () => {
-  it("SDR acha só os leads dele (nome ou final do telefone); gestor acha todos; closer não busca", async () => {
-    expect((await as<{ name: string }>(uid.sdrA, "select name from painel.buscar_leads_para_agendar('maria')")).map((r) => r.name)).toEqual(["Maria Souza"]);
+  it("SDR acha leads de todas as carteiras (nome ou final do telefone), como o gestor; closer não busca", async () => {
+    expect((await as<{ name: string }>(uid.sdrA, "select name from painel.buscar_leads_para_agendar('maria')")).map((r) => r.name).sort()).toEqual(["Maria Lima", "Maria Souza"]);
     expect((await as<{ name: string; phone_final: string }>(uid.sdrB, "select name, phone_final from painel.buscar_leads_para_agendar('85678')"))).toEqual([{ name: "Maria Lima", phone_final: "5678" }]);
-    expect(await as(uid.sdrB, "select * from painel.buscar_leads_para_agendar('Souza')")).toEqual([]);
+    expect((await as<{ name: string }>(uid.sdrB, "select name from painel.buscar_leads_para_agendar('Souza')")).map((r) => r.name)).toEqual(["Maria Souza"]);
     expect((await as(uid.gestor, "select * from painel.buscar_leads_para_agendar('maria')")).length).toBe(2);
     expect(await as(uid.gestor, "select * from painel.buscar_leads_para_agendar('m')")).toEqual([]);
     await expect(as(uid.closerA, "select * from painel.buscar_leads_para_agendar('maria')")).rejects.toThrow(/acesso negado/);
@@ -72,15 +72,13 @@ describe("busca de lead", () => {
 });
 
 describe("passagem de bastão e reuniões do lead", () => {
-  it("abre para o closer da reunião, o SDR que agendou e o gestor; nega o outro closer e o outro SDR", async () => {
+  it("abre para o closer da reunião, qualquer SDR e o gestor; nega o outro closer", async () => {
     const outroCloser = id.meetingCloser === id.closerA ? uid.closerB : uid.closerA;
     const closerDela = id.meetingCloser === id.closerA ? uid.closerA : uid.closerB;
-    for (const u of [closerDela, uid.sdrA, uid.gestor]) {
+    for (const u of [closerDela, uid.sdrA, uid.sdrB, uid.gestor]) {
       expect((await as<{ handoff: string }>(u, "select handoff from painel.reuniao_detalhe($1)", [id.meeting]))[0].handoff).toBe("quer 8 usuários");
     }
-    for (const u of [outroCloser, uid.sdrB]) {
-      await expect(as(u, "select * from painel.reuniao_detalhe($1)", [id.meeting])).rejects.toThrow(/acesso negado/);
-    }
+    await expect(as(outroCloser, "select * from painel.reuniao_detalhe($1)", [id.meeting])).rejects.toThrow(/acesso negado/);
   });
 
   it("reuniões do lead pelo lead ou pelo contato do HubSpot; closer não usa", async () => {

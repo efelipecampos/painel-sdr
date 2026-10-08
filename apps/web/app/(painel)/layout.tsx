@@ -22,7 +22,7 @@ export default async function PainelLayout({ children }: { children: ReactNode }
       <header className="topbar">
         <Link href={me.role === "sdr" ? `/sdr/${me.sdrId}` : me.role === "closer" ? "/agenda" : "/"} className="brand">Painel SDR</Link>
         <nav className="group" aria-label="Navegação">
-          {isManager(me) && <Link href="/" className="btn small">Painel</Link>}
+          {(me.role === "sdr" || isManager(me)) && <Link href="/" className="btn small">Painel</Link>}
           {isManager(me) && <Link href="/carrosseis" className="btn small">Carrosséis</Link>}
           {me.role === "sdr" && <Link href={`/sdr/${me.sdrId}`} className="btn small">Meus chats</Link>}
           {me.role === "closer" && <Link href="/agenda" className="btn small">Minha agenda</Link>}

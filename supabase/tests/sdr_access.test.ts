@@ -63,10 +63,10 @@ afterAll(async () => {
   await db.close();
 });
 
-describe("SDR logado vê só o que é dele", () => {
-  it("sdr_metrics devolve só a linha do próprio SDR", async () => {
+describe("SDR logado vê tudo de todos (decisão de 2026-10-08)", () => {
+  it("sdr_metrics devolve a linha de todos os SDRs", async () => {
     const rows = await as<{ sdr_id: string; name: string }>(uid.sdrA, "select sdr_id, name from painel.sdr_metrics($1, $2)", [FROM, TO]);
-    expect(rows).toEqual([{ sdr_id: sdr.A, name: "SDR A" }]);
+    expect(rows.map((r) => r.name).sort()).toEqual(["SDR A", "SDR B"]);
   });
 
   it("sdr_chats do próprio SDR funciona e não traz lead de outro", async () => {
@@ -74,17 +74,20 @@ describe("SDR logado vê só o que é dele", () => {
     expect(rows.map((r) => r.lead_name)).toEqual(["Lead do A"]);
   });
 
-  it("sdr_chats de outro SDR: acesso negado", async () => {
-    await expect(as(uid.sdrA, "select * from painel.sdr_chats($1, $2, $3)", [sdr.B, FROM, TO])).rejects.toThrow(/acesso negado/);
+  it("sdr_chats de outro SDR: vê os leads dele", async () => {
+    const rows = await as<{ lead_name: string }>(uid.sdrA, "select lead_name from painel.sdr_chats($1, $2, $3, false)", [sdr.B, FROM, TO]);
+    expect(rows.map((r) => r.lead_name)).not.toContain("Lead do A");
+    expect(rows.length).toBeGreaterThan(0);
   });
 
-  it("team_metrics (visão do time): acesso negado", async () => {
-    await expect(as(uid.sdrA, "select * from painel.team_metrics($1, $2)", [FROM, TO])).rejects.toThrow(/acesso negado/);
+  it("team_metrics (visão do time): o SDR vê", async () => {
+    expect(await as(uid.sdrA, "select * from painel.team_metrics($1, $2)", [FROM, TO])).toHaveLength(1);
   });
 
-  it("set_meeting_status: acesso negado, inclusive no próprio lead", async () => {
+  it("set_meeting_status: o SDR marca, inclusive em lead de outro SDR", async () => {
     const leadA = (await db.query<{ id: string }>("select id from painel.leads where poli_contact_uuid = 'cA'")).rows[0].id;
-    await expect(as(uid.sdrA, "select painel.set_meeting_status($1, 'validada')", [leadA])).rejects.toThrow(/acesso negado/);
+    await as(uid.sdrA, "select painel.set_meeting_status($1, 'validada')", [leadA]);
+    await as(uid.sdrA, "select painel.set_meeting_status($1, null)", [leadA]);
   });
 
   it.each(["chats", "leads", "chat_messages", "meetings", "meeting_status_history", "response_events", "sdrs", "hubspot_leads", "chat_owner_history"])(

@@ -47,17 +47,17 @@ afterAll(async () => {
 });
 
 describe("pedido de troca", () => {
-  it("só o SDR da reunião pede, com justificativa; um pendente por reunião; gestor vê todos, o outro SDR não vê", async () => {
+  it("qualquer SDR pede, com justificativa; gestor não pede; um pendente por reunião; gestor e SDRs veem todos", async () => {
     const m = await reunir("2030-01-07T13:00:00Z");
     id.m1 = m.meeting_id;
-    await expect(as(uid.sdrB, "select painel.pedir_troca_closer($1, 'x')", [m.meeting_id])).rejects.toThrow(/acesso negado/);
     await expect(as(uid.gestor, "select painel.pedir_troca_closer($1, 'x')", [m.meeting_id])).rejects.toThrow(/acesso negado/);
     await expect(as(uid.sdrA, "select painel.pedir_troca_closer($1, '  ')", [m.meeting_id])).rejects.toThrow(/justificativa/);
     await as(uid.sdrA, "select painel.pedir_troca_closer($1, 'lead pediu outro horário com outra pessoa')", [m.meeting_id]);
     await expect(as(uid.sdrA, "select painel.pedir_troca_closer($1, 'de novo')", [m.meeting_id])).rejects.toThrow(/já existe um pedido/);
+    await expect(as(uid.sdrB, "select painel.pedir_troca_closer($1, 'outro SDR')", [m.meeting_id])).rejects.toThrow(/já existe um pedido/);
     expect(await as(uid.gestor, "select id from painel.pedidos_troca()")).toHaveLength(1);
     expect(await as(uid.sdrA, "select id from painel.pedidos_troca()")).toHaveLength(1);
-    expect(await as(uid.sdrB, "select id from painel.pedidos_troca()")).toHaveLength(0);
+    expect(await as(uid.sdrB, "select id from painel.pedidos_troca()")).toHaveLength(1);
     await expect(as(uid.closer, "select * from painel.pedidos_troca()")).rejects.toThrow(/acesso negado/);
     await expect(as(uid.gestor, "select * from painel.closer_swap_requests")).rejects.toThrow(/permission denied/);
   });

@@ -102,12 +102,10 @@ export default async function ReunioesPage({ searchParams }: { searchParams: Pro
           <option value="">Todos os carrosséis</option>
           {carousels.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
-        {me.role !== "sdr" && (
-          <select name="s" className="field" aria-label="SDR" defaultValue={sp.s ?? ""}>
-            <option value="">Todos os SDRs</option>
-            {sdrs.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-        )}
+        <select name="s" className="field" aria-label="SDR" defaultValue={sp.s ?? ""}>
+          <option value="">Todos os SDRs</option>
+          {sdrs.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
         {me.role !== "closer" && (
           <select name="k" className="field" aria-label="Closer" defaultValue={sp.k ?? ""}>
             <option value="">Todos os closers</option>

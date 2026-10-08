@@ -39,6 +39,8 @@ export interface LeadLoaded {
   erro?: string;
   leadId?: string | null;
   info?: LeadInfo & { ownerName: string | null; ownerIsMe: boolean; stageLabel: string | null };
+  /** SDR dono da carteira: o dono do contato no HubSpot, se for SDR; senão o SDR do atendimento mais recente. */
+  donoSdrId?: string | null;
   sugestao?: { poli: string | null; chatshub: string | null };
   reunioes?: { id: string; starts_at: string; status: string; carousel: string | null; closer: string | null; sdr: string | null }[];
   /** Reunião do painel que deve ser reagendada em vez de criar outra (uma reunião por lead). */
@@ -56,10 +58,6 @@ export async function carregarLead(input: { leadId?: string; ref?: string }): Pr
   if (input.leadId) {
     const { data: l } = await db.from("leads").select("id, hubspot_contact_id").eq("id", input.leadId).maybeSingle();
     if (!l) return { erro: "Lead não encontrado." };
-    if (me.role === "sdr") {
-      const { data: own } = await db.from("chats").select("id").eq("lead_id", l.id).eq("sdr_id", me.sdrId!).limit(1);
-      if (!own?.length) return { erro: "Este lead não é seu." };
-    }
     leadId = l.id;
     contactId = l.hubspot_contact_id;
     if (!contactId) return { erro: "Este lead ainda não está ligado a um contato do HubSpot. Cole o link do contato ou do Lead do HubSpot abaixo.", leadId };
@@ -98,6 +96,7 @@ export async function carregarLead(input: { leadId?: string; ref?: string }): Pr
   }
   return {
     leadId,
+    donoSdrId: await donoDaCarteira((owner.data as { email?: string } | null)?.email ?? null, leadId),
     info: {
       ...info, phone: maskPhone(info.phone),
       ownerName: (owner.data as { name?: string } | null)?.name ?? null,
@@ -108,7 +107,7 @@ export async function carregarLead(input: { leadId?: string; ref?: string }): Pr
     reunioes: (reunioes.data ?? []) as LeadLoaded["reunioes"],
     reaproveitar: reap ? {
       id: reap.id, status: reap.status, starts_at: reap.starts_at, closer: reap.closer, sdr: reap.sdr,
-      podeReagendar: isManager(me) || (!!me.sdrId && reap.sdr_id === me.sdrId) || reap.created_by === me.id,
+      podeReagendar: isManager(me) || me.role === "sdr",
     } : null,
     hubspotFora,
   };
@@ -121,6 +120,19 @@ function maskPhone(phone: string | null): string | null {
   const d = String(phone ?? "").replace(/\D/g, "").replace(/^55(?=\d{10,11}$)/, "");
   if (d.length < 8) return phone ? "••••" : null;
   return d.length >= 10 ? `(${d.slice(0, 2)}) ${d.slice(2, 3)}••••-${d.slice(-4)}` : `••••-${d.slice(-4)}`;
+}
+
+/** Dono da carteira: o SDR ativo com o e-mail do dono do contato no HubSpot; senão o SDR do atendimento mais recente. */
+async function donoDaCarteira(ownerEmail: string | null, leadId: string | null): Promise<string | null> {
+  const db = admin();
+  if (ownerEmail) {
+    const { data } = await db.from("sdrs").select("id").eq("poli_email", ownerEmail.toLowerCase()).eq("role", "sdr").eq("active", true).maybeSingle();
+    if (data) return data.id as string;
+  }
+  if (!leadId) return null;
+  const { data } = await db.from("chats").select("sdr_id, sdrs!inner(role, active)").eq("lead_id", leadId)
+    .eq("sdrs.role", "sdr").eq("sdrs.active", true).order("last_message_at", { ascending: false, nullsFirst: false }).limit(1);
+  return ((data ?? [])[0] as { sdr_id?: string } | undefined)?.sdr_id ?? null;
 }
 
 async function myEmail(sdrId: string): Promise<string> {
@@ -186,8 +198,11 @@ export async function confirmar(_: ConfirmState, form: FormData): Promise<Confir
   const badGuest = guests.find((g) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(g));
   if (badGuest) return { erro: `E-mail de convidado inválido: ${badGuest}` };
 
-  // SDR responsável: o próprio SDR; gestor/admin escolhe na tela.
-  const sdrId = me.role === "sdr" ? me.sdrId! : (s("sdrId") || null);
+  // SDR responsável: escolhido na tela (vem com o dono da carteira). Precisa ser um SDR com login ativo.
+  const sdrId = s("sdrId") || null;
+  if (!sdrId) return { erro: "Escolha o SDR responsável." };
+  const { data: sdrOk } = await admin().from("profiles").select("id").eq("sdr_id", sdrId).eq("role", "sdr").eq("active", true).maybeSingle();
+  if (!sdrOk) return { erro: "O SDR responsável escolhido não está ativo no painel." };
   const loaded = await carregarLead(s("leadId") ? { leadId: s("leadId") } : { ref: s("contactId") });
   if (loaded.erro || !loaded.info) return { erro: loaded.erro ?? "Lead não encontrado no HubSpot." };
   const info = loaded.info;
