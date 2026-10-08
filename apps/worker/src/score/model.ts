@@ -50,13 +50,15 @@ export function anthropicScorer(model: string, client = new Anthropic()): Scorer
 
 /** Preço da Celeris por milhão de tokens (docs.celeris.ai/pricing, 08/10/2026): celeris-1 e celeris-1-magnus. */
 export const CELERIS_1: Prices = { input: 0.2, output: 0.7 };
-export const CELERIS_URL = "https://inference.celeris.ai/celeris-1/v1";
+/** Cada modelo tem o próprio endereço, com o nome do modelo no caminho (docs.celeris.ai/models). */
+export const celerisUrl = (model: string) => `https://inference.celeris.ai/${model}/v1`;
 
 export class CelerisError extends Error {
   constructor(public status: number, message: string) { super(message); }
 }
 
-export function celerisScorer(model: string, apiKey: string, baseUrl = CELERIS_URL, fetchFn: typeof fetch = fetch): Scorer {
+/** thinking: deixa o modelo raciocinar antes de responder (mais lento e mais tokens de saída). */
+export function celerisScorer(model: string, apiKey: string, baseUrl = celerisUrl(model), fetchFn: typeof fetch = fetch, thinking = false): Scorer {
   async function post(body: unknown): Promise<Response> {
     for (let attempt = 0; ; attempt++) {
       const res = await fetchFn(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
@@ -80,10 +82,10 @@ export function celerisScorer(model: string, apiKey: string, baseUrl = CELERIS_U
       const res = await post({
         model,
         messages: [{ role: "system", content: system }, { role: "user", content: user }],
-        max_tokens: 2000,
+        max_tokens: thinking ? 8000 : 2000,
         temperature: 0,
         response_format: { type: "json_schema", json_schema: { name: "avaliacao_lead", schema } },
-        chat_template_kwargs: { enable_thinking: false },
+        chat_template_kwargs: { enable_thinking: thinking },
       });
       if (!res.ok) {
         // A resposta de erro não traz dado do lead; corta para não encher o log.
@@ -111,7 +113,8 @@ export function scorerFromEnv(env: NodeJS.ProcessEnv = process.env): Scorer | nu
   const ia = env.SCORE_IA?.trim().toLowerCase() || "anthropic";
   if (ia === "celeris") {
     const key = env.CELERIS_API_KEY?.trim();
-    return key ? celerisScorer(env.CELERIS_MODEL?.trim() || "celeris-1", key, env.CELERIS_URL?.trim() || CELERIS_URL) : null;
+    const model = env.CELERIS_MODEL?.trim() || "celeris-1";
+    return key ? celerisScorer(model, key, env.CELERIS_URL?.trim() || celerisUrl(model), fetch, env.CELERIS_RACIOCINIO?.trim() === "sim") : null;
   }
   if (ia !== "anthropic") throw new Error(`SCORE_IA inválido: ${ia} (use anthropic ou celeris)`);
   const model = env.ANTHROPIC_MODEL?.trim();
