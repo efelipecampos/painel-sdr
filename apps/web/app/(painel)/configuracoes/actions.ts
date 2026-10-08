@@ -63,3 +63,54 @@ export async function saveSettings(form: FormData) {
   }
   back();
 }
+
+interface QualityCriterion { id: string | null; name: string; description: string; weight: number }
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+// Critérios e contexto da nota de qualidade (Fase 7c). Critério removido é desativado, não apagado: as notas antigas
+// continuam mostrando o nome dele. Qualquer mudança gera uma versão nova e o worker avalia os leads de novo.
+export async function saveQuality(form: FormData) {
+  const me = await getMe();
+  if (me?.role !== "admin") back("Só o administrador pode alterar as configurações.");
+
+  let list: QualityCriterion[];
+  try {
+    list = JSON.parse(String(form.get("criteria")));
+    if (!Array.isArray(list)) throw new Error();
+  } catch {
+    return back("Não foi possível ler o formulário. Recarregue a página e tente de novo.");
+  }
+  const context = String(form.get("quality_context") ?? "").trim();
+  if (!context) return back("Escreva o contexto para o Claude.");
+  if (context.length > 3000) return back("O contexto pode ter até 3.000 caracteres.");
+  if (!list.length) return back("Mantenha pelo menos um critério.");
+  if (list.length > 8) return back("Use no máximo 8 critérios.");
+  const rows = list.map((c, i) => ({
+    id: typeof c.id === "string" && UUID.test(c.id) ? c.id : null,
+    name: String(c.name ?? "").trim(),
+    description: String(c.description ?? "").trim(),
+    weight: Number(c.weight),
+    sort: i + 1,
+  }));
+  for (const c of rows) {
+    if (!c.name || c.name.length > 60) return back("Cada critério precisa de um nome de até 60 caracteres.");
+    if (!c.description || c.description.length > 600) return back(`Descreva o que o Claude deve observar em "${c.name}" (até 600 caracteres).`);
+    if (!Number.isInteger(c.weight) || c.weight < 1 || c.weight > 10) return back(`O peso de "${c.name}" precisa ser um número de 1 a 10.`);
+  }
+  if (new Set(rows.map((c) => c.name.toLowerCase())).size !== rows.length) return back("Há dois critérios com o mesmo nome.");
+
+  const db = (await createClient()).schema("painel");
+  const current = await db.from("quality_criteria").select("id").eq("active", true);
+  if (current.error) return back(`Não foi possível ler os critérios: ${current.error.message}`);
+  const keep = new Set(rows.flatMap((c) => (c.id ? [c.id] : [])));
+  const removed = (current.data ?? []).map((c) => c.id).filter((id) => !keep.has(id));
+
+  const steps = [
+    ...rows.filter((c) => c.id).map(({ id, ...c }) => db.from("quality_criteria").update({ ...c, active: true }).eq("id", id!)),
+    ...(rows.some((c) => !c.id) ? [db.from("quality_criteria").insert(rows.filter((c) => !c.id).map(({ id: _, ...c }) => c))] : []),
+    ...(removed.length ? [db.from("quality_criteria").update({ active: false }).in("id", removed)] : []),
+    db.from("settings").upsert({ key: "quality_context", value: context, updated_at: new Date().toISOString(), updated_by: me!.id }),
+  ];
+  for (const r of await Promise.all(steps)) if (r.error) return back(`Não foi possível salvar os critérios: ${r.error.message}`);
+  back();
+}
