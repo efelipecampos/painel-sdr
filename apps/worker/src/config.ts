@@ -34,6 +34,8 @@ export const config = {
   hubspotToken: process.env.HUBSPOT_PRIVATE_APP_TOKEN?.trim() || null,
   /** Intervalo do sync de Leads do HubSpot. */
   hubspotEveryMinutes: Number(process.env.HUBSPOT_SYNC_MINUTES ?? 15),
+  /** Modelo do score de qualidade (Fase 7). A chave ANTHROPIC_API_KEY é lida direto pelo SDK. */
+  anthropicModel: process.env.ANTHROPIC_MODEL?.trim() || null,
   /** Webhook do espaço Gestão SDR no Google Chat. Sem ele, os alertas só vão para o log. */
   alertWebhookUrl: process.env.GOOGLE_CHAT_WEBHOOK_URL_ALERTAS?.trim() || null,
   /** Endereço do painel, para conferir se está no ar. */
