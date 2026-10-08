@@ -112,9 +112,6 @@ A Fase 2 mexe em produção e em outro repositório. Não edite a integração a
 | Pendência | Quando perguntar |
 |---|---|
 | Ligar ou não a nota diária no HubSpot (`DAILY_NOTES_ENABLED`); hoje `false` | Quando o Felipe quiser |
-| Carteira (card e qualidade da carteira): proposta = Lead mais recente do contato no [New] Pipeline SDR, em etapa aberta, com o SDR como dono | Fase 7 |
-| Critérios e pesos da nota de qualidade + contexto da Poli (proposta com base nos motivos de descarte já enviada em 07/10) | Fase 7 |
-| Modelo, limite de gasto e chave da API da Anthropic | Fase 7 |
 | Em que dia o agendamento conta (entrada em Garantir Agendamento × Qualificado) — substituído pelo agendamento dentro do painel | Fase 10 |
 | Formulário de cadastro: separar a faixa "2 a 4 colaboradores" (o corte real é 3 atendentes) | Quando o Felipe quiser |
 | Retenção de conteúdo de mensagens (LGPD) | Fase 8 |
