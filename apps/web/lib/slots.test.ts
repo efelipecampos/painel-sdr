@@ -36,8 +36,8 @@ describe("grade", () => {
   it("primeiro horário da grade às 08:15, depois 08:30, 09:00...", () => {
     const r = { ...rules, hours: rules.hours.map((h) => ({ ...h, start_time: "08:00" })), gridFirst: "08:15" };
     expect(gridSlots("2026-10-13", 60, r, NOW).slice(0, 4)).toEqual(["08:15", "08:30", "09:00", "09:30"]);
-    // expediente começando depois do primeiro horário: vale o expediente
-    expect(gridSlots("2026-10-13", 30, { ...rules, gridFirst: "08:15" }, NOW)[0]).toBe("08:30");
+    // horário comercial das métricas às 08:20: a grade continua começando às 08:15
+    expect(gridSlots("2026-10-13", 30, { ...rules, gridFirst: "08:15" }, NOW).slice(0, 2)).toEqual(["08:15", "08:30"]);
     // primeiro horário em ponto da grade não duplica
     expect(gridSlots("2026-10-13", 30, { ...r, gridFirst: "09:00" }, NOW).slice(0, 2)).toEqual(["09:00", "09:30"]);
   });
@@ -55,6 +55,9 @@ describe("ajuste manual", () => {
     expect(checkManual("2026-10-13T12:15", 30, rules, NOW)).toMatchObject({ erro: null, avisos: ["Pega o horário de almoço"], foraDoPadrao: true });
     expect(checkManual("2026-10-13T17:50", 30, rules, NOW).avisos).toEqual(["Termina depois das 18:00"]);
     expect(checkManual("2026-10-13T07:30", 30, rules, NOW).avisos).toEqual(["Começa antes das 08:20"]);
+    // 08:15 é horário padrão de reunião (primeiro da grade), mesmo com o expediente às 08:20
+    expect(checkManual("2026-10-13T08:15", 60, { ...rules, gridFirst: "08:15" }, NOW)).toMatchObject({ avisos: [], foraDoPadrao: false });
+    expect(checkManual("2026-10-13T08:00", 60, { ...rules, gridFirst: "08:15" }, NOW).avisos).toEqual(["Começa antes das 08:15"]);
     expect(checkManual("2026-10-12T10:00", 30, rules, NOW).avisos).toEqual(["Dia fora do expediente (fim de semana ou feriado)"]);
   });
   it("recusa fora do limite absoluto, sem antecedência, fora da janela ou duração inválida", () => {
