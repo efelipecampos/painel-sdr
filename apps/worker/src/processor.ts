@@ -42,7 +42,7 @@ export async function setCursor(db: SupabaseClient, id: number): Promise<void> {
   check(await db.schema("painel").from("settings").upsert({ key: CURSOR_KEY, value: id, updated_at: new Date().toISOString() }), "gravar cursor");
 }
 
-/** Mantém o papel de cada atendente (e quem é robô) igual às listas do .env. */
+/** Mantém o papel de cada atendente (e quem é robô) igual às listas do .env; papel definido na tela Usuários não muda. */
 export async function syncRoles(db: SupabaseClient): Promise<void> {
   // Closers da lista que ainda não apareceram em nenhum chat também precisam existir (carrosséis, Fase 10).
   const known = new Set(check(await db.schema("painel").from("sdrs").select("poli_email"), "ler sdrs").map((r: { poli_email: string }) => r.poli_email));
@@ -55,9 +55,9 @@ export async function syncRoles(db: SupabaseClient): Promise<void> {
       { onConflict: "poli_email", ignoreDuplicates: true },
     ), "cadastrar closers");
   }
-  const rows = check(await db.schema("painel").from("sdrs").select("id, poli_email, role, is_bot"), "ler sdrs");
+  const rows = check(await db.schema("painel").from("sdrs").select("id, poli_email, role, is_bot, role_pela_tela"), "ler sdrs");
   for (const r of rows) {
-    const role = roleFor(r.poli_email);
+    const role = r.role_pela_tela ? r.role : roleFor(r.poli_email);
     const bot = isBot(r.poli_email);
     if (role !== r.role || bot !== r.is_bot) {
       check(await db.schema("painel").from("sdrs").update({ role, is_bot: bot }).eq("id", r.id), "atualizar papel");

@@ -89,6 +89,8 @@ describe("troca de marca", () => {
     expect((await db.query<{ v: string }>("select painel.carrossel_outra_marca($1) as v", [ch])).rows[0].v).toBe(id.car);
     const lic = await one("select id from painel.carousels where name = 'Licitação'");
     expect((await db.query<{ v: string | null }>("select painel.carrossel_outra_marca($1) as v", [lic])).rows[0].v).toBeNull();
+    // só o servidor chama (revisão de segurança da Fase 8): usuário logado não executa
+    await expect(as(uid.gestor, "select painel.carrossel_outra_marca($1)", [id.car])).rejects.toThrow(/permission denied/);
   });
 });
 

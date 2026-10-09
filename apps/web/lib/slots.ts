@@ -52,8 +52,9 @@ export function gridSlots(day: string, duration: number, r: AgendaRules, now: Da
   const end = Math.min(toMin(h.end_time.slice(0, 5)), toMin(GRID_END));
   const [ls, le] = [toMin(r.lunchStart), toMin(r.lunchEnd)];
   const out: string[] = [];
-  const first = Math.max(toMin(h.start_time.slice(0, 5)), r.gridFirst ? toMin(r.gridFirst) : 0);
-  const starts: number[] = r.gridFirst && first === toMin(r.gridFirst) && first % GRID_STEP_MINUTES ? [first] : [];
+  // O primeiro horário das reuniões (08:15) vale mesmo com o horário comercial das métricas começando depois (08:20).
+  const first = r.gridFirst ? toMin(r.gridFirst) : toMin(h.start_time.slice(0, 5));
+  const starts: number[] = r.gridFirst && first % GRID_STEP_MINUTES ? [first] : [];
   for (let m = Math.ceil(first / GRID_STEP_MINUTES) * GRID_STEP_MINUTES; m + duration <= end; m += GRID_STEP_MINUTES) starts.push(m);
   for (const m of starts) {
     if (m + duration > end) continue;
@@ -86,7 +87,10 @@ export function checkManual(local: string, duration: number, r: AgendaRules, now
   const avisos: string[] = [];
   const h = hoursOf(day, r);
   if (!h) avisos.push("Dia fora do expediente (fim de semana ou feriado)");
-  else if (s < toMin(h.start_time.slice(0, 5))) avisos.push(`Começa antes das ${h.start_time.slice(0, 5)}`);
+  else {
+    const inicio = r.gridFirst ?? h.start_time.slice(0, 5);  // reuniões começam às 08:15, mesmo com o expediente às 08:20
+    if (s < toMin(inicio)) avisos.push(`Começa antes das ${inicio}`);
+  }
   if (s < toMin(r.lunchEnd) && e > toMin(r.lunchStart)) avisos.push("Pega o horário de almoço");
   if (e > toMin(GRID_END)) avisos.push(`Termina depois das ${GRID_END}`);
   return { erro: null, avisos, foraDoPadrao: avisos.length > 0 };
