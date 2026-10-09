@@ -61,6 +61,8 @@ export function toRow(lead: HubspotLead, contactId: string | null, stages: Metri
     entered_descartado_at: entered(stages.descartado),
     entered_dsq_at: entered(stages.dsq),
     entered_agendado_at: agendado,
+    // "Respondeu template" (lido pelo follow-up do n8n); o painel marca em hubspot/respostas.ts
+    respondeu_template: p.respondeu_template == null || p.respondeu_template === "" ? null : p.respondeu_template === "true",
     synced_at: new Date().toISOString(),
   };
 }
@@ -133,7 +135,7 @@ export async function syncLeads(db: SupabaseClient, hs: HubspotClient): Promise<
         {
           filterGroups: [{ filters: [{ propertyName: "hs_lastmodifieddate", operator: "GTE", value: String(since) }] }],
           sorts: [{ propertyName: "hs_lastmodifieddate", direction: "ASCENDING" }],
-          properties: ["hs_pipeline", "hs_pipeline_stage", "hubspot_owner_id", "hs_createdate", "hs_lastmodifieddate", ...extra],
+          properties: ["hs_pipeline", "hs_pipeline_stage", "hubspot_owner_id", "hs_createdate", "hs_lastmodifieddate", "respondeu_template", ...extra],
           limit: PAGE,
           after,
         },

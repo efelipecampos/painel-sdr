@@ -7,6 +7,7 @@ import { Monitor, postToGoogleChat } from "./alerts.js";
 import { config } from "./config.js";
 import { HubspotClient, resetLeadsCursor, syncLeads, syncOwners, syncStages } from "./hubspot/leads.js";
 import { dailyCheck, stuckMeetings, syncMeetings } from "./hubspot/meetings.js";
+import { marcarRespostas } from "./hubspot/respostas.js";
 import { checkGoogle } from "./google.js";
 import { createDb, processBatch, rebuildAll, syncRoles } from "./processor.js";
 import { scoreRound } from "./score/job.js";
@@ -76,6 +77,27 @@ async function syncHubspotMeetings(): Promise<void> {
   }
 }
 
+/** "Respondeu template" no Lead do HubSpot (follow-up do n8n). Alerta se falhar por mais de 15 min seguidos. */
+let respostasErroDesde = 0;
+let respostasAlertou = false;
+async function syncRespostas(): Promise<void> {
+  if (!hubspot) return;
+  try {
+    const n = await marcarRespostas(db, hubspot);
+    if (n) console.log(`[worker] HubSpot: ${n} Leads marcados como "Respondeu template"`);
+    respostasErroDesde = 0;
+    respostasAlertou = false;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[worker] erro ao marcar \"Respondeu template\":", msg);
+    respostasErroDesde ||= Date.now();
+    if (!respostasAlertou && Date.now() - respostasErroDesde > 15 * 60_000) {
+      respostasAlertou = true;
+      await postToGoogleChat(`⚠️ *Painel SDR:* há mais de 15 min o painel não consegue marcar "Respondeu template" nos Leads do HubSpot. O follow-up do n8n pode mandar mensagem para quem já respondeu. Erro: ${msg}. O painel continua tentando.`);
+    }
+  }
+}
+
 async function syncHubspot(force: boolean): Promise<boolean> {
   if (!hubspot) return false;
   if (!force && Date.now() - lastHubspotSync < config.hubspotEveryMinutes * 60_000) return false;
@@ -126,6 +148,7 @@ if (process.argv.includes("--testar-alerta")) {
       console.error("[worker] erro no sync do HubSpot:", err instanceof Error ? err.message : err);
       await monitor.hubspot(err);
     }
+    await syncRespostas();
     try {
       await syncGoogle();
     } catch (err) {
