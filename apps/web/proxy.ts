@@ -16,7 +16,8 @@ export async function proxy(request: NextRequest) {
   });
   const { data } = await supabase.auth.getUser();
   const isLogin = request.nextUrl.pathname.startsWith("/login");
-  if (!data.user && !isLogin) {
+  const isConfirm = request.nextUrl.pathname === "/auth/confirm"; // link do e-mail de convite / senha nova
+  if (!data.user && !isLogin && !isConfirm) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
