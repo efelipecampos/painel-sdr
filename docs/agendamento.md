@@ -83,7 +83,7 @@ Até aqui o painel só lê dados. Com este módulo ele passa a **operar**: SDRs 
    - Início em qualquer minuto; duração livre (padrão 10 a 240 min), com atalhos de 30, 45 e 60.
    - A cada mudança o sistema **confere de novo a agenda real** para o intervalo exato e mostra quantos closers estão disponíveis. Zero closers: não deixa confirmar. É isso que faltava no "Ajustar hora e minuto" da Poli Agenda.
    - A grade só oferece horários do expediente padrão (fora do almoço, até as 18h). O ajuste manual pode sair disso, dentro de um limite absoluto configurável (padrão 07:00 a 20:00). Nesse caso a tela avisa ("Pega o horário de almoço", "Termina depois das 18:00") e a reunião fica **marcada como fora do horário padrão** na lista dos gestores.
-   - O intervalo entre reuniões continua valendo no ajuste manual.
+   - O intervalo entre reuniões continua valendo no ajuste manual (só entre reuniões do painel; ver abaixo).
    - O servidor repete todas essas checagens na confirmação; a tela não é a única barreira.
    Cada horário mostra **quantos closers estão disponíveis** ("1 closer disponível", "2 closers disponíveis"), pedido do Felipe em 2026-10-07. Nunca o nome.
 4. Confirma. O sistema, nesta ordem, no servidor:
@@ -102,6 +102,8 @@ Sem e-mail do lead: o evento vai só para o closer e a tela mostra o link do Mee
 **Horários oferecidos:** dentro do horário comercial e fora de feriados (configurações que já existem), respeitando antecedência mínima, janela máxima de dias úteis e intervalo entre reuniões. Um horário aparece se ao menos um closer elegível está livre nele.
 
 **Closer elegível:** ativo no carrossel, peso maior que zero, agenda conectada, livre no horário (free/busy do Google + reuniões já gravadas no painel + intervalo).
+
+**Intervalo entre reuniões (decisão do Felipe, 2026-10-09):** o intervalo do carrossel vale só entre reuniões com cliente, ou seja, as reuniões do painel. O ocupado que vem do livre/ocupado do Google (almoço, reunião interna, bloqueio) continua bloqueando o horário, mas sem intervalo. Motivo: o "Almoço" das 12:00 na agenda dos closers escondia o horário das 11:00 (60 min + intervalo). Vale na grade, no ajuste manual e na conferência da confirmação.
 
 **Cada carrossel tem o seu livro-caixa.** Um closer pode estar em vários carrosséis, com peso diferente em cada um. A agenda dele é uma só: horário ocupado por reunião de um carrossel fica indisponível nos outros.
 

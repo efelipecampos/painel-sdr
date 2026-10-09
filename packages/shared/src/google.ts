@@ -250,6 +250,18 @@ export function isFree(busy: Interval[], start: Date, end: Date, gapMinutes: num
   return !busy.some((b) => b.start.getTime() < end.getTime() + g && b.end.getTime() > start.getTime() - g);
 }
 
+/** Ocupado de um closer, separado pela origem. */
+export interface Ocupado { google: Interval[]; painel: Interval[] }
+
+/**
+ * Livre considerando a origem do ocupado (decisão do Felipe, 2026-10-09): o intervalo do carrossel vale só entre
+ * reuniões com cliente (as do painel); o ocupado do Google (almoço, reunião interna, bloqueio) bloqueia sem intervalo.
+ * A reunião do painel também está no Google; lá conta sem intervalo, aqui com.
+ */
+export function isFreeOcupado(o: Ocupado, start: Date, end: Date, gapMinutes: number): boolean {
+  return isFree(o.google, start, end, 0) && isFree(o.painel, start, end, gapMinutes);
+}
+
 export type EventState = "ok" | "removida" | "recusada_lead" | "recusada_closer";
 
 /** Situação de um evento do painel no Google (conferência periódica). */

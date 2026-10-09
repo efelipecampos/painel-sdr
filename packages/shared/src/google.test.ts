@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { randomBytes } from "node:crypto";
-import { GoogleCalendar, GoogleError, accessToken, activeTitle, archiveTitle, authUrl, decryptToken, encryptToken, eventState, exchangeCode, isFree } from "./google";
+import { GoogleCalendar, GoogleError, accessToken, activeTitle, archiveTitle, authUrl, decryptToken, encryptToken, eventState, exchangeCode, isFree, isFreeOcupado } from "./google";
 
 const KEY = randomBytes(32).toString("base64");
 const creds = { clientId: "cid", clientSecret: "sec", redirectUri: "https://x/api/google/callback" };
@@ -56,6 +56,20 @@ describe("livre e ocupado", () => {
     expect(isFree(busy, t("11:15"), t("11:45"), 15)).toBe(true);
     expect(isFree(busy, t("09:15"), t("09:45"), 15)).toBe(true);
     expect(isFree([], t("10:00"), t("10:30"), 15)).toBe(true);
+  });
+  it("intervalo do carrossel só entre reuniões do painel; ocupado do Google bloqueia sem intervalo", () => {
+    const almoco = { start: t("12:00"), end: t("13:00") };
+    // almoço às 12:00 libera 11:00–12:00 (60 min, intervalo 15)
+    expect(isFreeOcupado({ google: [almoco], painel: [] }, t("11:00"), t("12:00"), 15)).toBe(true);
+    expect(isFreeOcupado({ google: [almoco], painel: [] }, t("13:00"), t("14:00"), 15)).toBe(true);
+    // mas continua bloqueando o próprio horário
+    expect(isFreeOcupado({ google: [almoco], painel: [] }, t("11:30"), t("12:30"), 15)).toBe(false);
+    // reunião do painel às 12:00 (que também aparece no Google) não libera 11:00–12:00
+    const reuniao = { start: t("12:00"), end: t("13:00") };
+    expect(isFreeOcupado({ google: [reuniao], painel: [reuniao] }, t("11:00"), t("12:00"), 15)).toBe(false);
+    expect(isFreeOcupado({ google: [reuniao], painel: [reuniao] }, t("10:45"), t("11:45"), 15)).toBe(true);
+    expect(isFreeOcupado({ google: [reuniao], painel: [reuniao] }, t("13:00"), t("14:00"), 15)).toBe(false);
+    expect(isFreeOcupado({ google: [reuniao], painel: [reuniao] }, t("13:15"), t("14:15"), 15)).toBe(true);
   });
   it("lê o livre/ocupado e trata agenda com erro como falha (não como livre)", async () => {
     const cal = new GoogleCalendar("tk", async () => json(200, { calendars: { primary: { busy: [{ start: "2026-10-12T13:00:00Z", end: "2026-10-12T14:00:00Z" }] } } }));
