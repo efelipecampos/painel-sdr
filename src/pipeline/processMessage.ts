@@ -130,24 +130,26 @@ async function handleMessage(message: MessageEvent): Promise<ProcessResult> {
     message,
     ownerId,
   });
-  const completedCycle = await updatePoliContactProperties(contactId, message);
-  if (completedCycle) {
-    logger.info(
-      { contactId, horas: completedCycle.hours, template: completedCycle.templateName },
-      "Lead respondeu a prospecção",
-    );
-    try {
-      await writeCycleToDeals(openDeals, completedCycle);
-    } catch (err) {
-      logger.warn({ err, contactId }, "Falha ao copiar o ciclo de prospecção pros negócios");
+  if (env.HUBSPOT_FIELDS_ENABLED) {
+    const completedCycle = await updatePoliContactProperties(contactId, message);
+    if (completedCycle) {
+      logger.info(
+        { contactId, horas: completedCycle.hours, template: completedCycle.templateName },
+        "Lead respondeu a prospecção",
+      );
+      try {
+        await writeCycleToDeals(openDeals, completedCycle);
+      } catch (err) {
+        logger.warn({ err, contactId }, "Falha ao copiar o ciclo de prospecção pros negócios");
+      }
     }
-  }
 
-  try {
-    const filled = await fillMissingDealChatLinks(openDeals, buildPoliChatLink(message.leadUuid));
-    if (filled.length > 0) logger.info({ contactId, dealIds: filled }, "Link do chat na Poli preenchido nos negócios");
-  } catch (err) {
-    logger.warn({ err, contactId }, "Falha ao preencher o link do chat na Poli nos negócios");
+    try {
+      const filled = await fillMissingDealChatLinks(openDeals, buildPoliChatLink(message.leadUuid));
+      if (filled.length > 0) logger.info({ contactId, dealIds: filled }, "Link do chat na Poli preenchido nos negócios");
+    } catch (err) {
+      logger.warn({ err, contactId }, "Falha ao preencher o link do chat na Poli nos negócios");
+    }
   }
 
   logger.info({ contactId, communicationId, direction: message.direction }, "Mensagem registrada no HubSpot");

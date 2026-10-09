@@ -29,6 +29,11 @@ const schema = z.object({
   // dry_run_results pra conferência antes de ligar a escrita de verdade.
   DRY_RUN: booleanFromEnv(false),
 
+  // Campos do Contato e do Negócio (poli_*, id/link do chat na Poli). Vão
+  // passar a ser responsabilidade do Painel de SDR; false = a integração só
+  // cria a Communication e deixa os campos com o painel.
+  HUBSPOT_FIELDS_ENABLED: booleanFromEnv(true),
+
   GOOGLE_CHAT_WEBHOOK_URL_SDR: z.string().url().or(z.literal("")).default(""),
   GOOGLE_CHAT_WEBHOOK_URL_CLOSER: z.string().url().or(z.literal("")).default(""),
 
