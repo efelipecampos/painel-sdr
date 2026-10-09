@@ -83,7 +83,7 @@ Atualize esta lista conforme avança.
   - [x] 10e — HubSpot e trocas: Reunião no HubSpot (criação, atualização, status às 17:55), pedido de troca de closer com fila e aviso no Gestão SDR, troca direta, Passar para CH/Poli, relatório. No ar e no `main` desde 07/10/2026, testadas pelo Felipe (reuniões de teste apagadas do painel, do Google e do HubSpot).
   - [ ] Virada da Poli Agenda (em andamento: SDRs começam a agendar pelo painel em 08/10/2026).
   - [x] Ajustes da virada (08/10/2026): acesso global do SDR, SDR responsável = dono da carteira, botão Finalizar, transferência entre SDRs leva a espera para quem recebeu, login leva cada um à própria tela.
-  - [ ] Falta na Fase 10: Aline Paiva e Lucas Cintra conectarem a agenda (os outros 7 conectados em 09/10, inclusive as contas @chatshub.com.br), conferir os 7 carrosséis montados, desligar a extensão do HubSpot e a Poli Agenda (data de corte), "Adicionar usuário" e trocar papel pela tela Usuários.
+  - [ ] Falta na Fase 10: Aline Paiva conectar a agenda quando voltar das férias (terça, 13/10); Lucas Cintra pediu demissão: desativar na tela Usuários (os outros 7 conectados em 09/10, inclusive as contas @chatshub.com.br), conferir os 7 carrosséis montados, desligar a extensão do HubSpot e a Poli Agenda (data de corte), "Adicionar usuário" e trocar papel pela tela Usuários.
 
 ## 5. O que já se sabe sobre a integração PoliChat-Hubspot
 
