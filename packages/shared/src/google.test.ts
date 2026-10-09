@@ -71,6 +71,15 @@ describe("livre e ocupado", () => {
     expect(isFreeOcupado({ google: [reuniao], painel: [reuniao] }, t("13:00"), t("14:00"), 15)).toBe(false);
     expect(isFreeOcupado({ google: [reuniao], painel: [reuniao] }, t("13:15"), t("14:15"), 15)).toBe(true);
   });
+  it("intervalo de 30 min antes e depois de reunião do painel", () => {
+    const r = { start: t("10:00"), end: t("11:00") };
+    const o = { google: [r], painel: [r] };
+    expect(isFreeOcupado(o, t("11:00"), t("12:00"), 30)).toBe(false);  // logo depois
+    expect(isFreeOcupado(o, t("11:30"), t("12:30"), 30)).toBe(true);   // meia hora depois
+    expect(isFreeOcupado(o, t("09:00"), t("10:00"), 30)).toBe(false);  // termina logo antes
+    expect(isFreeOcupado(o, t("08:45"), t("09:45"), 30)).toBe(false);  // só 15 min antes
+    expect(isFreeOcupado(o, t("08:30"), t("09:30"), 30)).toBe(true);   // meia hora antes
+  });
   it("lê o livre/ocupado e trata agenda com erro como falha (não como livre)", async () => {
     const cal = new GoogleCalendar("tk", async () => json(200, { calendars: { primary: { busy: [{ start: "2026-10-12T13:00:00Z", end: "2026-10-12T14:00:00Z" }] } } }));
     expect(await cal.busy(t("07:00"), t("20:00"))).toEqual([{ start: new Date("2026-10-12T13:00:00Z"), end: new Date("2026-10-12T14:00:00Z") }]);
