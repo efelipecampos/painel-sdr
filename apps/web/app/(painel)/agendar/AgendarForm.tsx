@@ -56,7 +56,7 @@ export function AgendarForm({ carousels, initialLead, sdrs, meuSdr, voltar }: {
   const [gridLoading, setGridLoading] = useState(false);
   const [day, setDay] = useState("");
   const [startTime, setStartTime] = useState("");
-  const [duration, setDuration] = useState(30);
+  const [duration, setDuration] = useState(60); // padrão 60 min (decisão do Felipe, 2026-10-09)
   const [check, setCheck] = useState<{ erro: string | null; avisos: string[]; count: number } | null>(null);
   const [checking, setChecking] = useState(false);
   const [state, action, confirming] = useActionState(confirmar, {});
