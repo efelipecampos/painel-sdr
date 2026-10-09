@@ -13,6 +13,22 @@ if (existsSync(rootEnv)) {
   }
 }
 
+// CSP (Fase 8): o navegador só fala com o próprio painel. Supabase, Google e HubSpot são chamados pelo servidor;
+// a fonte (next/font) é servida pelo painel. 'unsafe-inline' em script porque o Next injeta scripts inline sem nonce;
+// 'unsafe-eval' só em desenvolvimento (recarga do Next). Links para HubSpot e Poli são navegação e não passam pela CSP.
+const csp = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"}`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
 const nextConfig: NextConfig = {
   output: "standalone",
   outputFileTracingRoot: resolve(__dirname, "../.."),
@@ -29,6 +45,7 @@ const nextConfig: NextConfig = {
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
         { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
+        { key: "Content-Security-Policy", value: csp },
       ],
     }];
   },
