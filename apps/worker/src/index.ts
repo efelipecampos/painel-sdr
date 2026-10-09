@@ -8,6 +8,7 @@ import { config } from "./config.js";
 import { HubspotClient, resetLeadsCursor, syncLeads, syncOwners, syncStages } from "./hubspot/leads.js";
 import { dailyCheck, stuckMeetings, syncMeetings } from "./hubspot/meetings.js";
 import { marcarRespostas } from "./hubspot/respostas.js";
+import { gravarCamposContato } from "./hubspot/contatos.js";
 import { checkGoogle } from "./google.js";
 import { createDb, processBatch, rebuildAll, syncRoles } from "./processor.js";
 import { scoreRound } from "./score/job.js";
@@ -77,26 +78,35 @@ async function syncHubspotMeetings(): Promise<void> {
   }
 }
 
-/** "Respondeu template" no Lead do HubSpot (follow-up do n8n). Alerta se falhar por mais de 15 min seguidos. */
-let respostasErroDesde = 0;
-let respostasAlertou = false;
-async function syncRespostas(): Promise<void> {
-  if (!hubspot) return;
-  try {
-    const n = await marcarRespostas(db, hubspot);
-    if (n) console.log(`[worker] HubSpot: ${n} Leads marcados como "Respondeu template"`);
-    respostasErroDesde = 0;
-    respostasAlertou = false;
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[worker] erro ao marcar \"Respondeu template\":", msg);
-    respostasErroDesde ||= Date.now();
-    if (!respostasAlertou && Date.now() - respostasErroDesde > 15 * 60_000) {
-      respostasAlertou = true;
-      await postToGoogleChat(`⚠️ *Painel SDR:* há mais de 15 min o painel não consegue marcar "Respondeu template" nos Leads do HubSpot. O follow-up do n8n pode mandar mensagem para quem já respondeu. Erro: ${msg}. O painel continua tentando.`);
+/** Tarefa que grava no HubSpot a cada rodada; alerta no Gestão SDR se falhar por mais de 15 min seguidos. */
+function tarefaHubspot(nome: string, aviso: string, fn: () => Promise<string | null>): () => Promise<void> {
+  let erroDesde = 0;
+  let alertou = false;
+  return async () => {
+    if (!hubspot) return;
+    try {
+      const log = await fn();
+      if (log) console.log(`[worker] HubSpot: ${log}`);
+      erroDesde = 0;
+      alertou = false;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(`[worker] erro em ${nome}:`, msg);
+      erroDesde ||= Date.now();
+      if (!alertou && Date.now() - erroDesde > 15 * 60_000) {
+        alertou = true;
+        await postToGoogleChat(`⚠️ *Painel SDR:* há mais de 15 min o painel não consegue ${aviso}. Erro: ${msg}. O painel continua tentando.`);
+      }
     }
-  }
+  };
 }
+
+// "Respondeu template" no Lead (follow-up do n8n, 2026-10-09)
+const syncRespostas = tarefaHubspot("Respondeu template", 'marcar "Respondeu template" nos Leads do HubSpot (o follow-up do n8n pode mandar mensagem para quem já respondeu)',
+  async () => { const n = await marcarRespostas(db, hubspot!); return n ? `${n} Leads marcados como "Respondeu template"` : null; });
+// Campos "Poli - ..." do Contato e dos Negócios abertos (2026-10-09; antes eram da integração)
+const syncCamposContato = tarefaHubspot("campos do contato", 'gravar os campos "Poli - ..." dos Contatos e Negócios no HubSpot',
+  async () => { const r = await gravarCamposContato(db, hubspot!); return r.contatos || r.negocios ? `campos atualizados em ${r.contatos} contatos e ${r.negocios} negócios` : null; });
 
 async function syncHubspot(force: boolean): Promise<boolean> {
   if (!hubspot) return false;
@@ -149,6 +159,7 @@ if (process.argv.includes("--testar-alerta")) {
       await monitor.hubspot(err);
     }
     await syncRespostas();
+    await syncCamposContato();
     try {
       await syncGoogle();
     } catch (err) {
