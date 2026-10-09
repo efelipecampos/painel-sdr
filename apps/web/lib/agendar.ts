@@ -34,6 +34,7 @@ export async function loadRules(carouselId: string): Promise<{ carousel: Carouse
       lunchEnd: str("lunch_end", "13:30"),
       manualMin: str("manual_min_time", "07:00"),
       manualMax: str("manual_max_time", "20:00"),
+      gridFirst: str("grid_first_time", "08:15"),
       minNoticeMinutes: car.data.min_notice_minutes,
       windowBusinessDays: car.data.window_business_days,
     },

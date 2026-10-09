@@ -103,6 +103,8 @@ Sem e-mail do lead: o evento vai só para o closer e a tela mostra o link do Mee
 
 **Closer elegível:** ativo no carrossel, peso maior que zero, agenda conectada, livre no horário (free/busy do Google + reuniões já gravadas no painel + intervalo).
 
+**Primeiro horário da grade: 08:15 (decisão do Felipe, 2026-10-09).** A grade oferece 08:15 e depois segue de 30 em 30 min (08:30, 09:00, 09:30...). Fica em configuração (`grid_first_time`, padrão "08:15" no código). O ajuste manual continua podendo marcar a partir das 07:00.
+
 **Intervalo entre reuniões (decisão do Felipe, 2026-10-09):** o intervalo do carrossel vale só entre reuniões com cliente, ou seja, as reuniões do painel. O ocupado que vem do livre/ocupado do Google (almoço, reunião interna, bloqueio) continua bloqueando o horário, mas sem intervalo. Motivo: o "Almoço" das 12:00 na agenda dos closers escondia o horário das 11:00 (60 min + intervalo). Vale na grade, no ajuste manual e na conferência da confirmação.
 
 **Cada carrossel tem o seu livro-caixa.** Um closer pode estar em vários carrosséis, com peso diferente em cada um. A agenda dele é uma só: horário ocupado por reunião de um carrossel fica indisponível nos outros.

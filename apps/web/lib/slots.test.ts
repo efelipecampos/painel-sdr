@@ -33,6 +33,14 @@ describe("grade", () => {
     expect(s).not.toContain("11:30");
     expect(s[s.length - 1]).toBe("16:30");
   });
+  it("primeiro horário da grade às 08:15, depois 08:30, 09:00...", () => {
+    const r = { ...rules, hours: rules.hours.map((h) => ({ ...h, start_time: "08:00" })), gridFirst: "08:15" };
+    expect(gridSlots("2026-10-13", 60, r, NOW).slice(0, 4)).toEqual(["08:15", "08:30", "09:00", "09:30"]);
+    // expediente começando depois do primeiro horário: vale o expediente
+    expect(gridSlots("2026-10-13", 30, { ...rules, gridFirst: "08:15" }, NOW)[0]).toBe("08:30");
+    // primeiro horário em ponto da grade não duplica
+    expect(gridSlots("2026-10-13", 30, { ...r, gridFirst: "09:00" }, NOW).slice(0, 2)).toEqual(["09:00", "09:30"]);
+  });
   it("respeita a antecedência mínima hoje; feriado não tem grade", () => {
     expect(gridSlots("2026-10-09", 30, rules, NOW)[0]).toBe("09:00");
     expect(gridSlots("2026-10-12", 30, rules, NOW)).toEqual([]);

@@ -13,6 +13,7 @@ export interface AgendaRules {
   lunchEnd: string;          // "13:30"
   manualMin: string;         // "07:00"
   manualMax: string;         // "20:00"
+  gridFirst?: string;        // "08:15": primeiro horário da grade; depois segue a grade de 30 em 30 (decisão do Felipe, 2026-10-09)
   minNoticeMinutes: number;
   windowBusinessDays: number;
 }
@@ -51,7 +52,11 @@ export function gridSlots(day: string, duration: number, r: AgendaRules, now: Da
   const end = Math.min(toMin(h.end_time.slice(0, 5)), toMin(GRID_END));
   const [ls, le] = [toMin(r.lunchStart), toMin(r.lunchEnd)];
   const out: string[] = [];
-  for (let m = Math.ceil(toMin(h.start_time.slice(0, 5)) / GRID_STEP_MINUTES) * GRID_STEP_MINUTES; m + duration <= end; m += GRID_STEP_MINUTES) {
+  const first = Math.max(toMin(h.start_time.slice(0, 5)), r.gridFirst ? toMin(r.gridFirst) : 0);
+  const starts: number[] = r.gridFirst && first === toMin(r.gridFirst) && first % GRID_STEP_MINUTES ? [first] : [];
+  for (let m = Math.ceil(first / GRID_STEP_MINUTES) * GRID_STEP_MINUTES; m + duration <= end; m += GRID_STEP_MINUTES) starts.push(m);
+  for (const m of starts) {
+    if (m + duration > end) continue;
     if (m < le && m + duration > ls) continue;  // pega o almoço
     if (localToDate(`${day}T${fromMin(m)}`).getTime() < earliest) continue;
     out.push(fromMin(m));
