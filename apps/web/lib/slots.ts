@@ -71,7 +71,10 @@ export function checkManual(local: string, duration: number, r: AgendaRules, now
   const e = s + duration;
   if (s < toMin(r.manualMin) || e > toMin(r.manualMax)) return fail(`O horário precisa ficar entre ${r.manualMin} e ${r.manualMax}.`);
   if (localToDate(local).getTime() < now.getTime() + r.minNoticeMinutes * 60_000) {
-    return fail(`A reunião precisa ser marcada com pelo menos ${r.minNoticeMinutes / 60} h de antecedência.`);
+    // sem antecedência mínima (0 h, decisão de 2026-10-09): só não pode marcar no passado
+    return fail(r.minNoticeMinutes > 0
+      ? `A reunião precisa ser marcada com pelo menos ${r.minNoticeMinutes / 60} h de antecedência.`
+      : "Esse horário já passou. Escolha um horário a partir de agora.");
   }
   const days = windowDays(now, r);
   if (day < localDay(now) || day > days[days.length - 1]) return fail(`O dia precisa estar dentro dos próximos ${r.windowBusinessDays} dias úteis.`);

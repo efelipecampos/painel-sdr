@@ -52,6 +52,10 @@ describe("ajuste manual", () => {
   it("recusa fora do limite absoluto, sem antecedência, fora da janela ou duração inválida", () => {
     expect(checkManual("2026-10-13T19:45", 30, rules, NOW).erro).toMatch(/entre 07:00 e 20:00/);
     expect(checkManual("2026-10-09T08:30", 30, rules, NOW).erro).toMatch(/antecedência/);
+    // sem antecedência (0 h): às 10:00 dá para marcar 10:30, mas não 09:30
+    const dezHoras = new Date("2026-10-09T13:00:00Z");
+    expect(checkManual("2026-10-09T09:30", 30, { ...rules, minNoticeMinutes: 0 }, dezHoras).erro).toMatch(/já passou/);
+    expect(checkManual("2026-10-09T10:30", 30, { ...rules, minNoticeMinutes: 0 }, dezHoras).erro).toBeNull();
     expect(checkManual("2026-11-30T10:00", 30, rules, NOW).erro).toMatch(/10 dias úteis/);
     expect(checkManual("2026-10-13T10:00", 5, rules, NOW).erro).toMatch(/10 a 240/);
   });
