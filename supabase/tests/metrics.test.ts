@@ -205,6 +205,47 @@ describe("nota interna de descarte", () => {
   });
 });
 
+describe("reativação: template depois do descarte volta a contar (2026-10-13)", () => {
+  it("etapa Descartado/DSQ e nota antigas não escondem o lead que recebeu template novo e respondeu; descarte novo esconde de novo", async () => {
+    await db.exec(`insert into painel.hubspot_stages (stage_id, pipeline_id, label, state) values
+      ('1250901141', '841793591', 'Descartado', 'UNQUALIFIED'), ('1250901142', '841793591', 'DSQ - BR', 'UNQUALIFIED'),
+      ('1358962969', '841793591', 'Qualificado', 'QUALIFIED')`);
+    const reat = await lead("X", [["template_bot", ago(300)], ["lead", ago(200)]], { name: "Reativado" });
+    const dsq = await lead("X", [["template", ago(300)], ["lead", ago(200)]], { name: "DSQ" });
+    const sem = await lead("X", [["lead", ago(200)]], { name: "Sem template" });
+    const qual = await lead("X", [["template", ago(300)], ["lead", ago(200)]], { name: "Qualificado" });
+    const nota = await lead("X", [["sdr", ago(500)], ["template_bot", ago(300)], ["lead", ago(200)]], { name: "Nota" });
+    for (const [l, h] of [[reat, "r1"], [dsq, "r2"], [sem, "r3"], [qual, "r4"], [nota, "r5"]] as const) {
+      await db.query("update painel.leads set hubspot_contact_id = $2 where id = $1", [l.leadId, h]);
+    }
+    await db.query(`insert into painel.hubspot_leads (hubspot_lead_id, hubspot_contact_id, stage_id, created_at, entered_descartado_at, entered_dsq_at) values
+      ('R1', 'r1', '1250901141', $1, $2, null), ('R2', 'r2', '1250901142', $1, null, $2),
+      ('R3', 'r3', '1250901141', $1, $2, null), ('R4', 'r4', '1358962969', $1, null, null)`, [ago(5000), ago(4000)]);
+    await db.query(
+      `insert into painel.chat_messages (poli_message_id, chat_id, lead_id, sdr_id, sender, sent_at, system_type, note_tag)
+       values ('nota-r5', $1, $2, $3, 'system', $4, 'NOTE', 'descartado')`, [nota.chats.get("A"), nota.leadId, sdr.X, ago(400)]);
+    await db.query("select painel.rebuild_leads($1::uuid[])", [[reat.leadId, dsq.leadId, sem.leadId, qual.leadId, nota.leadId]]);
+    const q = async () => Object.fromEntries((await db.query<{ lead_name: string; situacao: string }>(
+      "select lead_name, situacao from painel.sdr_chats($1, now() - interval '1 day', now() + interval '1 minute')", [sdr.X],
+    )).rows.map((r) => [r.lead_name, r.situacao]));
+    expect(await q()).toEqual({ Reativado: "aguardando", DSQ: "aguardando", "Sem template": "fora_do_funil", Qualificado: "fora_do_funil", Nota: "aguardando" });
+    const m = async () => (await db.query<{ aguardando: number }>(
+      "select aguardando from painel.sdr_metrics(now() - interval '1 day', now() + interval '1 minute') where name = 'SDR X'")).rows[0].aguardando;
+    expect(await m()).toBe(3);
+    // descartado de novo depois do template: sai outra vez
+    await db.query("update painel.hubspot_leads set entered_descartado_at = $1 where hubspot_lead_id = 'R1'", [ago(100)]);
+    expect((await q()).Reativado).toBe("fora_do_funil");
+    expect(await m()).toBe(2);
+  });
+
+  it("robôs e gestores continuam fora dos números: só SDRs", async () => {
+    await lead("G", [["template", ago(300)], ["lead", ago(200)]], { name: "Do gestor" });
+    const names = (await db.query<{ name: string }>("select name from painel.sdr_metrics(now() - interval '1 day', now() + interval '1 minute')")).rows.map((r) => r.name);
+    expect(names).not.toContain("SDR G");
+    expect((await db.query<{ aguardando: number }>("select aguardando from painel.team_metrics(now() - interval '1 day', now() + interval '1 minute')")).rows[0].aguardando).toBe(0);
+  });
+});
+
 describe("Descartados e DSQ (HubSpot)", () => {
   it("Descartados no card do SDR pelo dono do Lead; DSQ só no Time, de qualquer dono", async () => {
     await db.exec(`
