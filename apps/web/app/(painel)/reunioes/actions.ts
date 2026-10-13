@@ -150,9 +150,9 @@ export async function conferirEdicaoLivre(id: string, local: string, duration: n
     closers: closers.map((c) => {
       const o = busy.get(c.id);
       const situacao = !o ? "a agenda não respondeu"
-        : !isFree(o.painel, start, end, 0) ? "ocupado: outra reunião do painel neste horário"
+        : !isFree(o.cliente, start, end, 0) ? "ocupado: outra reunião com cliente neste horário"
         : !isFree(o.google, start, end, 0) ? "ocupado: compromisso na agenda"
-        : !isFree(o.painel, start, end, carousel.gap_minutes) ? `livre, mas a menos de ${carousel.gap_minutes} min de outra reunião`
+        : !isFree(o.cliente, start, end, carousel.gap_minutes) ? `livre, mas a menos de ${carousel.gap_minutes} min de outra reunião com cliente`
         : "livre";
       return { id: c.id, name: c.name, atual: c.id === m.closer_id, situacao, livre: situacao === "livre" };
     }),

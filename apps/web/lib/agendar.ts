@@ -53,9 +53,13 @@ export async function candidates(carouselId: string, leadId: string | null, hubs
   return (data ?? []).map((r: { closer_id: string }) => r.closer_id);
 }
 
+/** Domínios de e-mail da empresa: convidado de fora deles faz do evento do Google uma reunião com cliente (2026-10-13). */
+export const DOMINIOS_EMPRESA = ["poli.digital", "chatshub.com.br"];
+
 /**
- * Ocupado de cada closer entre from e to: Google (livre/ocupado) e reuniões do painel, separados (o intervalo do
- * carrossel só vale entre reuniões do painel). Closer cuja agenda falhou fica fora (não aparece como livre) e a falha é registrada.
+ * Ocupado de cada closer entre from e to: tudo o que ocupa no Google e, separado, as reuniões com cliente (as do
+ * painel e as do Google com convidado de fora da empresa), que ganham o intervalo do carrossel. Closer cuja agenda
+ * falhou fica fora (não aparece como livre) e a falha é registrada.
  */
 export async function busyOf(closers: string[], from: Date, to: Date, ignoreMeeting: string | null = null): Promise<Map<string, Ocupado>> {
   const out = new Map<string, Ocupado>();
@@ -69,9 +73,9 @@ export async function busyOf(closers: string[], from: Date, to: Date, ignoreMeet
   await Promise.all(closers.map(async (c) => {
     try {
       const cal = await calendarOf(c);
-      const g = own?.google_event_id && own.closer_id === c ? await cal.busyExcept(from, to, own.google_event_id) : await cal.busy(from, to);
+      const o = await cal.ocupados(from, to, { internos: DOMINIOS_EMPRESA, excetoEvento: own?.closer_id === c ? own.google_event_id : null });
       const p = (ms ?? []).filter((m) => m.closer_id === c && m.id !== ignoreMeeting).map((m) => ({ start: new Date(m.starts_at), end: new Date(m.ends_at) }));
-      out.set(c, { google: g, painel: p });
+      out.set(c, { google: o.google, cliente: [...o.cliente, ...p] });
     } catch (e) {
       if (e instanceof GoogleError) await logCalendar({ closer_id: c, op: e.op, ok: false, http_status: e.status, reason: e.reason });
       else await logCalendar({ closer_id: c, op: "livre_ocupado", ok: false, reason: String((e as Error).message).slice(0, 200) });
@@ -80,7 +84,7 @@ export async function busyOf(closers: string[], from: Date, to: Date, ignoreMeet
   return out;
 }
 
-/** Closers livres num intervalo exato (intervalo mínimo do carrossel só entre reuniões do painel). */
+/** Closers livres num intervalo exato (intervalo mínimo do carrossel só entre reuniões com cliente). */
 export function freeAt(busy: Map<string, Ocupado>, start: Date, end: Date, gap: number): string[] {
   return [...busy.entries()].filter(([, b]) => isFreeOcupado(b, start, end, gap)).map(([c]) => c);
 }

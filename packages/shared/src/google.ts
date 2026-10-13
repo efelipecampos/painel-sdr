@@ -168,37 +168,44 @@ export class GoogleCalendar {
   }
 
   /**
-   * Ocupados da agenda sem um evento (a própria reunião que está mudando de horário). O freeBusy junta tudo e
-   * não diz qual evento é qual, então aqui lemos os eventos, só com os campos de horário e situação (sem título,
-   * descrição nem convidados), e seguimos a regra do freeBusy: não conta evento "disponível", recusado nem cancelado.
+   * Ocupados da agenda, lendo os eventos (o freeBusy junta tudo e não diz o que é cada um). Segue a regra do
+   * freeBusy: evento "disponível", recusado ou cancelado não ocupa. Separa as reuniões com cliente: evento com pelo
+   * menos um convidado de fora da empresa (domínio fora de `internos`) ganha o intervalo do carrossel (decisão do
+   * Felipe, 2026-10-13). `excetoEvento`: a própria reunião que está mudando de horário não ocupa o closer.
+   * Pede só horário, situação e convidados; os e-mails servem só para comparar o domínio e não saem daqui.
    */
-  async busyExcept(from: Date, to: Date, exceptEventId: string, calendarId = "primary"): Promise<Interval[]> {
+  async ocupados(from: Date, to: Date, opts: { internos: string[]; excetoEvento?: string | null }, calendarId = "primary"): Promise<Ocupado> {
     type Ev = {
       id: string; status?: string; transparency?: string; eventType?: string;
       start?: { dateTime?: string; date?: string }; end?: { dateTime?: string; date?: string };
-      attendees?: { self?: boolean; responseStatus?: string }[];
+      attendees?: { email?: string; self?: boolean; resource?: boolean; responseStatus?: string }[];
     };
-    const out: Interval[] = [];
+    const internos = new Set(opts.internos.map((d) => d.toLowerCase()));
+    const out: Ocupado = { google: [], cliente: [] };
     let page: string | undefined;
     do {
       const q = new URLSearchParams({
         timeMin: from.toISOString(), timeMax: to.toISOString(), singleEvents: "true", maxResults: "250",
-        fields: "items(id,status,transparency,eventType,start,end,attendees(self,responseStatus)),nextPageToken",
+        fields: "items(id,status,transparency,eventType,start,end,attendees(email,self,resource,responseStatus)),nextPageToken",
         ...(page ? { pageToken: page } : {}),
       });
       const j = await this.call<{ items?: Ev[]; nextPageToken?: string }>("livre_ocupado", `${API}/calendars/${enc(calendarId)}/events?${q}`);
       for (const ev of j.items ?? []) {
-        if (ev.id === exceptEventId || ev.status === "cancelled" || ev.transparency === "transparent" || ev.eventType === "workingLocation") continue;
+        if ((opts.excetoEvento && ev.id === opts.excetoEvento) || ev.status === "cancelled" || ev.transparency === "transparent" || ev.eventType === "workingLocation") continue;
         if (ev.attendees?.some((a) => a.self && a.responseStatus === "declined")) continue;
         // dia inteiro: o Google manda só a data; o dia vale no fuso de negócio (São Paulo, -03:00, sem horário de verão)
         const at = (d?: { dateTime?: string; date?: string }) => (d?.dateTime ? new Date(d.dateTime) : d?.date ? new Date(`${d.date}T00:00:00-03:00`) : null);
         const s = at(ev.start);
         const e = at(ev.end);
-        if (s && e && e > s) out.push({ start: s, end: e });
+        if (!s || !e || e <= s) continue;
+        out.google.push({ start: s, end: e });
+        const externo = ev.attendees?.some((a) => !a.self && !a.resource && !!a.email && !internos.has(a.email.split("@").pop()!.toLowerCase()));
+        if (externo) out.cliente.push({ start: s, end: e });
       }
       page = j.nextPageToken;
     } while (page);
-    return out.sort((a, b) => a.start.getTime() - b.start.getTime());
+    const ord = (a: Interval, b: Interval) => a.start.getTime() - b.start.getTime();
+    return { google: out.google.sort(ord), cliente: out.cliente.sort(ord) };
   }
 
   /** Cria o evento com Meet. sendUpdates=all: convidados recebem o convite por e-mail. */
@@ -284,16 +291,16 @@ export function isFree(busy: Interval[], start: Date, end: Date, gapMinutes: num
   return !busy.some((b) => b.start.getTime() < end.getTime() + g && b.end.getTime() > start.getTime() - g);
 }
 
-/** Ocupado de um closer, separado pela origem. */
-export interface Ocupado { google: Interval[]; painel: Interval[] }
+/** Ocupado de um closer: tudo o que ocupa (google) e, separado, as reuniões com cliente (painel + Google com convidado de fora). */
+export interface Ocupado { google: Interval[]; cliente: Interval[] }
 
 /**
- * Livre considerando a origem do ocupado (decisão do Felipe, 2026-10-09): o intervalo do carrossel vale só entre
- * reuniões com cliente (as do painel); o ocupado do Google (almoço, reunião interna, bloqueio) bloqueia sem intervalo.
- * A reunião do painel também está no Google; lá conta sem intervalo, aqui com.
+ * Livre considerando o tipo do ocupado: o intervalo do carrossel vale só entre reuniões com cliente (decisão do
+ * Felipe, 2026-10-09; "com cliente" inclui as marcadas fora do painel, 2026-10-13); almoço, bloqueio e reunião só
+ * com a equipe bloqueiam sem intervalo. A reunião com cliente também está em google; lá conta sem intervalo, aqui com.
  */
 export function isFreeOcupado(o: Ocupado, start: Date, end: Date, gapMinutes: number): boolean {
-  return isFree(o.google, start, end, 0) && isFree(o.painel, start, end, gapMinutes);
+  return isFree(o.google, start, end, 0) && isFree(o.cliente, start, end, gapMinutes);
 }
 
 export type EventState = "ok" | "removida" | "recusada_lead" | "recusada_closer";

@@ -6,6 +6,7 @@ const KEY = randomBytes(32).toString("base64");
 const creds = { clientId: "cid", clientSecret: "sec", redirectUri: "https://x/api/google/callback" };
 const t = (h: string) => new Date(`2026-10-12T${h}:00-03:00`);
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+const INTERNOS = ["poli.digital", "chatshub.com.br"];
 const idToken = (p: object) => `x.${Buffer.from(JSON.stringify(p)).toString("base64url")}.y`;
 
 describe("cifra do token", () => {
@@ -60,20 +61,20 @@ describe("livre e ocupado", () => {
   it("intervalo do carrossel só entre reuniões do painel; ocupado do Google bloqueia sem intervalo", () => {
     const almoco = { start: t("12:00"), end: t("13:00") };
     // almoço às 12:00 libera 11:00–12:00 (60 min, intervalo 15)
-    expect(isFreeOcupado({ google: [almoco], painel: [] }, t("11:00"), t("12:00"), 15)).toBe(true);
-    expect(isFreeOcupado({ google: [almoco], painel: [] }, t("13:00"), t("14:00"), 15)).toBe(true);
+    expect(isFreeOcupado({ google: [almoco], cliente: [] }, t("11:00"), t("12:00"), 15)).toBe(true);
+    expect(isFreeOcupado({ google: [almoco], cliente: [] }, t("13:00"), t("14:00"), 15)).toBe(true);
     // mas continua bloqueando o próprio horário
-    expect(isFreeOcupado({ google: [almoco], painel: [] }, t("11:30"), t("12:30"), 15)).toBe(false);
+    expect(isFreeOcupado({ google: [almoco], cliente: [] }, t("11:30"), t("12:30"), 15)).toBe(false);
     // reunião do painel às 12:00 (que também aparece no Google) não libera 11:00–12:00
     const reuniao = { start: t("12:00"), end: t("13:00") };
-    expect(isFreeOcupado({ google: [reuniao], painel: [reuniao] }, t("11:00"), t("12:00"), 15)).toBe(false);
-    expect(isFreeOcupado({ google: [reuniao], painel: [reuniao] }, t("10:45"), t("11:45"), 15)).toBe(true);
-    expect(isFreeOcupado({ google: [reuniao], painel: [reuniao] }, t("13:00"), t("14:00"), 15)).toBe(false);
-    expect(isFreeOcupado({ google: [reuniao], painel: [reuniao] }, t("13:15"), t("14:15"), 15)).toBe(true);
+    expect(isFreeOcupado({ google: [reuniao], cliente: [reuniao] }, t("11:00"), t("12:00"), 15)).toBe(false);
+    expect(isFreeOcupado({ google: [reuniao], cliente: [reuniao] }, t("10:45"), t("11:45"), 15)).toBe(true);
+    expect(isFreeOcupado({ google: [reuniao], cliente: [reuniao] }, t("13:00"), t("14:00"), 15)).toBe(false);
+    expect(isFreeOcupado({ google: [reuniao], cliente: [reuniao] }, t("13:15"), t("14:15"), 15)).toBe(true);
   });
   it("intervalo de 30 min antes e depois de reunião do painel", () => {
     const r = { start: t("10:00"), end: t("11:00") };
-    const o = { google: [r], painel: [r] };
+    const o = { google: [r], cliente: [r] };
     expect(isFreeOcupado(o, t("11:00"), t("12:00"), 30)).toBe(false);  // logo depois
     expect(isFreeOcupado(o, t("11:30"), t("12:30"), 30)).toBe(true);   // meia hora depois
     expect(isFreeOcupado(o, t("09:00"), t("10:00"), 30)).toBe(false);  // termina logo antes
@@ -86,7 +87,7 @@ describe("livre e ocupado", () => {
     const bad = new GoogleCalendar("tk", async () => json(200, { calendars: { primary: { errors: [{ reason: "notFound" }] } } }));
     await expect(bad.busy(t("07:00"), t("20:00"))).rejects.toThrow(/notFound/);
   });
-  it("mudar a reunião das 16:00 para 16:30: a própria reunião não ocupa o closer, os outros compromissos sim", async () => {
+  it("lê os eventos: a própria reunião não ocupa; evento disponível, recusado ou cancelado também não", async () => {
     const ev = (id: string, s: string, e: string, extra: object = {}) => ({ id, start: { dateTime: t(s).toISOString() }, end: { dateTime: t(e).toISOString() }, ...extra });
     const urls: string[] = [];
     const pages: Record<string, unknown> = {
@@ -97,18 +98,41 @@ describe("livre e ocupado", () => {
       urls.push(String(u));
       return json(200, pages[new URL(String(u)).searchParams.get("pageToken") ?? ""]);
     });
-    const busy = await cal.busyExcept(t("00:00"), t("23:59"), "propria");
-    expect(busy).toEqual([{ start: t("17:30"), end: t("18:00") }]);
-    expect(isFreeOcupado({ google: busy, painel: [] }, t("16:30"), t("17:30"), 30)).toBe(true);
-    // com um compromisso às 17:00 no Google, 16:30–17:30 continua bloqueado
-    expect(isFreeOcupado({ google: [...busy, { start: t("17:00"), end: t("17:30") }], painel: [] }, t("16:30"), t("17:30"), 30)).toBe(false);
-    // só pede os campos de horário e situação (nada de título, descrição ou convidados)
-    expect(new URL(urls[0]).searchParams.get("fields")).not.toMatch(/summary|description|email/);
+    const o = await cal.ocupados(t("00:00"), t("23:59"), { internos: INTERNOS, excetoEvento: "propria" });
+    expect(o).toEqual({ google: [{ start: t("17:30"), end: t("18:00") }], cliente: [] });
+    // mudar de 16:00 para 16:30 com o mesmo closer: livre (o compromisso das 17:30 não tem cliente, sem intervalo)
+    expect(isFreeOcupado(o, t("16:30"), t("17:30"), 30)).toBe(true);
+    // só pede horário, situação e convidados (nada de título nem descrição)
+    expect(new URL(urls[0]).searchParams.get("fields")).not.toMatch(/summary|description/);
     expect(urls).toHaveLength(2);
+  });
+  it("reunião com cliente marcada fora do painel (convidado de fora da empresa) ganha o intervalo; almoço e reunião interna não", async () => {
+    const ev = (id: string, s: string, e: string, emails: string[]) => ({
+      id, start: { dateTime: t(s).toISOString() }, end: { dateTime: t(e).toISOString() },
+      attendees: [{ email: "closer@poli.digital", self: true }, ...emails.map((email) => ({ email }))],
+    });
+    const cal = new GoogleCalendar("tk", async () => json(200, { items: [
+      ev("almoco", "12:00", "13:00", []),
+      ev("interna", "10:00", "11:00", ["gestor@poli.digital", "ana@CHATSHUB.com.br"]),
+      ev("cliente", "14:00", "15:00", ["closer2@poli.digital", "contato@mills.com.br"]),
+    ] }));
+    const o = await cal.ocupados(t("00:00"), t("23:59"), { internos: INTERNOS });
+    expect(o.cliente).toEqual([{ start: t("14:00"), end: t("15:00") }]);
+    expect(o.google).toHaveLength(3);
+    expect(isFreeOcupado(o, t("15:00"), t("16:00"), 30)).toBe(false);  // logo depois da reunião com cliente (caso da Alessandra)
+    expect(isFreeOcupado(o, t("15:30"), t("16:30"), 30)).toBe(true);
+    expect(isFreeOcupado(o, t("13:15"), t("13:45"), 30)).toBe(false);  // só 15 min antes da reunião com cliente
+    expect(isFreeOcupado(o, t("13:00"), t("13:30"), 30)).toBe(true);   // meia hora antes; e logo depois do almoço, sem intervalo
+    expect(isFreeOcupado(o, t("11:00"), t("12:00"), 30)).toBe(true);   // entre a reunião interna e o almoço, sem intervalo
   });
   it("evento de dia inteiro ocupa o dia no fuso de São Paulo", async () => {
     const cal = new GoogleCalendar("tk", async () => json(200, { items: [{ id: "ferias", start: { date: "2026-10-12" }, end: { date: "2026-10-13" } }] }));
-    expect(await cal.busyExcept(t("00:00"), t("23:59"), "x")).toEqual([{ start: t("00:00"), end: new Date("2026-10-13T00:00:00-03:00") }]);
+    expect((await cal.ocupados(t("00:00"), t("23:59"), { internos: INTERNOS })).google).toEqual([{ start: t("00:00"), end: new Date("2026-10-13T00:00:00-03:00") }]);
+  });
+  it("sala de reunião (recurso) não faz do evento uma reunião com cliente", async () => {
+    const cal = new GoogleCalendar("tk", async () => json(200, { items: [{ id: "x", start: { dateTime: t("10:00").toISOString() }, end: { dateTime: t("11:00").toISOString() },
+      attendees: [{ email: "sala@resource.calendar.google.com", resource: true }, { email: "x@poli.digital" }] }] }));
+    expect((await cal.ocupados(t("00:00"), t("23:59"), { internos: INTERNOS })).cliente).toEqual([]);
   });
 });
 
