@@ -84,7 +84,7 @@ Atualize esta lista conforme avança.
   - [x] Virada da Poli Agenda: concluída no fim do dia 08/10/2026; desde 09/10 toda a operação de SDR agenda pelo painel.
   - [x] Ajustes da virada (08/10/2026): acesso global do SDR, SDR responsável = dono da carteira, botão Finalizar, transferência entre SDRs leva a espera para quem recebeu, login leva cada um à própria tela.
   - [x] 09/10/2026: Lucas Cintra desativado, 7 carrosséis conferidos pelo Felipe, `HUBSPOT_FIELDS_ENABLED` desligado na integração (campos do Contato e Negócios só pelo painel; conferência de 4.117 contatos: 1 divergente, gravado pela integração antes do desligamento).
-  - [ ] Falta na Fase 10: Aline Paiva conectar a agenda quando voltar das férias (terça, 13/10); "Adicionar usuário" e trocar papel pela tela Usuários.
+  - [ ] Falta na Fase 10: teste do convite pela tela Usuários ("Adicionar usuário" com um e-mail de teste). Aline Paiva conectou a agenda em 13/10 (8 de 8 closers conectados; ela está nos 6 carrosséis de Poli e ChatsHub, sem Licitação).
 
 ## 5. O que já se sabe sobre a integração PoliChat-Hubspot
 
