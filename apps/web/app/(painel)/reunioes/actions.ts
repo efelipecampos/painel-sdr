@@ -8,7 +8,7 @@ import { isFree } from "@painel/shared/google";
 import { busyOf, freeAt, loadRules } from "@/lib/agendar";
 import { postGestaoSdr } from "@/lib/chat";
 import { APP_URL } from "@/lib/google";
-import { loadMeeting, moveEvent, recreateEvent, renameEvent, syncEventWithStatus } from "@/lib/reuniao-google";
+import { loadMeeting, moveEvent, recreateEventDefault, renameEvent, syncEventWithStatus } from "@/lib/reuniao-google";
 import { checkLivre, checkManual, gridSlots, interval, windowDays } from "@/lib/slots";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -314,10 +314,8 @@ export async function recriarEvento(id: string): Promise<{ erro?: string }> {
   if (!(await permissao(id))) return { erro: "Você não pode alterar esta reunião." };
   const m = await loadMeeting(id);
   if (!m || m.status !== "agendada") return { erro: "Só dá para recriar o evento de reunião agendada." };
-  const { data: st } = await admin().from("settings").select("value").eq("key", "google_invite_sdr").maybeSingle();
-  const { data: sdr } = m.sdr_id ? await admin().from("sdrs").select("poli_email").eq("id", m.sdr_id).maybeSingle() : { data: null };
   try {
-    await recreateEvent(m, st?.value !== false, (sdr as { poli_email?: string } | null)?.poli_email ?? null);
+    await recreateEventDefault(m);
   } catch (e) {
     return { erro: `Não foi possível recriar o evento: ${(e as Error).message}` };
   }

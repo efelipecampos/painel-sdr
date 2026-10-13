@@ -1,7 +1,7 @@
 // Evento do Google de uma reunião do painel, depois de agendada (Fase 10d.2): arquivo e mudança de horário.
 // Cancelada e no show saem da agenda do closer (o horário fica livre) e vão para a agenda de arquivo, com o
 // closer no título e a cor da situação. Voltar para agendada/validada traz o evento de volta, mesmo link do Meet.
-import { ARCHIVE_COLOR, archiveTitle } from "@painel/shared/google";
+import { ARCHIVE_COLOR, GoogleError, archiveTitle } from "@painel/shared/google";
 import { APP_URL, calendarOf, withLog } from "@/lib/google";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -71,10 +71,22 @@ export async function moveEvent(before: MeetingRow, after: MeetingRow): Promise<
   const oldCal = await calendarOf(before.closer_id);
   const where = before.google_calendar_id || "primary";
   if (before.closer_id === after.closer_id) {
-    await withLog(after.closer_id, "alterar", () => oldCal.patch(before.google_event_id!, { start, end }, where), after.id);
+    try {
+      const ev = await withLog(after.closer_id, "alterar", () => oldCal.patch(before.google_event_id!, { start, end }, where), after.id);
+      if (ev.status !== "cancelled") return;
+    } catch (e) {
+      if (!(e instanceof GoogleError && (e.status === 404 || e.status === 410))) throw e;
+    }
+    // evento apagado no Google (2026-10-13): mesma rotina do "Recriar evento", já no horário novo
+    await recreateEventDefault({ ...after, google_event_id: before.google_event_id, google_calendar_id: where });
     return;
   }
   const old = await oldCal.get(before.google_event_id!, where);
+  if (!old) {
+    // evento apagado no Google: cria na agenda do novo closer convidando o lead (e o SDR), como o "Recriar evento"
+    await recreateEventDefault({ ...after, google_event_id: null });
+    return;
+  }
   const newCal = await calendarOf(after.closer_id);
   const attendees = (old?.attendees ?? []).filter((a) => !a.self && !a.organizer).map((a) => a.email);
   const ev = await withLog(after.closer_id, "criar", () => newCal.insert({
@@ -99,6 +111,13 @@ export async function renameEvent(m: MeetingRow): Promise<void> {
     title = archiveTitle(m.title, c?.name ?? "");
   }
   await withLog(m.closer_id, "alterar", () => cal.patch(m.google_event_id!, { title }, m.google_calendar_id || "primary", false), m.id);
+}
+
+/** "Recriar evento" com a configuração de convidar o SDR (google_invite_sdr) e o e-mail Poli do SDR da reunião. */
+export async function recreateEventDefault(m: MeetingRow): Promise<void> {
+  const { data: st } = await admin().from("settings").select("value").eq("key", "google_invite_sdr").maybeSingle();
+  const { data: sdr } = m.sdr_id ? await admin().from("sdrs").select("poli_email").eq("id", m.sdr_id).maybeSingle() : { data: null };
+  await recreateEvent(m, st?.value !== false, (sdr as { poli_email?: string } | null)?.poli_email ?? null);
 }
 
 /**
