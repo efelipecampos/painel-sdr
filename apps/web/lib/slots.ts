@@ -96,6 +96,31 @@ export function checkManual(local: string, duration: number, r: AgendaRules, now
   return { erro: null, avisos, foraDoPadrao: avisos.length > 0 };
 }
 
+/**
+ * Edição livre de gestor e admin (2026-10-13): nenhuma regra de horário bloqueia, só avisa.
+ * Erro só para formato inválido ou duração fora de 1 min a 24 h.
+ */
+export function checkLivre(local: string, duration: number, r: AgendaRules, now: Date): ManualCheck {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(local)) return { erro: "Horário inválido.", avisos: [], foraDoPadrao: false };
+  if (!Number.isInteger(duration) || duration < 1 || duration > 1440) return { erro: "A duração precisa ser de 1 a 1440 minutos.", avisos: [], foraDoPadrao: false };
+  const day = local.slice(0, 10);
+  const s = toMin(local.slice(11));
+  const e = s + duration;
+  const avisos: string[] = [];
+  if (localToDate(local).getTime() < now.getTime()) avisos.push("Horário no passado");
+  const days = windowDays(now, r);
+  if (day > days[days.length - 1]) avisos.push(`Depois dos próximos ${r.windowBusinessDays} dias úteis`);
+  const h = hoursOf(day, r);
+  if (!h) avisos.push("Dia fora do expediente (fim de semana ou feriado)");
+  else {
+    const inicio = r.gridFirst ?? h.start_time.slice(0, 5);
+    if (s < toMin(inicio)) avisos.push(`Começa antes das ${inicio}`);
+  }
+  if (s < toMin(r.lunchEnd) && e > toMin(r.lunchStart)) avisos.push("Pega o horário de almoço");
+  if (e > toMin(GRID_END)) avisos.push(`Termina depois das ${GRID_END}`);
+  return { erro: null, avisos, foraDoPadrao: avisos.length > 0 };
+}
+
 /** "AAAA-MM-DDTHH:mm" local + duração → instantes. */
 export function interval(local: string, duration: number): { start: Date; end: Date } {
   const start = localToDate(local);

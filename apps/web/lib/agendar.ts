@@ -62,10 +62,14 @@ export async function busyOf(closers: string[], from: Date, to: Date, ignoreMeet
   const { data: ms } = await admin().from("meetings").select("id, closer_id, starts_at, ends_at")
     .eq("source", "painel").neq("status", "cancelada").in("closer_id", closers.length ? closers : ["00000000-0000-0000-0000-000000000000"])
     .lt("starts_at", to.toISOString()).gt("ends_at", from.toISOString());
+  // a reunião que está mudando de horário não ocupa o próprio closer no Google (16:00 → 16:30 com o mesmo closer)
+  const { data: own } = ignoreMeeting
+    ? await admin().from("meetings").select("closer_id, google_event_id").eq("id", ignoreMeeting).maybeSingle()
+    : { data: null };
   await Promise.all(closers.map(async (c) => {
     try {
       const cal = await calendarOf(c);
-      const g = await cal.busy(from, to);
+      const g = own?.google_event_id && own.closer_id === c ? await cal.busyExcept(from, to, own.google_event_id) : await cal.busy(from, to);
       const p = (ms ?? []).filter((m) => m.closer_id === c && m.id !== ignoreMeeting).map((m) => ({ start: new Date(m.starts_at), end: new Date(m.ends_at) }));
       out.set(c, { google: g, painel: p });
     } catch (e) {

@@ -86,6 +86,30 @@ describe("livre e ocupado", () => {
     const bad = new GoogleCalendar("tk", async () => json(200, { calendars: { primary: { errors: [{ reason: "notFound" }] } } }));
     await expect(bad.busy(t("07:00"), t("20:00"))).rejects.toThrow(/notFound/);
   });
+  it("mudar a reunião das 16:00 para 16:30: a própria reunião não ocupa o closer, os outros compromissos sim", async () => {
+    const ev = (id: string, s: string, e: string, extra: object = {}) => ({ id, start: { dateTime: t(s).toISOString() }, end: { dateTime: t(e).toISOString() }, ...extra });
+    const urls: string[] = [];
+    const pages: Record<string, unknown> = {
+      "": { items: [ev("propria", "16:00", "17:00"), ev("livre", "16:30", "17:30", { transparency: "transparent" })], nextPageToken: "p2" },
+      p2: { items: [ev("recusada", "16:30", "17:00", { attendees: [{ self: true, responseStatus: "declined" }] }), ev("cancelada", "16:30", "17:00", { status: "cancelled" }), ev("outra", "17:30", "18:00")] },
+    };
+    const cal = new GoogleCalendar("tk", async (u) => {
+      urls.push(String(u));
+      return json(200, pages[new URL(String(u)).searchParams.get("pageToken") ?? ""]);
+    });
+    const busy = await cal.busyExcept(t("00:00"), t("23:59"), "propria");
+    expect(busy).toEqual([{ start: t("17:30"), end: t("18:00") }]);
+    expect(isFreeOcupado({ google: busy, painel: [] }, t("16:30"), t("17:30"), 30)).toBe(true);
+    // com um compromisso às 17:00 no Google, 16:30–17:30 continua bloqueado
+    expect(isFreeOcupado({ google: [...busy, { start: t("17:00"), end: t("17:30") }], painel: [] }, t("16:30"), t("17:30"), 30)).toBe(false);
+    // só pede os campos de horário e situação (nada de título, descrição ou convidados)
+    expect(new URL(urls[0]).searchParams.get("fields")).not.toMatch(/summary|description|email/);
+    expect(urls).toHaveLength(2);
+  });
+  it("evento de dia inteiro ocupa o dia no fuso de São Paulo", async () => {
+    const cal = new GoogleCalendar("tk", async () => json(200, { items: [{ id: "ferias", start: { date: "2026-10-12" }, end: { date: "2026-10-13" } }] }));
+    expect(await cal.busyExcept(t("00:00"), t("23:59"), "x")).toEqual([{ start: t("00:00"), end: new Date("2026-10-13T00:00:00-03:00") }]);
+  });
 });
 
 describe("situação do evento", () => {

@@ -4,11 +4,12 @@
 // A permissão é conferida no banco (permissao_reuniao / definir_status_reuniao) com a sessão do usuário.
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { isFree } from "@painel/shared/google";
 import { busyOf, freeAt, loadRules } from "@/lib/agendar";
 import { postGestaoSdr } from "@/lib/chat";
 import { APP_URL } from "@/lib/google";
 import { loadMeeting, moveEvent, recreateEvent, renameEvent, syncEventWithStatus } from "@/lib/reuniao-google";
-import { checkManual, gridSlots, interval, windowDays } from "@/lib/slots";
+import { checkLivre, checkManual, gridSlots, interval, windowDays } from "@/lib/slots";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { addDays, localToDate } from "@/lib/time";
@@ -107,6 +108,86 @@ export async function reagendar(_: { erro?: string }, form: FormData): Promise<{
     await moveEvent(before, after);
   } catch (e) {
     return { erro: `O horário mudou no painel, mas a agenda do Google não foi atualizada (${(e as Error).message}). Avise o gestor.` };
+  }
+  redirect(`/reunioes?mudou=${id}`);
+}
+
+// ---------- Edição livre: gestor e admin (2026-10-13) ----------
+// Qualquer data, hora e duração, e o closer que o gestor escolher, mesmo ocupado. O painel só avisa.
+
+export interface CloserLivre { id: string; name: string; atual: boolean; situacao: string; livre: boolean }
+
+/** Closers que podem ficar com a reunião: o atual e os do carrossel com agenda conectada (mesma regra do banco). */
+async function closersDoCarrossel(meetingId: string) {
+  const m = await loadMeeting(meetingId);
+  if (!m) throw new Error("Reunião não encontrada.");
+  const { data: car } = await admin().from("meetings").select("carousel_id").eq("id", meetingId).single();
+  const { data: mem } = await admin().from("carousel_members").select("closer_id").eq("carousel_id", car!.carousel_id);
+  const ids = [...new Set([m.closer_id, ...((mem ?? []) as { closer_id: string }[]).map((r) => r.closer_id)])];
+  const [{ data: sd }, { data: con }] = await Promise.all([
+    admin().from("sdrs").select("id, name, active").in("id", ids),
+    admin().from("google_connections").select("closer_id").in("closer_id", ids).eq("status", "conectada"),
+  ]);
+  const ok = new Set(((con ?? []) as { closer_id: string }[]).map((c) => c.closer_id));
+  const closers = ((sd ?? []) as { id: string; name: string; active: boolean }[])
+    .filter((c) => c.id === m.closer_id || (c.active && ok.has(c.id)))
+    .sort((a, b) => (a.id === m.closer_id ? -1 : b.id === m.closer_id ? 1 : a.name.localeCompare(b.name, "pt-BR")));
+  return { m, carouselId: car!.carousel_id as string, closers };
+}
+
+/** Avisos do horário e a situação de cada closer nele (só informação; nada bloqueia). */
+export async function conferirEdicaoLivre(id: string, local: string, duration: number): Promise<{ erro: string | null; avisos: string[]; closers: CloserLivre[] }> {
+  if ((await permissao(id)) !== "gestor") return { erro: "Só gestor e admin editam a reunião livremente.", avisos: [], closers: [] };
+  const { m, carouselId, closers } = await closersDoCarrossel(id);
+  const { carousel, rules } = await loadRules(carouselId);
+  const check = checkLivre(local, duration, rules, new Date());
+  if (check.erro) return { erro: check.erro, avisos: [], closers: [] };
+  const { start, end } = interval(local, duration);
+  const busy = await busyOf(closers.map((c) => c.id), start, end, id);
+  return {
+    erro: null,
+    avisos: check.avisos,
+    closers: closers.map((c) => {
+      const o = busy.get(c.id);
+      const situacao = !o ? "a agenda não respondeu"
+        : !isFree(o.painel, start, end, 0) ? "ocupado: outra reunião do painel neste horário"
+        : !isFree(o.google, start, end, 0) ? "ocupado: compromisso na agenda"
+        : !isFree(o.painel, start, end, carousel.gap_minutes) ? `livre, mas a menos de ${carousel.gap_minutes} min de outra reunião`
+        : "livre";
+      return { id: c.id, name: c.name, atual: c.id === m.closer_id, situacao, livre: situacao === "livre" };
+    }),
+  };
+}
+
+export async function editarLivre(_: { erro?: string }, form: FormData): Promise<{ erro?: string }> {
+  const id = String(form.get("id"));
+  const local = String(form.get("local") ?? "");
+  const duration = Number(form.get("duration"));
+  const closer = String(form.get("closer") ?? "");
+  const motivo = String(form.get("motivo") ?? "").slice(0, 1000);
+  if ((await permissao(id)) !== "gestor") return { erro: "Só gestor e admin editam a reunião livremente." };
+  const { m: before, carouselId, closers } = await closersDoCarrossel(id);
+  if (!closers.some((c) => c.id === closer)) return { erro: "Escolha um closer da lista." };
+  const { rules } = await loadRules(carouselId);
+  const check = checkLivre(local, duration, rules, new Date());
+  if (check.erro) return { erro: check.erro };
+  const { start, end } = interval(local, duration);
+  const r = await admin().rpc("editar_reuniao_livre", { p_meeting: id, p_starts: start.toISOString(), p_ends: end.toISOString(), p_closer: closer, p_motivo: motivo });
+  if (r.error) return { erro: `Não foi possível salvar: ${r.error.message}` };
+  const me = (await (await createClient()).auth.getUser()).data.user?.id ?? null;
+  const after = (await loadMeeting(id))!;
+  // hubspot_sync_needed: o worker atualiza a Reunião no HubSpot (horário e closer) em seguida
+  await admin().from("meetings").update({ fora_do_padrao: check.foraDoPadrao, hubspot_sync_needed: true }).eq("id", id);
+  await admin().from("meeting_changes").insert({
+    meeting_id: id, changed_by: me, from_starts: before.starts_at, to_starts: after.starts_at, from_closer: before.closer_id, to_closer: after.closer_id,
+  });
+  try {
+    await moveEvent(before, after);
+    // no show / cancelada com closer novo: o evento novo volta para a agenda de arquivo
+    const now = await loadMeeting(id);
+    if (now) await syncEventWithStatus(now);
+  } catch (e) {
+    return { erro: `A reunião mudou no painel, mas a agenda do Google não foi atualizada (${(e as Error).message}). Use "Recriar evento" ou avise o admin.` };
   }
   redirect(`/reunioes?mudou=${id}`);
 }

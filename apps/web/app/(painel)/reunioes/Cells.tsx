@@ -60,7 +60,7 @@ export function StatusCell({ id, status, permissao, problema, company }: { id: s
   );
 }
 
-/** Ações: Reagendar, Trocar closer (gestor) ou Pedir troca (SDR), Passar para CH/Poli, Abrir Meet. */
+/** Ações: Reagendar (SDR) ou Editar (gestor), Trocar closer (gestor) ou Pedir troca (SDR), Passar para CH/Poli, Abrir Meet. */
 export function ActionsCell({ id, status, futura, permissao, brand, meetUrl, pedidoPendente, company }: {
   id: string; status: string; futura: boolean; permissao: string; brand: string | null; meetUrl: string | null; pedidoPendente: boolean; company: string;
 }) {
@@ -70,11 +70,14 @@ export function ActionsCell({ id, status, futura, permissao, brand, meetUrl, ped
   const [closers, setClosers] = useState<{ id: string; name: string }[] | null>(null);
   const [closer, setCloser] = useState("");
   const ativa = status === "agendada" && futura;
-  const podeHorario = (permissao === "sdr" || permissao === "gestor") && (status === "agendada" || status === "cancelada");
+  // gestor e admin editam qualquer reunião, em qualquer situação (edição livre, 2026-10-13)
+  const podeHorario = permissao === "gestor" || (permissao === "sdr" && (status === "agendada" || status === "cancelada"));
   return (
     <div className="cell-stack" style={{ alignItems: "flex-end" }}>
       <div className="rn-actions">
-        {podeHorario && <Link href={`/reunioes/${id}/horario`} aria-label={`Reagendar reunião com ${company}`}>Reagendar</Link>}
+        {podeHorario && (permissao === "gestor"
+          ? <Link href={`/reunioes/${id}/horario`} aria-label={`Editar reunião com ${company}`}>Editar</Link>
+          : <Link href={`/reunioes/${id}/horario`} aria-label={`Reagendar reunião com ${company}`}>Reagendar</Link>)}
         {permissao === "gestor" && ativa && (
           <button type="button" className="link" aria-label={`Trocar o closer da reunião com ${company}`}
             onClick={() => { const o = open === "trocar" ? null : "trocar"; setOpen(o); if (o) { setClosers(null); closersLivres(id).then(setClosers); } }}>Trocar closer</button>

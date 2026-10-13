@@ -106,3 +106,51 @@ describe("relatório", () => {
     await expect(as(uid.sdrA, "select * from painel.relatorio_agendamentos('2000-01-01', '2100-01-01')")).rejects.toThrow(/acesso negado/);
   });
 });
+
+describe("edição livre (gestor e admin, 2026-10-13)", () => {
+  const debitos = async (m: string) => Object.fromEntries((await db.query<{ closer_id: string; s: string }>(
+    "select closer_id, sum(amount) as s from painel.carousel_ledger where meeting_id = $1 and kind = 'debit' group by closer_id", [m])).rows.map((d) => [d.closer_id, Number(d.s)]));
+
+  it("muda o horário (inclusive para o passado) mantendo o closer, mesmo sobreposto a outra reunião dele", async () => {
+    const a = await reunir("2030-02-04T19:00:00Z");
+    const b = await reunir("2030-02-04T17:00:00Z");
+    if (b.closer_id !== a.closer_id) await db.query("update painel.meetings set closer_id = $2 where id = $1", [b.meeting_id, a.closer_id]);
+    const mudou = (await db.query<{ v: boolean }>("select painel.editar_reuniao_livre($1, $2, $3, $4, null) as v",
+      [a.meeting_id, "2030-02-04T17:15:00Z", "2030-02-04T18:15:00Z", a.closer_id])).rows[0].v;
+    expect(mudou).toBe(false);
+    const m = (await db.query<{ starts_at: Date; ends_at: Date; closer_id: string }>("select starts_at, ends_at, closer_id from painel.meetings where id = $1", [a.meeting_id])).rows[0];
+    expect([m.starts_at.toISOString(), m.ends_at.toISOString(), m.closer_id]).toEqual(["2030-02-04T17:15:00.000Z", "2030-02-04T18:15:00.000Z", a.closer_id]);
+    await db.query("select painel.editar_reuniao_livre($1, $2, $3, $4, null)", [a.meeting_id, "2020-01-04T10:00:00Z", "2020-01-04T10:30:00Z", a.closer_id]);
+    expect((await db.query<{ starts_at: Date }>("select starts_at from painel.meetings where id = $1", [a.meeting_id])).rows[0].starts_at.toISOString()).toBe("2020-01-04T10:00:00.000Z");
+  });
+
+  it("troca para o closer escolhido sem checar agenda, marca manual e move o débito; cancelada volta a agendada", async () => {
+    const a = await reunir("2030-02-05T13:00:00Z");
+    const outro = [id.c1, id.c2, id.c3].find((c) => c !== a.closer_id)!;
+    await db.query("update painel.meetings set status = 'cancelada' where id = $1", [a.meeting_id]);
+    const mudou = (await db.query<{ v: boolean }>("select painel.editar_reuniao_livre($1, $2, $3, $4, ' lead pediu ') as v",
+      [a.meeting_id, "2030-02-05T13:30:00Z", "2030-02-05T14:00:00Z", outro])).rows[0].v;
+    expect(mudou).toBe(true);
+    expect((await db.query("select closer_id, assigned_by, override_reason, status from painel.meetings where id = $1", [a.meeting_id])).rows[0])
+      .toMatchObject({ closer_id: outro, assigned_by: "manual", override_reason: "lead pediu", status: "agendada" });
+    expect(await debitos(a.meeting_id)).toMatchObject({ [a.closer_id]: 0, [outro]: 1 });
+  });
+
+  it("closer fora do carrossel ou sem agenda conectada não entra; horário invertido não passa", async () => {
+    const a = await reunir("2030-02-06T13:00:00Z");
+    const fora = await one("insert into painel.sdrs (poli_email, name, role) values ('fora@x', 'Fora', 'closer') returning id");
+    await expect(db.query("select painel.editar_reuniao_livre($1, $2, $3, $4, null)", [a.meeting_id, "2030-02-06T14:00:00Z", "2030-02-06T14:30:00Z", fora])).rejects.toThrow(/não é do carrossel/);
+    const outro = [id.c1, id.c2, id.c3].find((c) => c !== a.closer_id)!;
+    await db.query("update painel.google_connections set status = 'desconectada' where closer_id = $1", [outro]);
+    await expect(db.query("select painel.editar_reuniao_livre($1, $2, $3, $4, null)", [a.meeting_id, "2030-02-06T14:00:00Z", "2030-02-06T14:30:00Z", outro])).rejects.toThrow(/agenda conectada/);
+    await db.query("update painel.google_connections set status = 'conectada' where closer_id = $1", [outro]);
+    await expect(db.query("select painel.editar_reuniao_livre($1, $2, $3, $4, null)", [a.meeting_id, "2030-02-06T14:00:00Z", "2030-02-06T13:30:00Z", a.closer_id])).rejects.toThrow(/horário inválido/);
+  });
+
+  it("usuário logado (até gestor) não chama direto: só o servidor", async () => {
+    const a = await reunir("2030-02-07T13:00:00Z");
+    for (const u of [uid.gestor, uid.sdrA, uid.closer]) {
+      await expect(as(u, "select painel.editar_reuniao_livre($1, $2, $3, $4, null)", [a.meeting_id, "2030-02-07T14:00:00Z", "2030-02-07T14:30:00Z", a.closer_id])).rejects.toThrow(/permission denied/);
+    }
+  });
+});

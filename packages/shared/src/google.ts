@@ -167,6 +167,40 @@ export class GoogleCalendar {
     return (cal.busy ?? []).map((b) => ({ start: new Date(b.start), end: new Date(b.end) }));
   }
 
+  /**
+   * Ocupados da agenda sem um evento (a própria reunião que está mudando de horário). O freeBusy junta tudo e
+   * não diz qual evento é qual, então aqui lemos os eventos, só com os campos de horário e situação (sem título,
+   * descrição nem convidados), e seguimos a regra do freeBusy: não conta evento "disponível", recusado nem cancelado.
+   */
+  async busyExcept(from: Date, to: Date, exceptEventId: string, calendarId = "primary"): Promise<Interval[]> {
+    type Ev = {
+      id: string; status?: string; transparency?: string; eventType?: string;
+      start?: { dateTime?: string; date?: string }; end?: { dateTime?: string; date?: string };
+      attendees?: { self?: boolean; responseStatus?: string }[];
+    };
+    const out: Interval[] = [];
+    let page: string | undefined;
+    do {
+      const q = new URLSearchParams({
+        timeMin: from.toISOString(), timeMax: to.toISOString(), singleEvents: "true", maxResults: "250",
+        fields: "items(id,status,transparency,eventType,start,end,attendees(self,responseStatus)),nextPageToken",
+        ...(page ? { pageToken: page } : {}),
+      });
+      const j = await this.call<{ items?: Ev[]; nextPageToken?: string }>("livre_ocupado", `${API}/calendars/${enc(calendarId)}/events?${q}`);
+      for (const ev of j.items ?? []) {
+        if (ev.id === exceptEventId || ev.status === "cancelled" || ev.transparency === "transparent" || ev.eventType === "workingLocation") continue;
+        if (ev.attendees?.some((a) => a.self && a.responseStatus === "declined")) continue;
+        // dia inteiro: o Google manda só a data; o dia vale no fuso de negócio (São Paulo, -03:00, sem horário de verão)
+        const at = (d?: { dateTime?: string; date?: string }) => (d?.dateTime ? new Date(d.dateTime) : d?.date ? new Date(`${d.date}T00:00:00-03:00`) : null);
+        const s = at(ev.start);
+        const e = at(ev.end);
+        if (s && e && e > s) out.push({ start: s, end: e });
+      }
+      page = j.nextPageToken;
+    } while (page);
+    return out.sort((a, b) => a.start.getTime() - b.start.getTime());
+  }
+
   /** Cria o evento com Meet. sendUpdates=all: convidados recebem o convite por e-mail. */
   insert(ev: NewEvent, calendarId = "primary"): Promise<CalendarEvent> {
     return this.call("criar", `${API}/calendars/${enc(calendarId)}/events?conferenceDataVersion=1&sendUpdates=all`, {

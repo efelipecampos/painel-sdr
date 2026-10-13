@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkManual, gridSlots, windowDays, type AgendaRules } from "./slots";
+import { checkLivre, checkManual, gridSlots, windowDays, type AgendaRules } from "./slots";
 
 const hours = [1, 2, 3, 4, 5].map((weekday) => ({ weekday, enabled: true, start_time: "08:20", end_time: "17:45" }))
   .concat([0, 6].map((weekday) => ({ weekday, enabled: false, start_time: "08:00", end_time: "18:00" })));
@@ -69,5 +69,19 @@ describe("ajuste manual", () => {
     expect(checkManual("2026-10-09T10:30", 30, { ...rules, minNoticeMinutes: 0 }, dezHoras).erro).toBeNull();
     expect(checkManual("2026-11-30T10:00", 30, rules, NOW).erro).toMatch(/10 dias úteis/);
     expect(checkManual("2026-10-13T10:00", 5, rules, NOW).erro).toMatch(/10 a 240/);
+  });
+});
+
+describe("edição livre (gestor e admin)", () => {
+  it("nada bloqueia: passado, fim de semana, madrugada, fora da janela e duração longa só avisam", () => {
+    expect(checkLivre("2026-10-13T16:30", 60, rules, NOW)).toEqual({ erro: null, avisos: [], foraDoPadrao: false });
+    expect(checkLivre("2026-10-08T16:30", 30, rules, NOW)).toMatchObject({ erro: null, avisos: ["Horário no passado"] });
+    expect(checkLivre("2026-10-10T05:00", 300, rules, NOW)).toMatchObject({ erro: null, avisos: ["Dia fora do expediente (fim de semana ou feriado)"] });
+    expect(checkLivre("2026-10-13T21:30", 30, rules, NOW).avisos).toEqual(["Termina depois das 18:00"]);
+    expect(checkLivre("2026-11-30T10:00", 30, rules, NOW).avisos).toEqual(["Depois dos próximos 10 dias úteis"]);
+  });
+  it("só recusa formato ou duração inválidos", () => {
+    expect(checkLivre("2026-10-13", 30, rules, NOW).erro).toMatch(/inválido/);
+    expect(checkLivre("2026-10-13T10:00", 0, rules, NOW).erro).toMatch(/1 a 1440/);
   });
 });
