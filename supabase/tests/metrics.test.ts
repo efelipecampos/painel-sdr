@@ -83,6 +83,23 @@ describe("sdr_metrics", () => {
     expect(m).toMatchObject({ leads_abordados: 2, templates_enviados: 3, leads_responderam: 2 });
   });
 
+  it("abordado = recebeu qualquer mensagem no chat do SDR: escrita, template ou bot; nota interna não (2026-10-13)", async () => {
+    await lead("X", [["sdr", day("08:00")]]);                         // só mensagem escrita (cadência)
+    await lead("X", [["bot", day("08:30")]]);                         // só bot
+    await lead("X", [["template_bot", day("09:00")]]);                // só template do app token
+    await lead("X", [["sdr", day("10:00", "04")], ["lead", day("11:00")]]); // mensagem fora do período
+    const nota = await lead("X", [["lead", day("12:00")]]);           // só nota interna no período
+    await db.query(
+      `insert into painel.chat_messages (poli_message_id, chat_id, lead_id, sdr_id, sender, sent_at, system_type, note_tag)
+       values ('nota-ab', $1, $2, $3, 'system', $4, 'NOTE', null)`, [nota.chats.get("A"), nota.leadId, sdr.X, day("12:05")]);
+    await lead("Y", [["sdr", day("09:00")], ["sdr", day("09:30")]]);   // duas vezes, conta uma
+    const m = await metrics();
+    expect(m["SDR X"]).toMatchObject({ leads_abordados: 3, templates_enviados: 1 });
+    expect(m["SDR Y"]).toMatchObject({ leads_abordados: 1, templates_enviados: 0 });
+    const t = (await db.query<Record<string, number>>("select * from painel.team_metrics($1, $2, false)", [FROM, TO])).rows[0];
+    expect(t).toMatchObject({ leads_abordados: 4, templates_enviados: 1 });
+  });
+
   it("medianas entram no período pelo momento em que o lead escreveu", async () => {
     await lead("X", [["lead", day("09:00")], ["sdr", day("09:01")], ["lead", day("09:10")], ["sdr", day("09:20")]]); // 60s (1ª), 600s
     await lead("X", [["lead", day("10:00")], ["sdr", day("10:02")]]); // 120s (1ª)
