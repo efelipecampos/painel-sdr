@@ -1,6 +1,6 @@
 # Fase 11 — Jornada configurável (rascunho para aprovação)
 
-Rascunho de 2026-10-15. Nada desta fase é implementado antes da aprovação do Felipe e das respostas da seção 9.
+Rascunho de 2026-10-15, com as respostas do Felipe do mesmo dia. Nada desta fase é implementado antes da aprovação dele e do que falta na seção 9.
 
 ## 1. Objetivo
 
@@ -12,6 +12,10 @@ O gestor configura no painel o que acontece quando o lead clica num botão de um
 - **Quem configura:** só gestor e admin. O SDR não vê a tela.
 - **Ação da primeira versão:** só "enviar template".
 - **Futuro, fora desta fase:** configurar pelo painel a ordem de prioridade da lista de leads do SDR. Também ficam fora: mudar etapa no HubSpot, avisar SDR, fila.
+- **Abertura e cadência D1 a D4 continuam no n8n.** O painel só responde aos cliques nos botões.
+- **Se alguém da equipe já escreveu para o lead depois do clique, o painel não envia.**
+- **Remetente:** o envio sai da conta principal da Poli, em nome do SDR dono do lead. O dono vem do HubSpot e é ligado ao atendente do Poli por `painel.sdrs.poli_attendant_uuid`. Lead sem dono, ou com dono sem atendente no Poli, não recebe o envio: fica como "pulado", com o motivo.
+- **Documentação da API do Poli:** com o Felipe.
 
 ## 3. Como funciona
 
@@ -28,7 +32,7 @@ O processamento é idempotente: a mesma regra nunca envia duas vezes para o mesm
 - **Pausa geral** da jornada e pausa por regra, com efeito no ciclo seguinte do worker.
 - **Modo teste:** regra nova nasce em teste e só envia para os contatos de uma lista de teste. Só vira "ativa" quando o gestor ativa.
 - **Limite diário** de envios por regra. Se passar do limite, o worker para a regra e gera um alerta, como proteção contra laço ou erro.
-- **Não enviar** se uma pessoa da equipe já escreveu para o lead depois do clique (a confirmar, seção 9).
+- **Não enviar** se uma pessoa da equipe já escreveu para o lead depois do clique (decisão do Felipe).
 - **Só templates cujas variáveis o painel consegue preencher**, para evitar o erro 100 da Meta. Exemplo: nome do contato.
 - **Log sem conteúdo** (LGPD): só ids, regra, situação e código de erro. Nada de telefone nem texto da mensagem.
 - Token da API do Poli **só no worker** (`.env`), nunca no navegador.
@@ -68,10 +72,7 @@ O processamento é idempotente: a mesma regra nunca envia duas vezes para o mesm
 3. Tela de acompanhamento e funil.
 4. Ativação regra a regra, desligando o equivalente no n8n.
 
-## 9. Perguntas para o Felipe
+## 9. Em aberto
 
-1. **A abertura e a cadência D1 a D4** também passam para o painel nesta fase, ou só as respostas aos botões? (Recomendação: só os botões agora; a abertura e a cadência ficam no n8n até o motor estar provado.)
-2. **Se a SDR já escreveu para o lead depois do clique,** o painel deixa de enviar o template da regra?
-3. **De que conta e canal do Poli sai o envio,** e em nome de quem aparece para o lead: a SDR dona do lead ou a conta da automação?
-4. **Quem tem a documentação da API do Poli** para envio de template?
-5. **Qual é o número de teste** para o modo teste?
+1. **A documentação da API do Poli** para enviar template em nome de um atendente, e para listar templates, se existir. Está com o Felipe.
+2. **O destino do modo teste.** O Felipe indicou o "número do canal principal". Falta confirmar se é para mandar para um WhatsApp de teste da equipe, já que o canal principal é o próprio remetente e não pode receber de si mesmo.
