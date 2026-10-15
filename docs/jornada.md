@@ -65,13 +65,12 @@ O processamento é idempotente: a mesma regra nunca envia duas vezes para o mesm
 - **Enviar template ao lead:** `POST {host}/contacts/{contact_uuid}/messages` com `provider: "WHATSAPP"`, `account_channel_uuid` (Canal Principal, `9b8bae9e-2fe2-4f2a-82a2-abb931c7d7ce`), `type: "TEMPLATE"`, `template_uuid`, `version: "v3"` e `components.header/body.parameters` (variáveis).
 - **Enviar ao telefone de teste:** `POST {host}/accounts/{account_uuid}/contacts/{telefone}/messages` (mesmo corpo). Conta `9b8af98e-0407-49a2-bce9-3620f29c513a`.
 - **Listar templates:** `GET {host}/accounts/{account_uuid}/templates?include=key,version,status,message,components,interactive`. Alimenta a tela de regras (templates e botões).
-- **Atribuir a conversa:** `POST {host}/contacts/{contact_uuid}/forward` com `user_uuid` (e `team_uuid`).
 - **Situação da mensagem:** webhook `ack` (CREATED, QUEUED_BY_PROVIDER, RECEIVED_BY_PROVIDER, RECEIVED_BY_CLIENT, READ_BY_CLIENT, ERROR). Hoje a integração não grava esse evento.
 - **Clique:** o evento `received` traz `context.message.uuid` apontando para a mensagem do template, mas só em parte dos cliques (4 de 300 mensagens com `context` em 14/10). O painel identifica o clique pelo texto igual ao do botão do último template enviado ao contato, e usa o `context` quando ele vier.
 
-**O que a API não faz: escolher o autor.** O envio sai em nome de quem é dono do token. As aberturas da automação de hoje já saem assim, sem nome de atendente (por isso o `[operator_name]` vazio e o risco de erro 100). "Em nome da SDR" vira duas coisas (a confirmar com o Felipe):
-1. o primeiro nome da SDR dona do lead vai no texto, numa variável que o painel preenche;
-2. a conversa é atribuída à SDR (`forward` com o `user_uuid` dela), para a resposta do lead cair na fila dela.
+**O que a API não faz: escolher o autor.** O envio sai em nome de quem é dono do token. As aberturas da automação de hoje já saem assim, sem nome de atendente (por isso o `[operator_name]` vazio e o risco de erro 100). "Em nome da SDR" é o primeiro nome da SDR dona do lead no texto, numa variável que o painel preenche.
+
+**Nada muda no Poli além do envio** (decisão do Felipe, 2026-10-15): o painel não encaminha nem atribui a conversa. Quem clicou e recebeu o envio ganha prioridade **na lista do próprio painel** da SDR. Isso faz parte da prioridade da lista, que é uma fase futura.
 
 **Fora do painel, antes de ligar:**
 - token da aplicação e host da API no `.env`;
@@ -86,5 +85,5 @@ O processamento é idempotente: a mesma regra nunca envia duas vezes para o mesm
 
 ## 9. Em aberto
 
-1. ~~**A documentação da API do Poli.**~~ Recebida em 15/10 (seção 7). Ficou em aberto: o endereço (`host`) da API de produção, e se "em nome da SDR" pode ser o nome no texto mais a conversa atribuída a ela.
+1. ~~**A documentação da API do Poli.**~~ Recebida em 15/10 (seção 7). Host de produção: `https://foundation-api.poli.digital/v3`. "Em nome da SDR" = nome no texto; nada de atribuir conversa no Poli.
 2. ~~**O destino do modo teste.**~~ Resolvido em 15/10: campo "Telefone de teste" na tela de Regras, preenchido pelo gestor. Deve ser um número diferente do canal remetente.
