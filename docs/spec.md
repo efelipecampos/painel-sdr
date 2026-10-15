@@ -48,7 +48,7 @@ Estas definições foram fechadas como padrão da V1. Qualquer mudança é decis
 
 | Métrica | Definição |
 |---|---|
-| Leads abordados | Leads distintos que receberam ao menos 1 template enviado pelo SDR dentro do período. Um lead abordado duas vezes conta uma vez. |
+| Leads abordados | Leads distintos que receberam, dentro do período, ao menos 1 mensagem no chat do SDR (dono no momento da mensagem): mensagem escrita por pessoa, template (manual ou do app token) ou bot. Nota interna e eventos de sistema não contam. Um lead abordado duas vezes conta uma vez. Card do SDR e Time. (Decisão de 2026-10-13; antes era só template.) |
 | Templates enviados | Total de mensagens de template enviadas pelo SDR no período (conta repetidos). |
 | Leads que responderam | Leads distintos que mandaram pelo menos 1 mensagem em chat do SDR (dono no momento da mensagem) dentro do período. |
 | Descartados | Leads do HubSpot que entraram na etapa "Descartado" do [New] Pipeline SDR no período, atribuídos ao dono do Lead no HubSpot (ligado ao SDR pelo e-mail). Card do SDR e Time. |
