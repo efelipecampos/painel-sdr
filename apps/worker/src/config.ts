@@ -68,6 +68,19 @@ export const config = {
     : null,
   /** Intervalo da conferência das agendas e dos eventos. */
   googleEveryMinutes: Number(process.env.GOOGLE_CHECK_MINUTES ?? 10),
+  /**
+   * API do Poli (Fase 11, jornada configurável). Sem endereço e token, a jornada não roda.
+   * Conta e Canal Principal: os mesmos das aberturas da automação (vistos nos eventos em 2026-10-15).
+   */
+  poli: process.env.POLI_API_BASE_URL?.trim() && process.env.POLI_API_TOKEN?.trim()
+    ? {
+        baseUrl: process.env.POLI_API_BASE_URL.trim(),
+        token: process.env.POLI_API_TOKEN.trim(),
+        accountUuid: process.env.POLI_ACCOUNT_UUID?.trim() || "9b8af98e-0407-49a2-bce9-3620f29c513a",
+        channelUuid: process.env.POLI_CHANNEL_UUID?.trim() || "9b8bae9e-2fe2-4f2a-82a2-abb931c7d7ce",
+        templatesEveryMinutes: Number(process.env.JORNADA_TEMPLATES_MIN ?? 30),
+      }
+    : null,
 };
 
 export function isBot(email: string | null): boolean {

@@ -10,6 +10,8 @@ import { dailyCheck, stuckMeetings, syncMeetings } from "./hubspot/meetings.js";
 import { marcarRespostas } from "./hubspot/respostas.js";
 import { gravarCamposContato } from "./hubspot/contatos.js";
 import { checkGoogle } from "./google.js";
+import { rodarJornada, syncTemplates } from "./jornada/motor.js";
+import { PoliApi } from "./poli/api.js";
 import { createDb, processBatch, rebuildAll, syncRoles } from "./processor.js";
 import { scoreRound } from "./score/job.js";
 import { scorerFromEnv } from "./score/model.js";
@@ -119,6 +121,16 @@ async function syncHubspot(force: boolean): Promise<boolean> {
   return true;
 }
 
+// Jornada configurável (Fase 11): templates do Poli a cada 30 min e cliques a cada rodada, depois do processamento.
+const poli = config.poli ? new PoliApi(config.poli.baseUrl, config.poli.token) : null;
+async function jornada(): Promise<void> {
+  if (!poli || !config.poli) return;
+  const t = await syncTemplates(db, poli, config.poli);
+  if (t) console.log(`[worker] jornada: ${t} templates do Poli atualizados`);
+  const r = await rodarJornada(db, poli, config.poli);
+  if (r.cliques) console.log(`[worker] jornada: ${r.cliques} cliques com regra, ${r.enviados} enviados, ${r.falhas} falhas, ${r.pulados} pulados`);
+}
+
 async function drain(): Promise<void> {
   await syncRoles(db);
   for (;;) {
@@ -164,6 +176,11 @@ if (process.argv.includes("--testar-alerta")) {
       await syncGoogle();
     } catch (err) {
       console.error("[worker] erro na conferência do Google:", err instanceof Error ? err.message : err);
+    }
+    try {
+      await jornada();
+    } catch (err) {
+      console.error("[worker] erro na jornada:", err instanceof Error ? err.message : err);
     }
     try {
       await syncHubspotMeetings();

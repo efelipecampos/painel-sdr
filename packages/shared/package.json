@@ -10,6 +10,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./google": "./src/google.ts",
-    "./hubspot": "./src/hubspot.ts"
+    "./hubspot": "./src/hubspot.ts",
+    "./jornada": "./src/jornada.ts"
   }
 }

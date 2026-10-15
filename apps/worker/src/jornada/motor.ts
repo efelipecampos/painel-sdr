@@ -1,0 +1,201 @@
+// Motor da jornada configurável (Fase 11, docs/jornada.md). Roda a cada rodada do worker, depois do processamento
+// dos eventos: olha os eventos recebidos desde o cursor, reconhece o clique num botão de template, acha a regra e
+// envia o template de destino pela API do Poli. Regra em teste envia só para o telefone de teste.
+// Travas: o mesmo clique não é processado duas vezes (índice único), a mesma regra não envia de verdade duas vezes ao
+// mesmo lead, não envia se alguém da equipe já escreveu depois do clique, e respeita a pausa geral e o limite diário.
+// Logs e registros: só ids, situação e motivo. Nada de telefone nem texto de mensagem.
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { botaoClicado, escolherRegra, preencher, type Regra } from "@painel/shared/jornada";
+import { PoliApi, PoliError, type PoliTemplate } from "../poli/api.js";
+
+const CURSOR_KEY = "journey_cursor";
+const LOTE = 500;
+
+export interface JornadaConfig {
+  accountUuid: string;
+  channelUuid: string;
+  templatesEveryMinutes: number;
+}
+
+export interface Resumo {
+  cliques: number;
+  enviados: number;
+  falhas: number;
+  pulados: number;
+}
+
+let ultimoSyncTemplates = 0;
+
+/** Atualiza painel.poli_templates com a listagem da API (a cada N minutos). */
+export async function syncTemplates(db: SupabaseClient, poli: PoliApi, cfg: JornadaConfig, force = false): Promise<number> {
+  if (!force && Date.now() - ultimoSyncTemplates < cfg.templatesEveryMinutes * 60_000) return 0;
+  const ts = await poli.listTemplates(cfg.accountUuid);
+  const now = new Date().toISOString();
+  for (let i = 0; i < ts.length; i += 200) {
+    const { error } = await db.schema("painel").from("poli_templates").upsert(
+      ts.slice(i, i + 200).map((t) => ({ uuid: t.uuid, key: t.key, status: t.status, category: t.category, body: t.body, buttons: t.buttons.map((text) => ({ text })), synced_at: now })),
+    );
+    if (error) throw new Error(`gravar templates do Poli: ${error.message}`);
+  }
+  ultimoSyncTemplates = Date.now();
+  return ts.length;
+}
+
+export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: JornadaConfig): Promise<Resumo> {
+  const p = db.schema("painel");
+  const out: Resumo = { cliques: 0, enviados: 0, falhas: 0, pulados: 0 };
+
+  // Cursor: na primeira vez começa do evento mais recente. A jornada nunca olha cliques de antes de existir.
+  const { data: cur } = await p.from("settings").select("value").eq("key", CURSOR_KEY).maybeSingle();
+  let cursor = Number(cur?.value ?? 0);
+  if (!cursor) {
+    const { data: ult } = await db.from("raw_events").select("id").order("id", { ascending: false }).limit(1).maybeSingle();
+    await salvarCursor(db, Number(ult?.id ?? 0));
+    return out;
+  }
+
+  // Só eventos que o processamento já transformou em mensagem (chat_messages); os mais novos ficam para a próxima rodada.
+  const { data: proc } = await p.from("settings").select("value").eq("key", "raw_events_cursor").maybeSingle();
+  const processado = Number(proc?.value ?? 0);
+  if (processado <= cursor) return out;
+  const { data: evs, error } = await db.from("raw_events")
+    .select("id, received_at, contato:payload->value->contact->>uuid, texto:payload->value->components->body->>text")
+    .eq("event_type", "messages.message.received").gt("id", cursor).lte("id", processado).order("id").limit(LOTE);
+  if (error) throw new Error(`ler cliques: ${error.message}`);
+  if (!evs?.length) {
+    await salvarCursor(db, processado);
+    return out;
+  }
+
+  const { data: regrasRaw } = await p.from("journey_rules").select("id, origin_template_uuid, origin_button, janela, dest_template_uuid, status, daily_limit").neq("status", "pausada");
+  const regras = (regrasRaw ?? []) as Regra[];
+  if (!regras.length) {
+    await salvarCursor(db, Number(evs[evs.length - 1].id));
+    return out;
+  }
+  const origens = new Set(regras.map((r) => r.origin_template_uuid));
+  const { data: conf } = await p.from("journey_config").select("paused, test_phone").single();
+  const sdrs = new Map(((await p.from("sdrs").select("id, name, is_bot")).data ?? []).map((s) => [s.id, s]));
+  const humano = (m: { sender: string; sdr_id: string | null }) => m.sender === "sdr" && !!m.sdr_id && !sdrs.get(m.sdr_id)?.is_bot;
+
+  for (const ev of evs) {
+    const evId = Number(ev.id);
+    try {
+      await processarClique();
+    } finally {
+      await salvarCursor(db, evId);
+    }
+
+    async function processarClique(): Promise<void> {
+      if (!ev.contato) return;
+      const { data: lead } = await p.from("leads").select("id, name, hubspot_contact_id").eq("poli_contact_uuid", ev.contato).maybeSingle();
+      if (!lead) return;
+      const { data: msgs } = await p.from("chat_messages").select("sender, sdr_id, raw_event_id, sent_at")
+        .eq("lead_id", lead.id).order("sent_at", { ascending: true }).limit(2000);
+      const ms = msgs ?? [];
+      const iClique = ms.findIndex((m) => Number(m.raw_event_id) === evId);
+      if (iClique < 0 || ms[iClique].sender !== "lead") return;
+      // O clique é a primeira mensagem do lead depois do último template enviado a ele.
+      let iTpl = -1;
+      for (let i = iClique - 1; i >= 0; i--) {
+        if (ms[i].sender === "lead") return;
+        if (ms[i].sender === "template") { iTpl = i; break; }
+      }
+      if (iTpl < 0 || !ms[iTpl].raw_event_id) return;
+      const { data: tplEv } = await db.from("raw_events")
+        .select("uuid:payload->value->template->>uuid, botoes:payload->value->template->message->buttons").eq("id", ms[iTpl].raw_event_id).maybeSingle();
+      const tplUuid = tplEv?.uuid as string | null;
+      if (!tplUuid || !origens.has(tplUuid)) return;
+      const botoes = ((tplEv?.botoes as { type?: string; text?: string }[] | null) ?? []).filter((b) => b.type === "reply" && b.text).map((b) => b.text!);
+      const botao = botaoClicado(ev.texto as string | null, botoes);
+      if (!botao) return;
+      const clicouEm = ms[iClique].sent_at as string;
+      const { data: noExp } = await p.rpc("is_business_time", { p_at: clicouEm });
+      const regra = escolherRegra(regras, tplUuid, botao, !!noExp);
+      if (!regra) return;
+      out.cliques++;
+
+      const modo = regra.status === "teste" ? "teste" : "real";
+      const base = { rule_id: regra.id, click_event_id: evId, poli_contact_uuid: ev.contato as string, lead_id: lead.id, clicked_at: clicouEm, mode: modo };
+      const pular = async (reason: string, sdrId: string | null = null) => {
+        const { error: e } = await p.from("journey_sends").upsert({ ...base, sdr_id: sdrId, status: "pulado", reason }, { onConflict: "rule_id,click_event_id", ignoreDuplicates: true });
+        if (e) throw new Error(`registrar envio pulado: ${e.message}`);
+        out.pulados++;
+      };
+
+      if (conf?.paused) return pular("jornada_pausada");
+      if (modo === "teste" && !conf?.test_phone) return pular("sem_telefone_teste");
+      if (ms.slice(iClique + 1).some(humano)) return pular("equipe_ja_escreveu");
+      if (modo === "real") {
+        const { count: ja } = await p.from("journey_sends").select("id", { count: "exact", head: true })
+          .eq("rule_id", regra.id).eq("poli_contact_uuid", ev.contato).eq("mode", "real").eq("status", "enviado");
+        if (ja) return pular("ja_enviado");
+        if (regra.daily_limit) {
+          const desde = new Date(Date.now() - 864e5).toISOString(); // 24 h corridas
+          const { count: hoje } = await p.from("journey_sends").select("id", { count: "exact", head: true })
+            .eq("rule_id", regra.id).eq("mode", "real").eq("status", "enviado").gte("created_at", desde);
+          if ((hoje ?? 0) >= regra.daily_limit) {
+            await pausarPorLimite(db, regra);
+            return pular("limite_diario");
+          }
+        }
+      }
+
+      const { data: dest } = await p.from("poli_templates").select("uuid, body").eq("uuid", regra.dest_template_uuid).maybeSingle();
+      if (!dest) return pular("template_nao_encontrado");
+      const sdr = await sdrDono(db, lead.hubspot_contact_id);
+      const dados = preencher(dest.body ?? "", { leadNome: lead.name, sdrNome: sdr?.name ?? null });
+      if (!dados.ok) return pular(dados.falta === "operator_name" ? "sem_sdr_dona" : `falta_${dados.falta}`, sdr?.id ?? null);
+
+      // Reserva o clique antes de chamar o Poli: se o worker cair no meio, o mesmo clique não envia de novo.
+      const { data: reserva, error: eRes } = await p.from("journey_sends")
+        .upsert({ ...base, sdr_id: sdr?.id ?? null, status: "falhou", reason: "enviando" }, { onConflict: "rule_id,click_event_id", ignoreDuplicates: true })
+        .select("id");
+      if (eRes) throw new Error(`reservar envio: ${eRes.message}`);
+      if (!reserva?.length) return; // outro ciclo já tratou este clique
+
+      const envio = { templateUuid: dest.uuid as string, channelUuid: cfg.channelUuid, bodyParams: dados.params };
+      try {
+        const msgUuid = modo === "teste"
+          ? await poli.sendToPhone(cfg.accountUuid, String(conf!.test_phone), envio)
+          : await poli.sendToContact(ev.contato as string, envio);
+        await p.from("journey_sends").update({ status: "enviado", reason: null, poli_message_uuid: msgUuid }).eq("id", reserva[0].id);
+        out.enviados++;
+      } catch (e) {
+        const pe = e instanceof PoliError ? e : null;
+        await p.from("journey_sends").update({ status: "falhou", reason: pe?.reason ?? "erro_interno", http_status: pe?.status ?? null }).eq("id", reserva[0].id);
+        out.falhas++;
+      }
+    }
+  }
+  return out;
+}
+
+async function salvarCursor(db: SupabaseClient, id: number): Promise<void> {
+  const { error } = await db.schema("painel").from("settings").upsert({ key: CURSOR_KEY, value: id, updated_at: new Date().toISOString() });
+  if (error) throw new Error(`salvar cursor da jornada: ${error.message}`);
+}
+
+/** SDR dona do lead: dono do Lead mais recente no HubSpot, ligado ao atendente pelo e-mail. */
+async function sdrDono(db: SupabaseClient, hubspotContactId: string | null): Promise<{ id: string; name: string } | null> {
+  if (!hubspotContactId) return null;
+  const p = db.schema("painel");
+  const { data: hl } = await p.from("hubspot_leads").select("owner_id").eq("hubspot_contact_id", hubspotContactId)
+    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (!hl?.owner_id) return null;
+  const { data: dono } = await p.from("hubspot_owners").select("email").eq("owner_id", hl.owner_id).maybeSingle();
+  if (!dono?.email) return null;
+  const { data: sdr } = await p.from("sdrs").select("id, name").ilike("poli_email", dono.email).maybeSingle();
+  return sdr ? { id: sdr.id, name: sdr.name } : null;
+}
+
+/** Limite diário atingido: a regra pausa sozinha e o histórico registra (changed_by vazio = foi o worker). */
+async function pausarPorLimite(db: SupabaseClient, r: Regra): Promise<void> {
+  const p = db.schema("painel");
+  const { data } = await p.from("journey_rules").update({ status: "pausada", paused_reason: "limite_diario" }).eq("id", r.id).eq("status", "ativa").select("id");
+  if (data?.length) {
+    await p.from("journey_rule_changes").insert({ rule_id: r.id, action: "pausou_limite", before: { status: "ativa" }, after: { status: "pausada", paused_reason: "limite_diario" } });
+  }
+}
+
+export type { PoliTemplate };
