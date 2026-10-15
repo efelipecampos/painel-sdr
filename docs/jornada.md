@@ -59,11 +59,23 @@ O processamento é idempotente: a mesma regra nunca envia duas vezes para o mesm
 - `painel.settings`: chave `journey_paused`.
 - RLS: leitura e escrita só para gestor e admin. O worker usa service_role.
 
-## 7. O que precisa existir fora do painel
+## 7. API do Poli (coleção Postman do Felipe, lida em 2026-10-15)
 
-- **API do Poli:** a documentação do envio de template (endpoint, corpo, como passar as variáveis, que canal e conta usar, como vem o erro) e, se existir, da listagem de templates. Nem o painel nem a integração enviam mensagem hoje.
-- **Token da API do Poli,** colocado pelo Felipe no `.env` (`POLI_API_TOKEN`).
-- **Desligar no n8n** as regras que passarem para o painel, no mesmo dia em que forem ativadas aqui, para o lead não receber em dobro.
+- **Autenticação:** `Authorization: Bearer <token>` (token de aplicação, criado em Applications → Tokens). Vai no `.env` do worker como `POLI_API_TOKEN`, junto com `POLI_API_URL` (o `{{host}}` da coleção). Nunca no navegador.
+- **Enviar template ao lead:** `POST {host}/contacts/{contact_uuid}/messages` com `provider: "WHATSAPP"`, `account_channel_uuid` (Canal Principal, `9b8bae9e-2fe2-4f2a-82a2-abb931c7d7ce`), `type: "TEMPLATE"`, `template_uuid`, `version: "v3"` e `components.header/body.parameters` (variáveis).
+- **Enviar ao telefone de teste:** `POST {host}/accounts/{account_uuid}/contacts/{telefone}/messages` (mesmo corpo). Conta `9b8af98e-0407-49a2-bce9-3620f29c513a`.
+- **Listar templates:** `GET {host}/accounts/{account_uuid}/templates?include=key,version,status,message,components,interactive`. Alimenta a tela de regras (templates e botões).
+- **Atribuir a conversa:** `POST {host}/contacts/{contact_uuid}/forward` com `user_uuid` (e `team_uuid`).
+- **Situação da mensagem:** webhook `ack` (CREATED, QUEUED_BY_PROVIDER, RECEIVED_BY_PROVIDER, RECEIVED_BY_CLIENT, READ_BY_CLIENT, ERROR). Hoje a integração não grava esse evento.
+- **Clique:** o evento `received` traz `context.message.uuid` apontando para a mensagem do template, mas só em parte dos cliques (4 de 300 mensagens com `context` em 14/10). O painel identifica o clique pelo texto igual ao do botão do último template enviado ao contato, e usa o `context` quando ele vier.
+
+**O que a API não faz: escolher o autor.** O envio sai em nome de quem é dono do token. As aberturas da automação de hoje já saem assim, sem nome de atendente (por isso o `[operator_name]` vazio e o risco de erro 100). "Em nome da SDR" vira duas coisas (a confirmar com o Felipe):
+1. o primeiro nome da SDR dona do lead vai no texto, numa variável que o painel preenche;
+2. a conversa é atribuída à SDR (`forward` com o `user_uuid` dela), para a resposta do lead cair na fila dela.
+
+**Fora do painel, antes de ligar:**
+- token da aplicação e host da API no `.env`;
+- desligar no n8n as regras que passarem para o painel, no dia em que forem ativadas.
 
 ## 8. Ordem de entrega
 
@@ -74,5 +86,5 @@ O processamento é idempotente: a mesma regra nunca envia duas vezes para o mesm
 
 ## 9. Em aberto
 
-1. **A documentação da API do Poli** para enviar template em nome de um atendente, e para listar templates, se existir. Está com o Felipe.
+1. ~~**A documentação da API do Poli.**~~ Recebida em 15/10 (seção 7). Ficou em aberto: o endereço (`host`) da API de produção, e se "em nome da SDR" pode ser o nome no texto mais a conversa atribuída a ela.
 2. ~~**O destino do modo teste.**~~ Resolvido em 15/10: campo "Telefone de teste" na tela de Regras, preenchido pelo gestor. Deve ser um número diferente do canal remetente.
