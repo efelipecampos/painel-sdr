@@ -30,7 +30,7 @@ async function tables(): Promise<{ schema: string; name: string; rls: boolean }[
 describe("segurança do banco", () => {
   it("todas as tabelas de public e painel têm RLS ligado", async () => {
     const all = await tables();
-    expect(all.length).toBe(28);
+    expect(all.length).toBe(33);
     expect(all.filter((t) => !t.rls)).toEqual([]);
   });
 
@@ -47,7 +47,7 @@ describe("segurança do banco", () => {
     expect(f.rows).toEqual([]);
   });
 
-  it("authenticated só acessa profiles (leitura), as tabelas de configuração e as de carrossel", async () => {
+  it("authenticated só acessa profiles (leitura), as tabelas de configuração, as de carrossel e as da jornada", async () => {
     const res = await db.query<{ table_name: string; privilege_type: string }>(`
       select table_name, privilege_type from information_schema.role_table_grants
       where grantee = 'authenticated' and table_schema in ('public', 'painel')
@@ -55,7 +55,14 @@ describe("segurança do banco", () => {
     `);
     const byTable = new Map<string, string[]>();
     for (const r of res.rows) byTable.set(r.table_name, [...(byTable.get(r.table_name) ?? []), r.privilege_type]);
-    expect([...byTable.keys()].sort()).toEqual([...CONFIG_TABLES, "carousel_members", "carousels", "profiles"].sort());
+    expect([...byTable.keys()].sort()).toEqual([...CONFIG_TABLES, "carousel_members", "carousels", "profiles",
+      "journey_config", "journey_rule_changes", "journey_rules", "journey_sends", "poli_templates"].sort());
+    // Jornada (Fase 11): a RLS limita a gestor e admin; envios e templates só o worker grava.
+    expect(byTable.get("journey_rules")).toEqual(["INSERT", "SELECT", "UPDATE"]);
+    expect(byTable.get("journey_config")).toEqual(["SELECT", "UPDATE"]);
+    expect(byTable.get("journey_rule_changes")).toEqual(["INSERT", "SELECT"]);
+    expect(byTable.get("journey_sends")).toEqual(["SELECT"]);
+    expect(byTable.get("poli_templates")).toEqual(["SELECT"]);
     expect(byTable.get("carousels")).toEqual(["INSERT", "SELECT", "UPDATE"]);
     expect(byTable.get("carousel_members")).toEqual(["DELETE", "INSERT", "SELECT", "UPDATE"]);
     expect(byTable.get("profiles")).toEqual(["SELECT"]);
