@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PoliApi, PoliError, toTemplate } from "./api";
+import { PoliApi, PoliError, toTemplate } from "./poli";
 
 function fakeFetch(status: number, body: unknown, calls: { url: string; init: RequestInit }[]) {
   return (async (url: string, init: RequestInit) => {

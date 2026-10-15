@@ -11,7 +11,7 @@ import { marcarRespostas } from "./hubspot/respostas.js";
 import { gravarCamposContato } from "./hubspot/contatos.js";
 import { checkGoogle } from "./google.js";
 import { rodarJornada, syncTemplates } from "./jornada/motor.js";
-import { PoliApi } from "./poli/api.js";
+import { PoliApi } from "@painel/shared/poli";
 import { createDb, processBatch, rebuildAll, syncRoles } from "./processor.js";
 import { scoreRound } from "./score/job.js";
 import { scorerFromEnv } from "./score/model.js";

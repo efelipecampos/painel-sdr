@@ -11,6 +11,7 @@
     ".": "./src/index.ts",
     "./google": "./src/google.ts",
     "./hubspot": "./src/hubspot.ts",
-    "./jornada": "./src/jornada.ts"
+    "./jornada": "./src/jornada.ts",
+    "./poli": "./src/poli.ts"
   }
 }

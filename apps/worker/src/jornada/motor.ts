@@ -6,7 +6,7 @@
 // Logs e registros: só ids, situação e motivo. Nada de telefone nem texto de mensagem.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { botaoClicado, escolherRegra, preencher, type Regra } from "@painel/shared/jornada";
-import { PoliApi, PoliError, type PoliTemplate } from "../poli/api.js";
+import { PoliApi, PoliError, type PoliTemplate } from "@painel/shared/poli";
 
 const CURSOR_KEY = "journey_cursor";
 const LOTE = 500;

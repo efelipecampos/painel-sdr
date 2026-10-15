@@ -1,5 +1,6 @@
-// Cliente da API do Poli (OmniAPI v3), usado pela jornada configurável (Fase 11, docs/jornada.md).
-// Só o worker chama: o token de aplicação (POLI_API_TOKEN) nunca vai para o navegador.
+// Cliente da API do Poli (OmniAPI v3), usado pela jornada configurável (Fase 11, docs/jornada.md): o worker envia
+// pelos cliques e a tela de regras manda a mensagem de teste.
+// Só no servidor: o token de aplicação (POLI_API_TOKEN) nunca vai para o navegador.
 // Erros carregam só o status HTTP e um motivo curto: nada de telefone nem texto de mensagem nos logs.
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
