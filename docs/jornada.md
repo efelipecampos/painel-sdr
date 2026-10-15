@@ -1,0 +1,77 @@
+# Fase 11 — Jornada configurável (rascunho para aprovação)
+
+Rascunho de 2026-10-15. Nada desta fase é implementado antes da aprovação do Felipe e das respostas da seção 9.
+
+## 1. Objetivo
+
+O gestor configura no painel o que acontece quando o lead clica num botão de um template. Por exemplo: clicou "Eu e mais 1" → envia o template de encerramento; clicou "3 ou mais" fora do expediente → envia o template Manhã/Tarde. O painel executa o envio pela API do Poli e mostra o resultado de cada regra.
+
+## 2. Decisões do Felipe (2026-10-15)
+
+- **O painel configura e envia (opção B).** O worker lê o clique em `public.raw_events` e chama a API do Poli. As regras saem do n8n.
+- **Quem configura:** só gestor e admin. O SDR não vê a tela.
+- **Ação da primeira versão:** só "enviar template".
+- **Futuro, fora desta fase:** configurar pelo painel a ordem de prioridade da lista de leads do SDR. Também ficam fora: mudar etapa no HubSpot, avisar SDR, fila.
+
+## 3. Como funciona
+
+1. O lead clica num botão. O Poli manda o evento para a integração, que grava em `public.raw_events` como `messages.message.received`.
+2. A cada 30 s, o worker procura cliques novos. Um clique é a primeira mensagem do lead depois de um template, com o texto igual a um botão desse template, ou com `context` apontando para a mensagem do template.
+3. Para cada clique, o worker procura uma regra **ativa** que combine template + botão + horário (expediente, fora do expediente ou sempre).
+4. Se houver regra e o lead ainda não tiver recebido o envio dela, o worker chama a API do Poli e envia o template da regra para o contato.
+5. Cada tentativa vira uma linha em `painel.journey_sends`, com o resultado (enviado, falhou e o código do erro, pulado e o motivo).
+
+O processamento é idempotente: a mesma regra nunca envia duas vezes para o mesmo lead, mesmo se o worker reprocessar o evento.
+
+## 4. Regras de segurança do envio
+
+- **Pausa geral** da jornada e pausa por regra, com efeito no ciclo seguinte do worker.
+- **Modo teste:** regra nova nasce em teste e só envia para os contatos de uma lista de teste. Só vira "ativa" quando o gestor ativa.
+- **Limite diário** de envios por regra. Se passar do limite, o worker para a regra e gera um alerta, como proteção contra laço ou erro.
+- **Não enviar** se uma pessoa da equipe já escreveu para o lead depois do clique (a confirmar, seção 9).
+- **Só templates cujas variáveis o painel consegue preencher**, para evitar o erro 100 da Meta. Exemplo: nome do contato.
+- **Log sem conteúdo** (LGPD): só ids, regra, situação e código de erro. Nada de telefone nem texto da mensagem.
+- Token da API do Poli **só no worker** (`.env`), nunca no navegador.
+
+## 5. Telas (gestor e admin)
+
+**Jornada · Regras**
+- Lista das regras: template de origem, botão, horário, template enviado, situação (teste, ativa, pausada) e envios de hoje.
+- Criar e editar regra: escolher o template de origem e o botão (dos templates conhecidos), o horário e o template a enviar.
+- Botão de pausa geral no topo.
+- Histórico: quem criou, mudou, ativou ou pausou cada regra, e quando.
+
+**Jornada · Acompanhamento**
+- Por regra, no período: cliques, envios feitos, falhas (com o motivo) e pulados.
+- Depois do envio: quantos leads responderam e quantos agendaram.
+- O funil da jornada (abertura → clique → "3 ou mais" ou "Eu e mais 1" → SDR respondeu → agendou), separado entre expediente e fora do expediente e por SDR. Esta parte é a "tela da jornada" e pode vir junto.
+
+## 6. Banco (migrations nesta fase)
+
+- `painel.journey_rules`: regra (template e botão de origem, horário, template de destino, situação, limite diário, quem criou e quando).
+- `painel.journey_rule_changes`: histórico das mudanças.
+- `painel.journey_test_contacts`: contatos da lista de teste.
+- `painel.journey_sends`: cada tentativa de envio (regra, lead, evento do clique, situação, código de erro, id da mensagem no Poli). Índice único por (regra, lead).
+- `painel.settings`: chave `journey_paused`.
+- RLS: leitura e escrita só para gestor e admin. O worker usa service_role.
+
+## 7. O que precisa existir fora do painel
+
+- **API do Poli:** a documentação do envio de template (endpoint, corpo, como passar as variáveis, que canal e conta usar, como vem o erro) e, se existir, da listagem de templates. Nem o painel nem a integração enviam mensagem hoje.
+- **Token da API do Poli,** colocado pelo Felipe no `.env` (`POLI_API_TOKEN`).
+- **Desligar no n8n** as regras que passarem para o painel, no mesmo dia em que forem ativadas aqui, para o lead não receber em dobro.
+
+## 8. Ordem de entrega
+
+1. Motor no worker, com as regras gravadas direto no banco (sem tela) e só modo teste, enviando para o número de teste do Felipe.
+2. Tela de regras com pausa, teste e histórico.
+3. Tela de acompanhamento e funil.
+4. Ativação regra a regra, desligando o equivalente no n8n.
+
+## 9. Perguntas para o Felipe
+
+1. **A abertura e a cadência D1 a D4** também passam para o painel nesta fase, ou só as respostas aos botões? (Recomendação: só os botões agora; a abertura e a cadência ficam no n8n até o motor estar provado.)
+2. **Se a SDR já escreveu para o lead depois do clique,** o painel deixa de enviar o template da regra?
+3. **De que conta e canal do Poli sai o envio,** e em nome de quem aparece para o lead: a SDR dona do lead ou a conta da automação?
+4. **Quem tem a documentação da API do Poli** para envio de template?
+5. **Qual é o número de teste** para o modo teste?
