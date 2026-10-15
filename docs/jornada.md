@@ -30,8 +30,8 @@ O processamento é idempotente: a mesma regra nunca envia duas vezes para o mesm
 ## 4. Regras de segurança do envio
 
 - **Pausa geral** da jornada e pausa por regra, com efeito no ciclo seguinte do worker.
-- **Modo teste:** regra nova nasce em teste e só envia para os contatos de uma lista de teste. Só vira "ativa" quando o gestor ativa.
-- **Limite diário** de envios por regra. Se passar do limite, o worker para a regra e gera um alerta, como proteção contra laço ou erro.
+- **Modo teste:** regra nova nasce em teste. Enquanto está em teste, não envia ao lead: a cada clique real, manda a mesma mensagem (com os dados do lead) para o **telefone de teste**, um campo único na tela de Regras que o gestor preenche (decisão 15/10). A tela também tem o botão "Enviar esta mensagem para o telefone de teste". Sem telefone cadastrado, regra em teste não envia nada. Só vira "ativa" quando o gestor ativa.
+- **Limite diário** de envios por regra é opcional. O padrão é **Sem limite** (decisão 15/10). Se o gestor escolher "Limitar" e a regra passar do número, o worker pausa a regra e gera um alerta.
 - **Não enviar** se uma pessoa da equipe já escreveu para o lead depois do clique (decisão do Felipe).
 - **Só templates cujas variáveis o painel consegue preencher**, para evitar o erro 100 da Meta. Exemplo: nome do contato.
 - **Log sem conteúdo** (LGPD): só ids, regra, situação e código de erro. Nada de telefone nem texto da mensagem.
@@ -75,4 +75,4 @@ O processamento é idempotente: a mesma regra nunca envia duas vezes para o mesm
 ## 9. Em aberto
 
 1. **A documentação da API do Poli** para enviar template em nome de um atendente, e para listar templates, se existir. Está com o Felipe.
-2. **O destino do modo teste.** O Felipe indicou o "número do canal principal". Falta confirmar se é para mandar para um WhatsApp de teste da equipe, já que o canal principal é o próprio remetente e não pode receber de si mesmo.
+2. ~~**O destino do modo teste.**~~ Resolvido em 15/10: campo "Telefone de teste" na tela de Regras, preenchido pelo gestor. Deve ser um número diferente do canal remetente.

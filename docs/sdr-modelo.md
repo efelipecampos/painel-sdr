@@ -63,9 +63,12 @@ A IA é a mesma do score (Celeris, `SCORE_IA`), com as conversas mascaradas.
 - **SDR Modelo, visão do time:** os comportamentos nas linhas e os SDRs nas colunas, com a aderência de cada um. Mostra onde o time inteiro está fora da faixa, que é onde o treino coletivo rende mais.
 - **SDR Modelo, um SDR:** a aderência, cada comportamento com valor × faixa e exemplos de conversas (link para o chat). O SDR vê só a dele.
 - **SDR Ideal (configuração):** faixas, pesos, comportamentos de conversa, histórico de versões e as sugestões da IA para aprovar.
-- O desenho das telas vem antes do código, no padrão de `design/`.
+- O desenho das telas vem antes do código, no padrão de `design/`. Telas: `design/SDRModeloTime.dc.html` (time) e `design/SDRModeloUm.dc.html` (um SDR, com prévia gestor/SDR).
 
 ## 5. Regras
+
+- **Aderência (decisão do Felipe, 2026-10-15):** cada comportamento conta só como dentro ou fora da faixa, com o seu peso. Aderência = pesos dos comportamentos dentro ÷ pesos dos comportamentos avaliados.
+- **Melhor que a faixa conta como dentro (2026-10-15).** Cada comportamento tem um lado melhor: maior é melhor (volume, taxa de resposta, reuniões validadas, confirmação, perguntas, gatilhos) ou menor é melhor (1ª resposta, tempo de resposta). Descartes não têm lado melhor: abaixo ou acima da faixa contam como fora. A tela mostra "melhor que a faixa". O lado melhor fica editável na configuração do SDR Ideal.
 
 - Métricas no banco (RPC). O front só exibe.
 - Período com amostra pequena (menos de 10 conversas avaliadas ou menos de 3 reuniões) mostra "amostra pequena" no comportamento em vez de dentro/fora.
