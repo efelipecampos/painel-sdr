@@ -62,6 +62,12 @@ export function RegrasView(p: {
   }, [form.dest, destTexto]);
 
   const carregar = (r: RegraLinha | null) => {
+    // Leva o foco ao formulário: com a tela já em "Nova regra", o clique senão não mostra nada.
+    requestAnimationFrame(() => {
+      const el = document.getElementById("f-origin");
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      el?.focus();
+    });
     setEditando(r?.id ?? null);
     setForm(r ? formDe(r) : novoForm());
     setMsg(null);
@@ -194,6 +200,9 @@ export function RegrasView(p: {
             {atual ? <Badge status={atual.status} /> : <span className={`${s.badge} ${s.b_teste}`}>Nova: nasce em teste</span>}
           </div>
 
+          {!p.templates.length && (
+            <span className={s.noteWarn}>Os templates do Poli ainda não foram carregados. O painel busca a lista a cada 30 minutos; tente de novo em instantes.</span>
+          )}
           <div className={s.two}>
             <div className={s.field}>
               <label htmlFor="f-origin" className={s.lbl}>1. Template de origem</label>
