@@ -105,3 +105,33 @@
 .dialogBtns { display: flex; justify-content: flex-end; gap: 12px; margin-top: 4px; }
 .dialogBtn { height: 40px; padding: 0 16px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; color: #1a1a1a; border: 1px solid #f0a93b; background: #f0a93b; }
 .dialogBtnResume { color: #f6f7f9; border-color: #5757d3; background: #5757d3; }
+
+/* Acompanhamento */
+.periodBar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.dates { display: flex; align-items: center; gap: 8px; }
+.dateLbl { font-size: 12px; font-weight: 500; color: #a7abb5; }
+.date { height: 40px; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px; }
+.funil { background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+.funilHead { display: flex; align-items: flex-start; gap: 16px; }
+.funilHead > div:first-child { display: flex; flex-direction: column; gap: 2px; flex-grow: 1; }
+.legendFunil { display: flex; gap: 16px; font-size: 12px; line-height: 16px; }
+.legendFunil span { display: flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.swExp { background: #6868d7; }
+.swFora { background: #199e70; }
+.insight { display: flex; gap: 12px; padding: 12px; border-radius: 8px; background: #20293a; font-size: 14px; line-height: 20px; }
+.ftable { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; }
+.ftable th[scope="col"] { padding: 0 12px 8px 0; font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5; text-align: left; }
+.ftable tbody tr { border-top: 1px solid #252c3c; }
+.ftable tbody tr:hover, .ftable tbody tr.hov { background: #20203a; }
+.ftable th[scope="row"] { padding: 10px 12px 10px 8px; text-align: left; font-weight: 600; vertical-align: middle; width: 230px; }
+.ftable td { padding: 10px 12px 10px 0; }
+.bars { display: flex; flex-direction: column; gap: 2px; }
+.barRow { display: flex; align-items: center; gap: 8px; }
+.barRow span { font-size: 12px; line-height: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bar { height: 12px; border-radius: 0 4px 4px 0; }
+.pass { text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; line-height: 18px; width: 170px; }
+.pass > div { display: flex; flex-direction: column; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.detail { min-height: 20px; border-top: 1px solid #252c3c; padding-top: 12px; font-size: 12px; line-height: 16px; color: #a7abb5; }
