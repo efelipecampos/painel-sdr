@@ -167,6 +167,7 @@ Uma lista de alertas abertos, do mais grave para o mais leve. Cada alerta mostra
 | Lead do Calendly sem link da reunião | Leads marcaram e não receberam o Meet |
 | Reunião passada ainda como "agendada" | Reuniões de 09/10 continuavam abertas |
 | Problema no Google: evento apagado, agenda desconectada | Já existe na fila "Com problema" das Reuniões e viria para cá |
+| Reunião cancelada ou no show que não saiu da agenda do closer (o Google recusou mover para o arquivo) | Em 15/10, duas reuniões canceladas continuaram na agenda do Jerferson, porque faltava permissão dele na agenda de arquivo, e ninguém foi avisado |
 | Lead que respondeu e foi descartado automaticamente aos 7 dias | 11 leads descartados como "Término de carteira" |
 
 ### 5.7 Prioridade da lista do SDR (futuro, só registrar)
