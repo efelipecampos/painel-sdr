@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>SDR Ideal</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#1a1a1a;font-family:"Rubik",system-ui,sans-serif;color:#f6f7f9}
+a{color:#f6f7f9}a:hover{color:#cecff0}
+button,input,select,textarea{font-family:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #f6f7f9;outline-offset:2px}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 1320px; display: flex; flex-direction: column; background: #1a1a1a; font-family: Rubik, system-ui, sans-serif; color: #f6f7f9">
+
+<div style="height: 46px; flex-shrink: 0; display: flex; align-items: center; gap: 4px; padding: 0 16px; border-bottom: 1px solid #252c3c; font-size: 14px; line-height: 20px">
+<img src="/_blob/836dc846171f77c8e53729b39de898fe" alt="Poli" style="height: 24px; margin-right: 12px">
+<a href="Main.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Painel</a>
+<a href="SDRModeloTime.dc.html" aria-current="page" style="padding: 6px 12px; border-radius: 8px; text-decoration: none; font-weight: 600; background: #20203a">SDR Modelo</a>
+<a href="Reunioes.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Reuniões</a>
+<a href="Agendar.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Agendar</a>
+<a href="Carrossel.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Carrosséis</a>
+<a href="#" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Relatório</a>
+<a href="JornadaRegras.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Jornada</a>
+<a href="Alertas.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Alertas</a>
+<a href="Configuracoes.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Configurações</a>
+<a href="Usuarios.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Usuários</a>
+</div>
+
+<div style="flex-grow: 1; padding: 20px 16px 16px 16px; display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; align-items: center; gap: 16px">
+<a href="SDRModeloTime.dc.html" aria-label="Voltar para a visão do time" style="width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #4e5d7f; border-radius: 8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6l6 6"></path></svg></a>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: center; gap: 12px">
+<h1 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; color: #6868d7">SDR Ideal</h1>
+<span style="background: #20293a; border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600">Dados de exemplo</span>
+<span style="border: 1px solid #4e5d7f; border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600">{{versionChip}}</span>
+</div>
+<p style="margin: 0; font-size: 14px; line-height: 20px">Os comportamentos, as faixas e os pesos que formam a aderência de cada SDR. Só gestores e admin editam.</p>
+</div>
+<div style="flex-grow: 1"></div>
+<div role="tablist" aria-label="Seções do SDR Ideal" style="display: flex; gap: 4px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="3"><button type="button" role="tab" aria-selected="{{t.selected}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button></sc-for>
+</div>
+</div>
+
+<sc-if value="{{isCfg}}" hint-placeholder-val="{{true}}">
+<section aria-labelledby="sec-cfg" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; overflow: hidden">
+<div style="padding: 16px; display: flex; align-items: center; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1">
+<h2 id="sec-cfg" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Comportamentos e pesos</h2>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Mude o que quiser e salve. Cada vez que salva, nasce uma versão nova, com data e autor.</span>
+</div>
+<div style="{{sumBox}}">
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Soma dos pesos</span>
+<span style="font-size: 18px; line-height: 24px; font-weight: 700; font-variant-numeric: tabular-nums">{{sum}}<span style="font-size: 12px; font-weight: 500; color: #a7abb5"> de 100</span></span>
+</div>
+</div>
+
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px">
+<thead>
+<tr style="background: #20203a; text-align: left">
+<th scope="col" style="width: 64px; padding: 10px 16px; font-size: 12px; line-height: 16px; font-weight: 600">Ativo</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Comportamento</th>
+<th scope="col" style="width: 280px; padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Faixa ideal</th>
+<th scope="col" style="width: 200px; padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Fora da faixa, o que conta como melhor</th>
+<th scope="col" style="width: 250px; padding: 10px 16px; font-size: 12px; line-height: 16px; font-weight: 600">Peso</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+<tr style="background: #1a1a2c; border-top: 1px solid #252c3c">
+<th scope="rowgroup" colspan="5" style="padding: 8px 16px; text-align: left; font-size: 12px; line-height: 16px; font-weight: 600; color: #a7abb5">{{g.label}}</th>
+</tr>
+<sc-for list="{{g.rows}}" as="r" hint-placeholder-count="5">
+<tr style="{{r.rowStyle}}">
+<td style="padding: 12px 16px; vertical-align: top"><button type="button" role="switch" aria-checked="{{r.checked}}" aria-label="{{r.switchAria}}" onClick="{{r.toggle}}" style="{{r.switchStyle}}"><span style="{{r.knobStyle}}"></span></button></td>
+<td style="padding: 12px; vertical-align: top">
+<sc-if value="{{r.isIa}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<input type="text" value="{{r.name}}" onChange="{{r.onName}}" aria-label="Nome do comportamento" style="height: 36px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px; font-weight: 600">
+<label style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">O que a IA olha</label>
+<textarea rows="2" value="{{r.desc}}" onChange="{{r.onDesc}}" aria-label="{{r.descAria}}" style="{{r.descStyle}}"></textarea>
+<span style="{{r.descNoteStyle}}">{{r.descNote}}</span>
+</div>
+</sc-if>
+<sc-if value="{{r.isNum}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600">{{r.name}}</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{r.measure}}</span></div>
+</sc-if>
+</td>
+<td style="padding: 12px; vertical-align: top"><div style="display: flex; align-items: center; gap: 6px; white-space: nowrap">
+<span style="font-size: 12px; color: #a7abb5">de</span>
+<input type="number" value="{{r.lo}}" onChange="{{r.onLo}}" aria-label="{{r.loAria}}" style="width: 72px; height: 36px; box-sizing: border-box; padding: 0 8px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<span style="font-size: 12px; color: #a7abb5">a</span>
+<input type="number" value="{{r.hi}}" onChange="{{r.onHi}}" aria-label="{{r.hiAria}}" style="width: 72px; height: 36px; box-sizing: border-box; padding: 0 8px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<span style="font-size: 12px; color: #a7abb5">{{r.unit}}</span>
+</div></td>
+<td style="padding: 12px; vertical-align: top"><select value="{{r.better}}" onChange="{{r.onBetter}}" aria-label="{{r.betterAria}}" style="width: 100%; height: 36px; padding: 0 8px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px"><option value="1">Maior é melhor</option><option value="-1">Menor é melhor</option><option value="0">Nenhum: só a faixa</option></select></td>
+<td style="padding: 12px 16px; vertical-align: top"><div style="display: flex; align-items: center; gap: 10px">
+<input type="number" min="0" value="{{r.weight}}" onChange="{{r.onWeight}}" aria-label="{{r.weightAria}}" style="width: 64px; height: 36px; box-sizing: border-box; padding: 0 8px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<span aria-hidden="true" style="width: 110px; height: 8px; border-radius: 0 4px 4px 0; background: #252c3c; overflow: hidden"><span style="{{r.wBar}}"></span></span>
+<span style="{{r.changedStyle}}">{{r.changed}}</span>
+</div></td>
+</tr>
+</sc-for>
+</sc-for>
+</tbody>
+</table>
+
+<div style="padding: 12px 16px; border-top: 1px solid #252c3c; display: flex; align-items: center; gap: 12px">
+<button type="button" onClick="{{addIa}}" style="height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px dashed #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; font-size: 14px; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Novo comportamento de conversa</button>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Comportamento de conversa novo não precisa de código: a IA passa a avaliar a partir de agora. Comportamento novo de número precisa de código.</span>
+</div>
+
+<div style="padding: 16px; border-top: 1px solid #252c3c; background: #1a1a2c; display: flex; align-items: center; gap: 12px">
+<button type="button" onClick="{{save}}" aria-disabled="{{saveDisabled}}" style="{{saveStyle}}">{{saveLabel}}</button>
+<button type="button" onClick="{{discard}}" style="height: 40px; padding: 0 14px; border: 1px solid #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; font-size: 14px; cursor: pointer">Descartar mudanças</button>
+<span role="status" style="{{saveNoteStyle}}">{{saveNote}}</span>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{isSug}}" hint-placeholder-val="{{false}}">
+<section aria-labelledby="sec-sug" style="display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h2 id="sec-sug" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Sugestões da IA desta semana</h2>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Toda segunda, a IA compara as conversas que viraram reunião validada com as outras e sugere ajustes. Nada muda sem aprovação. Aprovar cria uma versão nova.</span>
+</div>
+<sc-for list="{{suggestions}}" as="s" hint-placeholder-count="3">
+<div style="{{s.card}}">
+<div style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1">
+<div style="display: flex; align-items: center; gap: 8px"><span style="border-radius: 9999px; padding: 2px 8px; font-size: 12px; line-height: 16px; font-weight: 600; background: #20293a">{{s.kind}}</span><span style="font-size: 14px; line-height: 20px; font-weight: 600">{{s.title}}</span></div>
+<div style="display: flex; align-items: center; gap: 10px; font-size: 14px; line-height: 20px"><span style="color: #a7abb5; text-decoration: line-through">{{s.from}}</span><span aria-hidden="true" style="color: #a7abb5">→</span><span style="font-weight: 700">{{s.to}}</span></div>
+<span style="font-size: 14px; line-height: 20px">{{s.why}}</span>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{s.base}}</span>
+</div>
+<sc-if value="{{s.pending}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0">
+<button type="button" onClick="{{s.approve}}" style="height: 40px; padding: 0 16px; border: 1px solid #5757d3; border-radius: 8px; background: #5757d3; color: #f6f7f9; font-size: 14px; font-weight: 600; cursor: pointer">Aprovar</button>
+<button type="button" onClick="{{s.reject}}" style="height: 40px; padding: 0 16px; border: 1px solid #4e5d7f; border-radius: 8px; background: transparent; color: #f6f7f9; font-size: 14px; cursor: pointer">Recusar</button>
+</div>
+</sc-if>
+<sc-if value="{{s.decided}}" hint-placeholder-val="{{false}}">
+<span style="{{s.decidedStyle}}">{{s.decidedLabel}}</span>
+</sc-if>
+</div>
+</sc-for>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Semanas anteriores: 06/10 (1 aprovada, 1 recusada). A 1ª sugestão real precisa de 2 a 3 semanas de reuniões validadas pelo painel.</span>
+</section>
+</sc-if>
+
+<sc-if value="{{isHist}}" hint-placeholder-val="{{false}}">
+<section aria-labelledby="sec-hist" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; overflow: hidden">
+<div style="padding: 16px; display: flex; flex-direction: column; gap: 2px">
+<h2 id="sec-hist" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Histórico de versões</h2>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">A aderência de cada período usa a versão que estava em uso naquele período.</span>
+</div>
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px">
+<thead>
+<tr style="background: #20203a; text-align: left">
+<th scope="col" style="padding: 10px 16px; font-size: 12px; line-height: 16px; font-weight: 600">Versão</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Em uso</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Quem</th>
+<th scope="col" style="padding: 10px 16px; font-size: 12px; line-height: 16px; font-weight: 600">O que mudou</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{history}}" as="h" hint-placeholder-count="3">
+<tr style="border-top: 1px solid #252c3c">
+<td style="padding: 12px 16px; vertical-align: top; font-weight: 700; white-space: nowrap">{{h.v}}</td>
+<td style="padding: 12px; vertical-align: top; white-space: nowrap">{{h.when}}</td>
+<td style="padding: 12px; vertical-align: top; white-space: nowrap">{{h.who}}</td>
+<td style="padding: 12px 16px; vertical-align: top"><ul style="margin: 0; padding-left: 16px"><sc-for list="{{h.changes}}" as="c" hint-placeholder-count="2"><li>{{c}}</li></sc-for></ul></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</section>
+</sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1320}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    var base = [
+      { id: 'vol', group: 'num', name: 'Volume', measure: 'Leads abordados por dia útil', unit: 'leads/dia', lo: 18, hi: 25, better: '1', weight: 15, on: true },
+      { id: 'pri', group: 'num', name: '1ª resposta', measure: 'Mediana do tempo de primeira resposta', unit: 'min', lo: 2, hi: 6, better: '-1', weight: 15, on: true },
+      { id: 'res', group: 'num', name: 'Tempo de resposta', measure: 'Mediana do tempo de resposta', unit: 'min', lo: 4, hi: 10, better: '-1', weight: 10, on: true },
+      { id: 'tax', group: 'num', name: 'Taxa de resposta', measure: 'Leads que responderam ÷ abordados', unit: '%', lo: 35, hi: 50, better: '1', weight: 15, on: true },
+      { id: 'des', group: 'num', name: 'Descartes', measure: 'Descartados ÷ leads que responderam', unit: '%', lo: 10, hi: 25, better: '0', weight: 10, on: true },
+      { id: 'val', group: 'num', name: 'Reuniões validadas', measure: 'Validadas ÷ leads que responderam', unit: '%', lo: 8, hi: 14, better: '1', weight: 15, on: true },
+      { id: 'conf', group: 'num', name: 'Confirmação de reunião', measure: 'Confirmou no dia e escreveu até 60 min antes', unit: '%', lo: 80, hi: 100, better: '1', weight: 10, on: true },
+      { id: 'per', group: 'ia', name: 'Perguntas', desc: 'Qualidade das perguntas, objetividade, se as perguntas levam à qualificação (tamanho da equipe, canal atual, dor).', unit: 'nota 0 a 10', lo: 7, hi: 9, better: '1', weight: 5, on: true },
+      { id: 'gat', group: 'ia', name: 'Gatilhos mentais', desc: 'Uso de urgência, escassez, prova social, autoridade e dor. Mostrar quais gatilhos aparecem.', unit: 'nota 0 a 10', lo: 6, hi: 9, better: '1', weight: 5, on: true }
+    ];
+    this.base = base;
+    this.state = { tab: 'cfg', rows: base.map(function (r) { return Object.assign({}, r); }), version: 1, saved: false, sug: {}, extraHist: [] };
+    this.nextId = 1;
+  }
+  renderVals() {
+    var self = this, st = this.state;
+    var baseById = {}; this.base.forEach(function (b) { baseById[b.id] = b; });
+    function setRow(id, patch) { self.setState({ saved: false, rows: self.state.rows.map(function (r) { return r.id === id ? Object.assign({}, r, patch) : r; }) }); }
+    var active = st.rows.filter(function (r) { return r.on; });
+    var sum = active.reduce(function (t, r) { return t + (Number(r.weight) || 0); }, 0);
+    var BETTER = { '1': 'maior é melhor', '-1': 'menor é melhor', '0': 'só a faixa' };
+    var changes = [];
+    st.rows.forEach(function (r) {
+      var b = baseById[r.id];
+      if (!b) { changes.push('Novo: ' + r.name); return; }
+      if (r.on !== b.on) changes.push(r.name + (r.on ? ' ligado' : ' desligado'));
+      if (Number(r.weight) !== b.weight) changes.push(r.name + ': peso ' + b.weight + ' → ' + r.weight);
+      if (Number(r.lo) !== b.lo || Number(r.hi) !== b.hi) changes.push(r.name + ': faixa ' + b.lo + '–' + b.hi + ' → ' + r.lo + '–' + r.hi);
+      if (r.better !== b.better) changes.push(r.name + ': ' + BETTER[b.better] + ' → ' + BETTER[r.better]);
+      if (r.name !== b.name) changes.push(b.name + ' renomeado para ' + r.name);
+      if (r.desc !== b.desc) changes.push(r.name + ': critério da IA mudou');
+    });
+    var dirty = changes.length > 0;
+    var emptyDesc = st.rows.some(function (r) { return r.group === 'ia' && r.on && !(r.desc || '').trim(); });
+    var badRange = st.rows.some(function (r) { return Number(r.lo) > Number(r.hi); });
+    var canSave = dirty && sum === 100 && !emptyDesc && !badRange;
+
+    function rowOf(r) {
+      var b = baseById[r.id], w = Number(r.weight) || 0;
+      var changed = !b ? 'novo' : (w !== b.weight ? 'era ' + b.weight : '');
+      return {
+        isIa: r.group === 'ia', isNum: r.group === 'num',
+        name: r.name, measure: r.measure, desc: r.desc || '', unit: r.unit, lo: r.lo, hi: r.hi, better: r.better, weight: r.weight,
+        rowStyle: 'border-top: 1px solid #252c3c; opacity: ' + (r.on ? '1' : '0.55'),
+        checked: r.on ? 'true' : 'false', switchAria: 'Ativo: ' + r.name,
+        toggle: function () { setRow(r.id, { on: !r.on }); },
+        switchStyle: 'width: 40px; height: 22px; border-radius: 9999px; border: 1px solid ' + (r.on ? '#5757d3' : '#4e5d7f') + '; background: ' + (r.on ? '#5757d3' : '#313a4f') + '; position: relative; cursor: pointer; padding: 0',
+        knobStyle: 'position: absolute; top: 2px; left: ' + (r.on ? '20px' : '2px') + '; width: 16px; height: 16px; border-radius: 9999px; background: #f6f7f9',
+        onName: function (e) { setRow(r.id, { name: e.target.value }); },
+        onDesc: function (e) { setRow(r.id, { desc: e.target.value }); },
+        descAria: 'O que a IA olha em ' + r.name,
+        descStyle: 'box-sizing: border-box; width: 100%; padding: 8px 10px; background: #313a4f; border: 1px solid ' + ((r.desc || '').trim() ? '#4e5d7f' : '#f0a93b') + '; border-radius: 8px; color: #f6f7f9; font-size: 14px; line-height: 20px; resize: none',
+        descNote: !(r.desc || '').trim() ? 'Escreva o que a IA deve olhar.' : (b && r.desc !== b.desc ? 'Mudou: as conversas avaliadas a partir de agora usam o texto novo.' : 'Critério versão 1, em uso desde 09/10.'),
+        descNoteStyle: 'font-size: 12px; line-height: 16px; color: ' + (!(r.desc || '').trim() || (b && r.desc !== b.desc) ? '#f0a93b' : '#a7abb5'),
+        onLo: function (e) { setRow(r.id, { lo: e.target.value }); },
+        onHi: function (e) { setRow(r.id, { hi: e.target.value }); },
+        loAria: r.name + ': faixa ideal, de', hiAria: r.name + ': faixa ideal, até',
+        onBetter: function (e) { setRow(r.id, { better: e.target.value }); },
+        betterAria: r.name + ': fora da faixa, o que conta como melhor',
+        onWeight: function (e) { setRow(r.id, { weight: e.target.value }); },
+        weightAria: 'Peso de ' + r.name,
+        wBar: 'display: block; height: 8px; border-radius: 0 4px 4px 0; background: #6868d7; width: ' + Math.min(100, w / 30 * 100) + '%',
+        changed: changed, changedStyle: 'font-size: 12px; line-height: 16px; white-space: nowrap; font-weight: 600; color: ' + (changed ? '#f0a93b' : '#a7abb5')
+      };
+    }
+    var groups = [
+      { label: 'Números (calculados no banco)', rows: st.rows.filter(function (r) { return r.group === 'num'; }).map(rowOf) },
+      { label: 'Conversa (avaliada pela IA)', rows: st.rows.filter(function (r) { return r.group === 'ia'; }).map(rowOf) }
+    ];
+
+    var saveNote;
+    if (st.saved) saveNote = 'Versão ' + st.version + ' salva às 14:05 por você. Vale a partir de hoje.';
+    else if (!dirty) saveNote = 'Nenhuma mudança.';
+    else if (sum !== 100) saveNote = 'Os pesos dos comportamentos ativos somam ' + sum + '. Precisam somar 100 para salvar.';
+    else if (emptyDesc) saveNote = 'Falta escrever o que a IA olha em um comportamento de conversa.';
+    else if (badRange) saveNote = 'Uma faixa está com o "de" maior que o "até".';
+    else saveNote = changes.length + (changes.length === 1 ? ' mudança: ' : ' mudanças: ') + changes.join('; ') + '.';
+    var noteWarn = !st.saved && dirty && !canSave;
+
+    var SUG = [
+      { id: 's1', kind: 'Peso', title: 'Confirmação de reunião', from: 'peso 10', to: 'peso 15', why: 'Nas reuniões validadas, 92% tiveram confirmação no dia e mensagem até 60 min antes. Nas que viraram no show, só 41%.', base: 'Base: 38 reuniões de 06/10 a 12/10. Para manter a soma em 100, ao aprovar você escolhe de qual comportamento tirar os 5 pontos.' },
+      { id: 's2', kind: 'Faixa', title: '1ª resposta', from: '2 a 6 min', to: '1 a 4 min', why: 'Leads que receberam a 1ª resposta em até 4 min agendaram 2,1 vezes mais do que os que esperaram 6 min ou mais.', base: 'Base: 412 conversas em que o lead respondeu, de 06/10 a 12/10.' },
+      { id: 's3', kind: 'Novo de conversa', title: 'Pergunta o número de usuários', from: 'não existe', to: 'ativo, peso 5', why: 'Em 81% das reuniões invalidadas, a SDR não perguntou quantas pessoas vão usar a plataforma. Nas validadas, perguntou em 94%.', base: 'O que a IA olharia: "A SDR perguntou quantas pessoas da empresa vão usar o WhatsApp antes de propor a reunião?"' }
+    ];
+    var pendingCount = SUG.filter(function (s) { return !st.sug[s.id]; }).length;
+    var suggestions = SUG.map(function (s) {
+      var d = st.sug[s.id];
+      return {
+        kind: s.kind, title: s.title, from: s.from, to: s.to, why: s.why, base: s.base,
+        pending: !d, decided: !!d,
+        decidedLabel: d === 'ok' ? 'Aprovada por você · vira a versão ' + (st.version) : 'Recusada por você',
+        decidedStyle: 'flex-shrink: 0; align-self: center; border-radius: 9999px; padding: 4px 12px; font-size: 12px; line-height: 16px; font-weight: 600; ' + (d === 'ok' ? 'background: #5757d3; color: #f6f7f9' : 'border: 1px solid #4e5d7f; color: #a7abb5'),
+        card: 'background: #181828; border: 1px solid ' + (d ? '#252c3c' : '#5757d3') + '; border-radius: 12px; padding: 16px; display: flex; align-items: flex-start; gap: 16px; opacity: ' + (d ? '0.7' : '1'),
+        approve: function () { var x = Object.assign({}, st.sug); x[s.id] = 'ok'; self.setState({ sug: x, version: st.version + 1, extraHist: [{ v: 'Versão ' + (st.version + 1), when: 'desde 15/10', who: 'Você, aprovando a IA', changes: [s.title + ': ' + s.from + ' → ' + s.to] }].concat(st.extraHist) }); },
+        reject: function () { var x = Object.assign({}, st.sug); x[s.id] = 'no'; self.setState({ sug: x }); }
+      };
+    });
+
+    var history = st.extraHist.concat([
+      { v: 'Versão 1', when: 'desde 09/10', who: 'Sistema', changes: ['Criada a partir dos 3 SDRs com mais reuniões validadas nos últimos 30 dias: Carla Mendes, Elisa Prado e Ana Souza.', 'Cada faixa vai do pior ao melhor valor entre esses 3.', 'Critérios da IA "Perguntas" e "Gatilhos mentais" na versão 1.'] }
+    ]);
+
+    var TABS = [['cfg', 'Comportamentos e pesos'], ['sug', 'Sugestões da IA (' + pendingCount + ')'], ['hist', 'Histórico de versões']];
+    return {
+      versionChip: 'Versão ' + st.version + ' em uso',
+      tabs: TABS.map(function (t) { var on = st.tab === t[0]; return { label: t[1], selected: on ? 'true' : 'false', pick: function () { self.setState({ tab: t[0] }); }, style: 'height: 36px; display: flex; align-items: center; white-space: nowrap; padding: 0 12px; border-radius: 8px; border: 1px solid ' + (on ? '#5757d3' : '#4e5d7f') + '; background: ' + (on ? '#5757d3' : '#313a4f') + '; color: #f6f7f9; font-size: 14px; font-weight: ' + (on ? '600' : '400') + '; cursor: pointer' }; }),
+      isCfg: st.tab === 'cfg', isSug: st.tab === 'sug', isHist: st.tab === 'hist',
+      sum: sum,
+      sumBox: 'display: flex; flex-direction: column; align-items: flex-end; padding: 6px 12px; border-radius: 8px; background: ' + (sum === 100 ? '#20203a' : 'rgba(240,169,59,0.12)') + '; border: 1px solid ' + (sum === 100 ? '#252c3c' : '#f0a93b'),
+      groups: groups,
+      addIa: function () { var id = 'novo' + (self.nextId++); self.setState({ saved: false, rows: st.rows.concat([{ id: id, group: 'ia', name: 'Novo comportamento', desc: '', unit: 'nota 0 a 10', lo: 7, hi: 9, better: '1', weight: 0, on: true }]) }); },
+      save: function () {
+        if (!canSave) return;
+        self.base = st.rows.map(function (r) { return Object.assign({}, r, { lo: Number(r.lo), hi: Number(r.hi), weight: Number(r.weight) }); });
+        self.setState({ saved: true, version: st.version + 1, rows: self.base.map(function (r) { return Object.assign({}, r); }), extraHist: [{ v: 'Versão ' + (st.version + 1), when: 'desde 15/10', who: 'Você', changes: changes }].concat(st.extraHist) });
+      },
+      saveDisabled: canSave ? 'false' : 'true',
+      saveLabel: 'Salvar como versão ' + (st.version + 1),
+      saveStyle: 'height: 40px; padding: 0 16px; border-radius: 8px; font-size: 14px; font-weight: 600; color: ' + (canSave ? '#f6f7f9' : '#a7abb5') + '; border: 1px solid ' + (canSave ? '#5757d3' : '#4e5d7f') + '; background: ' + (canSave ? '#5757d3' : 'transparent') + '; cursor: ' + (canSave ? 'pointer' : 'not-allowed'),
+      discard: function () { self.setState({ saved: false, rows: self.base.map(function (r) { return Object.assign({}, r); }) }); },
+      saveNote: saveNote,
+      saveNoteStyle: 'font-size: 12px; line-height: 16px; font-weight: ' + (noteWarn ? '600' : '400') + '; color: ' + (noteWarn ? '#f0a93b' : '#a7abb5'),
+      suggestions: suggestions,
+      history: history
+    };
+  }
+}
+</script>
+</body>
+</html>

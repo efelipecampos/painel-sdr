@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Alertas</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#1a1a1a;font-family:"Rubik",system-ui,sans-serif;color:#f6f7f9}
+a{color:#f6f7f9}a:hover{color:#cecff0}
+button,input,select,textarea{font-family:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid #f6f7f9;outline-offset:2px}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 1040px; display: flex; flex-direction: column; background: #1a1a1a; font-family: Rubik, system-ui, sans-serif; color: #f6f7f9">
+
+<div style="height: 46px; flex-shrink: 0; display: flex; align-items: center; gap: 4px; padding: 0 16px; border-bottom: 1px solid #252c3c; font-size: 14px; line-height: 20px">
+<img src="/_blob/836dc846171f77c8e53729b39de898fe" alt="Poli" style="height: 24px; margin-right: 12px">
+<a href="Main.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Painel</a>
+<a href="Reunioes.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Reuniões</a>
+<a href="Agendar.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Agendar</a>
+<a href="Carrossel.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Carrosséis</a>
+<a href="#" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Relatório</a>
+<a href="JornadaRegras.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Jornada</a>
+<a href="Alertas.dc.html" aria-current="page" style="padding: 6px 12px; border-radius: 8px; text-decoration: none; font-weight: 600; background: #20203a; display: flex; align-items: center; gap: 6px">Alertas<span style="min-width: 18px; height: 18px; box-sizing: border-box; padding: 0 5px; border-radius: 9999px; background: #e66767; color: #1a1a1a; font-size: 12px; line-height: 18px; font-weight: 700; text-align: center">{{navCount}}</span></a>
+<a href="Configuracoes.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Configurações</a>
+<a href="Usuarios.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Usuários</a>
+</div>
+
+<div style="flex-grow: 1; padding: 20px 16px 16px 16px; display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<h1 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; color: #6868d7">Alertas</h1>
+<span style="background: #20293a; border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600">Dados de exemplo</span>
+<div role="tablist" aria-label="Visão dos alertas" style="display: flex; gap: 4px; margin-left: 12px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="3"><button type="button" role="tab" aria-selected="{{t.selected}}" onClick="{{t.pick}}" style="{{t.style}}">{{t.label}}</button></sc-for>
+</div>
+<div style="flex-grow: 1"></div>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">O painel confere a cada 1 min · última conferência às 14:04</span>
+</div>
+
+<sc-if value="{{isOpen}}" hint-placeholder-val="{{true}}">
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px">
+<sc-for list="{{summary}}" as="s" hint-placeholder-count="3">
+<div style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 12px">
+<div style="{{s.iconBox}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{s.icon}}"></path></svg></div>
+<div style="display: flex; flex-direction: column; flex-grow: 1">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600">{{s.label}}</span>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{s.hint}}</span>
+</div>
+<span style="font-size: 28px; line-height: 36px; font-weight: 700; font-variant-numeric: tabular-nums">{{s.count}}</span>
+</div>
+</sc-for>
+</div>
+
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 520px; gap: 16px; align-items: start">
+
+<section aria-labelledby="sec-list" style="display: flex; flex-direction: column; gap: 8px">
+<h2 id="sec-list" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Alertas abertos, do mais grave para o mais leve</h2>
+<sc-for list="{{alerts}}" as="a" hint-placeholder-count="6">
+<div style="{{a.card}}">
+<div style="{{a.iconBox}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.icon}}"></path></svg></div>
+<div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1; min-width: 0">
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="{{a.sevStyle}}">{{a.sev}}</span>
+<span style="font-size: 14px; line-height: 20px; font-weight: 600">{{a.title}}</span>
+</div>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{a.meta}}</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; margin-right: 4px">
+<span style="font-size: 18px; line-height: 24px; font-weight: 700; font-variant-numeric: tabular-nums">{{a.count}}</span>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{a.unit}}</span>
+</div>
+<button type="button" onClick="{{a.open}}" aria-pressed="{{a.pressed}}" aria-label="{{a.openAria}}" style="{{a.openStyle}}">{{a.openLabel}}</button>
+</div>
+</sc-for>
+<sc-if value="{{noOpen}}" hint-placeholder-val="{{false}}">
+<div style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 32px; text-align: center; font-size: 14px; color: #a7abb5">Nenhum alerta aberto.</div>
+</sc-if>
+</section>
+
+<sc-if value="{{hasSel}}" hint-placeholder-val="{{true}}">
+<section aria-labelledby="sec-detail" style="{{detailBox}}">
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="{{sel.sevStyle}}">{{sel.sev}}</span>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{sel.since}}</span>
+</div>
+<h2 id="sec-detail" style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 700">{{sel.title}}</h2>
+
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 12px; line-height: 16px; font-weight: 600; color: #a7abb5">O que aconteceu</span>
+<span style="font-size: 14px; line-height: 20px">{{sel.what}}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 12px; line-height: 16px; font-weight: 600; color: #a7abb5">O que fazer</span>
+<span style="font-size: 14px; line-height: 20px">{{sel.todo}}</span>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 8px">
+<h3 style="margin: 0; font-size: 12px; line-height: 16px; font-weight: 600; color: #a7abb5; flex-grow: 1">{{sel.listTitle}}</h3>
+<a href="#" style="font-size: 12px; line-height: 16px; font-weight: 600">{{sel.allLink}}</a>
+</div>
+<sc-if value="{{sel.isCards}}" hint-placeholder-val="{{false}}">
+<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px">
+<sc-for list="{{sel.leads}}" as="l" hint-placeholder-count="2">
+<li style="display: flex; align-items: flex-start; gap: 12px; padding: 12px; border-radius: 8px; background: #20203a">
+<div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600">{{l.name}}</span>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{sel.col2}}: {{l.sdr}} · {{l.info}}</span>
+<span style="font-size: 12px; line-height: 16px; font-weight: 600; color: #f0a93b">{{l.sub}}</span>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{l.retryNote}}</span>
+</div>
+<button type="button" onClick="{{l.retry}}" aria-label="{{l.retryAria}}" style="height: 32px; flex-shrink: 0; padding: 0 10px; border: 1px solid #4e5d7f; border-radius: 8px; background: #313a4f; color: #f6f7f9; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer">Tentar de novo</button>
+</li>
+</sc-for>
+</ul>
+</sc-if>
+<sc-if value="{{sel.isTable}}" hint-placeholder-val="{{true}}">
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px">
+<thead>
+<tr style="background: #20203a; text-align: left">
+<th scope="col" style="padding: 8px 10px; font-size: 12px; line-height: 16px; font-weight: 600">{{sel.col1}}</th>
+<th scope="col" style="padding: 8px 10px; font-size: 12px; line-height: 16px; font-weight: 600">{{sel.col2}}</th>
+<th scope="col" style="padding: 8px 10px; font-size: 12px; line-height: 16px; font-weight: 600">{{sel.col3}}</th>
+<th scope="col" style="padding: 8px 10px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: right"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden">Abrir</span></th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{sel.leads}}" as="l" hint-placeholder-count="4">
+<tr style="border-top: 1px solid #252c3c">
+<td style="padding: 8px 10px; font-weight: 600">{{l.name}}</td>
+<td style="padding: 8px 10px">{{l.sdr}}</td>
+<td style="padding: 8px 10px; font-size: 12px; line-height: 16px"><div style="display: flex; flex-direction: column; gap: 2px"><span style="color: #a7abb5">{{l.info}}</span><sc-if value="{{l.hasSub}}" hint-placeholder-val="{{false}}"><span style="color: #f6f7f9; font-weight: 600">{{l.sub}}</span></sc-if></div></td>
+<td style="padding: 8px 10px; text-align: right"><a href="#" style="font-size: 12px; line-height: 16px; font-weight: 600; white-space: nowrap">{{l.link}}</a></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</sc-if>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #252c3c; padding-top: 16px">
+<label for="f-note" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">O que foi feito <span style="font-weight: 400">(opcional, fica no histórico)</span></label>
+<textarea id="f-note" rows="2" value="{{note}}" onChange="{{onNote}}" placeholder="Ex.: reiniciei o fluxo no n8n" style="box-sizing: border-box; width: 100%; padding: 8px 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px; line-height: 20px; resize: none"></textarea>
+<div style="display: flex; align-items: center; gap: 12px">
+<button type="button" onClick="{{resolve}}" style="height: 40px; padding: 0 16px; border: 1px solid #5757d3; border-radius: 8px; background: #5757d3; color: #f6f7f9; font-size: 14px; font-weight: 600; cursor: pointer">{{sel.resolveLabel}}</button>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{sel.reopen}}</span>
+</div>
+</div>
+</section>
+</sc-if>
+
+</div>
+</sc-if>
+
+<sc-if value="{{isDone}}" hint-placeholder-val="{{false}}">
+<section aria-labelledby="sec-done" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; overflow: hidden">
+<div style="padding: 16px; display: flex; flex-direction: column; gap: 2px">
+<h2 id="sec-done" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Resolvidos nos últimos 7 dias</h2>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Quem resolveu, quando e o que fez. Ajuda a ver o que quebra com frequência.</span>
+</div>
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px">
+<thead>
+<tr style="background: #20203a; text-align: left">
+<th scope="col" style="padding: 10px 16px; font-size: 12px; line-height: 16px; font-weight: 600">Alerta</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Abriu</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Ficou aberto</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: right">Leads</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Resolvido por</th>
+<th scope="col" style="padding: 10px 16px; font-size: 12px; line-height: 16px; font-weight: 600">O que foi feito</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{done}}" as="d" hint-placeholder-count="5">
+<tr style="border-top: 1px solid #252c3c">
+<td style="padding: 12px 16px"><div style="display: flex; align-items: center; gap: 8px"><span style="{{d.sevStyle}}">{{d.sev}}</span><span style="font-weight: 600">{{d.title}}</span></div></td>
+<td style="padding: 12px; font-variant-numeric: tabular-nums">{{d.opened}}</td>
+<td style="padding: 12px; font-variant-numeric: tabular-nums">{{d.duration}}</td>
+<td style="padding: 12px; text-align: right; font-variant-numeric: tabular-nums">{{d.count}}</td>
+<td style="padding: 12px">{{d.by}}</td>
+<td style="padding: 12px 16px; color: #a7abb5">{{d.note}}</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</section>
+</sc-if>
+
+<sc-if value="{{isConfig}}" hint-placeholder-val="{{false}}">
+<section aria-labelledby="sec-cfg" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; overflow: hidden">
+<div style="padding: 16px; display: flex; align-items: center; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1">
+<h2 id="sec-cfg" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Configurar alertas</h2>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Ligue só os que fazem sentido. Só gestores e admin veem os alertas. Os urgentes também avisam no Google Chat, no espaço "Gestão SDR".</span>
+</div>
+<button type="button" onClick="{{saveCfg}}" style="height: 40px; padding: 0 16px; border: 1px solid #5757d3; border-radius: 8px; background: #5757d3; color: #f6f7f9; font-size: 14px; font-weight: 600; cursor: pointer">{{saveCfgLabel}}</button>
+</div>
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px">
+<thead>
+<tr style="background: #20203a; text-align: left">
+<th scope="col" style="padding: 10px 16px; font-size: 12px; line-height: 16px; font-weight: 600">Ligado</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Alerta</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Gravidade</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Dispara quando</th>
+<th scope="col" style="padding: 10px 16px; font-size: 12px; line-height: 16px; font-weight: 600">Avisar também</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{cfg}}" as="c" hint-placeholder-count="10">
+<tr style="border-top: 1px solid #252c3c">
+<td style="padding: 10px 16px; vertical-align: middle"><button type="button" role="switch" aria-checked="{{c.checked}}" aria-label="{{c.switchAria}}" onClick="{{c.toggle}}" style="{{c.switchStyle}}"><span style="{{c.knobStyle}}"></span></button></td>
+<td style="padding: 10px 12px; vertical-align: middle"><div style="display: flex; flex-direction: column"><span style="font-weight: 600">{{c.title}}</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{c.why}}</span></div></td>
+<td style="padding: 10px 12px; vertical-align: middle"><span style="{{c.sevStyle}}">{{c.sev}}</span></td>
+<td style="padding: 10px 12px; vertical-align: middle"><div style="display: flex; align-items: center; gap: 6px; white-space: nowrap"><span>{{c.pre}}</span><sc-if value="{{c.hasNum}}" hint-placeholder-val="{{true}}"><input type="number" min="1" value="{{c.num}}" onChange="{{c.onNum}}" aria-label="{{c.numAria}}" style="width: 64px; height: 32px; box-sizing: border-box; padding: 0 8px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px"></sc-if><span>{{c.post}}</span></div></td>
+<td style="padding: 10px 16px; vertical-align: middle"><select value="{{c.notify}}" onChange="{{c.onNotify}}" aria-label="{{c.notifyAria}}" style="height: 32px; padding: 0 8px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px"><option value="tela">Só na tela</option><option value="chat">Google Chat · Gestão SDR</option></select></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</section>
+</sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1040}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      tab: 'open', sel: 'automacao', note: '', saved: false,
+      resolved: [],
+      cfg: {
+        automacao: { on: true, num: 15, notify: 'chat' },
+        clique: { on: true, num: 10, notify: 'chat' },
+        meta: { on: true, notify: 'tela' },
+        limite: { on: true, notify: 'tela' },
+        semconversa: { on: true, num: 30, notify: 'tela' },
+        dsq: { on: true, notify: 'tela' },
+        calendly: { on: true, num: 30, notify: 'tela' },
+        reuniao: { on: true, num: 2, notify: 'tela' },
+        google: { on: true, notify: 'tela' },
+        cancelada: { on: true, notify: 'chat' },
+        descartado: { on: true, notify: 'tela' }
+      }
+    };
+  }
+  renderVals() {
+    var self = this, st = this.state;
+    var SEV = {
+      urgente: { label: 'Urgente', color: '#e66767', bg: 'rgba(230,103,103,0.14)', icon: 'M12 7v6M12 17h.01M8.5 3h7L21 8.5v7L15.5 21h-7L3 15.5v-7z', rank: 0, hint: 'Leads sendo perdidos agora' },
+      importante: { label: 'Importante', color: '#f0a93b', bg: 'rgba(240,169,59,0.12)', icon: 'M12 9v4M12 17h.01M10.3 3.9L2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z', rank: 1, hint: 'Resolver hoje' },
+      atencao: { label: 'Atenção', color: '#a7abb5', bg: '#20293a', icon: 'M12 16v-4M12 8h.01M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', rank: 2, hint: 'Arrumar quando der' }
+    };
+    function sevStyle(k) { var s = SEV[k]; return 'display: inline-block; white-space: nowrap; border-radius: 9999px; padding: 2px 8px; font-size: 12px; line-height: 16px; font-weight: 600; color: ' + s.color + '; background: ' + s.bg; }
+    function iconBox(k, size) { var s = SEV[k]; return 'width: ' + size + 'px; height: ' + size + 'px; flex-shrink: 0; border-radius: 9999px; display: flex; align-items: center; justify-content: center; color: ' + s.color + '; background: ' + s.bg; }
+
+    var ALERTS = [
+      { id: 'automacao', sev: 'urgente', title: 'A automação parou: leads novos sem abertura', since: 'Desde 13:20 · há 44 min', count: 18, unit: 'leads',
+        what: '18 leads novos entraram sem receber o template de abertura há mais de 15 min. O último template saiu às 13:18.',
+        todo: 'Confira se o fluxo do n8n está ligado e se a conexão com o Poli caiu. O alerta fecha sozinho quando os leads novos voltarem a receber a abertura.',
+        reopen: 'Se o problema continuar, o alerta abre de novo no próximo minuto.',
+        col1: 'Lead', col3: 'Entrou às', link: 'Abrir no HubSpot',
+        leads: [['Renata M.', 'Ana Souza', '13:21'], ['Paulo S.', 'Bruno Lima', '13:26'], ['Clínica Sorriso', 'Carla Mendes', '13:31'], ['Marcos T.', 'Diego Rocha', '13:40'], ['Juliana R.', 'Elisa Prado', '13:52']] },
+      { id: 'clique', sev: 'urgente', title: 'Clique esperando a SDR há mais de 10 min', since: 'Desde 13:42 · há 22 min', count: 4, unit: 'leads',
+        what: '4 leads clicaram em "3 ou mais" ou "Eu e mais 1" e ninguém da equipe respondeu ainda.',
+        todo: 'Avise a SDR dona do lead ou peça para outra pessoa responder. Cada lead sai da lista assim que alguém responder.',
+        reopen: 'Resolver aqui só fecha o alerta. Leads que continuarem esperando voltam a aparecer.',
+        col1: 'Lead', col3: 'Esperando há', link: 'Abrir no Poli',
+        leads: [['Fernanda L.', 'Bruno Lima', '22 min'], ['Auto Peças Rio', 'Diego Rocha', '17 min'], ['Lucas P.', 'Bruno Lima', '13 min'], ['Mariana C.', 'Gustavo Reis', '11 min']] },
+      { id: 'cancelada', sev: 'urgente', group: 'Google Agenda', title: 'Reunião cancelada ainda na agenda do closer', since: 'Desde 09:40 · há 4 h 25 min', count: 2, unit: 'reuniões',
+        what: '2 reuniões foram canceladas ou reagendadas no painel, mas o Google recusou tirar o evento da agenda do closer e mover para a agenda de arquivo. O closer continua vendo as reuniões como se fossem acontecer, e o horário dele continua ocupado.',
+        todo: 'Avise o closer agora. Dê a ele permissão de edição na agenda de arquivo e clique em "Tentar de novo". Se o evento não é do closer, apague o evento na agenda dele e clique em "Resolvido".',
+        reopen: 'Urgente porque as reuniões são hoje ou amanhã. Depois disso, entra como Importante.',
+        col1: 'Reunião', col2: 'Closer', col3: 'O que houve', retry: true, resolveLabel: 'Resolvido',
+        leads: [['Clínica Bem Estar · hoje 16:00', 'Jerferson', 'Cancelada às 09:40', 'Motivo: o closer não tem permissão na agenda de arquivo'], ['Distribuidora Norte · amanhã 10:30', 'Jerferson', 'Reagendada às 11:15', 'Motivo: o closer não tem permissão na agenda de arquivo']] },
+      { id: 'meta', sev: 'importante', title: 'Falha no envio de template: erro da Meta 100', since: 'Desde 09:12 · hoje', count: 6, unit: 'leads',
+        what: 'A Meta recusou o envio do template para 6 leads com o erro 100 (parâmetro inválido).',
+        todo: 'Confira se o template foi alterado na Meta ou se alguma variável chegou vazia. Depois, mande manualmente para esses leads.',
+        reopen: 'Novas falhas abrem um alerta novo.',
+        col1: 'Lead', col3: 'Template', link: 'Abrir no Poli',
+        leads: [['Roberto A.', 'Ana Souza', 'Abertura · 09:12'], ['Ótica Visão', 'Carla Mendes', 'Abertura · 09:40'], ['Sandra F.', 'Elisa Prado', 'Cadência D2 · 10:05'], ['Thiago N.', 'Gustavo Reis', 'Abertura · 11:20']] },
+      { id: 'calendly', sev: 'importante', title: 'Lead do Calendly sem link da reunião', since: 'Desde ontem 17:40', count: 2, unit: 'leads',
+        what: '2 leads marcaram pelo Calendly, mas a reunião foi criada sem link do Meet.',
+        todo: 'Gere o link na agenda do closer e mande para o lead antes da reunião.',
+        reopen: '',
+        col1: 'Lead', col3: 'Reunião', link: 'Abrir em Reuniões',
+        leads: [['Clínica Vida', 'Ana Souza', '16/10 10:00'], ['Pedro H.', 'Elisa Prado', '16/10 15:30']] },
+      { id: 'google', sev: 'importante', group: 'Google Agenda', title: 'Problema no Google: evento apagado da agenda', since: 'Desde hoje 08:05', count: 1, unit: 'reunião',
+        what: 'O evento de uma reunião agendada foi apagado da agenda do closer. No painel ela continua como "agendada".',
+        todo: 'Confirme com o closer se a reunião foi cancelada e atualize o status em Reuniões.',
+        reopen: 'É o mesmo item da fila "Com problema" das Reuniões.',
+        col1: 'Lead', col3: 'Reunião', link: 'Abrir em Reuniões',
+        leads: [['Imobiliária Lar', 'Carla Mendes', '15/10 16:00']] },
+      { id: 'semconversa', sev: 'atencao', title: 'Lead sem conversa no Poli', since: 'Desde 14/10', count: 9, unit: 'leads',
+        what: '9 leads estão no HubSpot há mais de 30 min, mas não têm conversa no Poli. 5 vieram do Calendly sem telefone.',
+        todo: 'Complete o telefone no HubSpot ou descarte o lead.',
+        reopen: '',
+        col1: 'Lead', col3: 'Motivo', link: 'Abrir no HubSpot',
+        leads: [['Camila B.', 'Ana Souza', 'Calendly sem telefone'], ['Escola Saber', 'Diego Rocha', 'Calendly sem telefone'], ['Rafael M.', 'Gustavo Reis', 'Telefone inválido']] },
+      { id: 'dsq', sev: 'atencao', title: 'Lead que deveria estar em DSQ: "Sou Autônomo" na cadência', since: 'Desde 13/10', count: 12, unit: 'leads',
+        what: '12 leads clicaram "Sou Autônomo" e continuam recebendo a cadência.',
+        todo: 'Mova esses leads para DSQ no HubSpot.',
+        reopen: '',
+        col1: 'Lead', col3: 'Clicou em', link: 'Abrir no HubSpot',
+        leads: [['Bianca S.', 'Bruno Lima', '13/10'], ['André F.', 'Elisa Prado', '14/10'], ['Lívia C.', 'Carla Mendes', '14/10']] },
+      { id: 'reuniao', sev: 'atencao', title: 'Reunião passada ainda como "agendada"', since: 'Desde 14/10', count: 5, unit: 'reuniões',
+        what: '5 reuniões já passaram há mais de 2 horas e continuam como "agendada".',
+        todo: 'Marque cada uma como Validada, No show, Invalidada ou Cancelada em Reuniões.',
+        reopen: '',
+        col1: 'Lead', col3: 'Era em', link: 'Abrir em Reuniões',
+        leads: [['Construtora Alfa', 'Ana Souza', '14/10 09:00'], ['Gabriel R.', 'Diego Rocha', '14/10 14:00'], ['Pet Shop Amigo', 'Gustavo Reis', '15/10 10:30']] },
+      { id: 'descartado', sev: 'atencao', title: 'Lead que respondeu e foi descartado aos 7 dias', since: 'Desde 12/10', count: 2, unit: 'leads',
+        what: '2 leads responderam, mas foram descartados automaticamente como "Término de carteira".',
+        todo: 'Reabra o lead no HubSpot e devolva para a SDR.',
+        reopen: '',
+        col1: 'Lead', col3: 'Respondeu em', link: 'Abrir no HubSpot',
+        leads: [['Helena D.', 'Bruno Lima', '05/10'], ['Farmácia Boa', 'Carla Mendes', '06/10']] }
+    ];
+
+    var open = ALERTS.filter(function (a) { return st.resolved.indexOf(a.id) < 0 && st.cfg[a.id] && st.cfg[a.id].on; });
+    var selA = open.filter(function (a) { return a.id === st.sel; })[0] || null;
+
+    var alerts = open.map(function (a) {
+      var on = selA && selA.id === a.id, s = SEV[a.sev];
+      return {
+        sev: s.label, sevStyle: sevStyle(a.sev), title: a.title, meta: (a.group ? a.group + ' · ' : '') + a.since, count: a.count, unit: a.unit,
+        iconBox: iconBox(a.sev, 32), icon: s.icon,
+        card: 'background: ' + (on ? '#20203a' : '#181828') + '; border: 1px solid ' + (on ? '#5757d3' : '#252c3c') + '; border-left: 4px solid ' + s.color + '; border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 12px',
+        pressed: on ? 'true' : 'false', openLabel: on ? 'Aberto' : (a.unit.indexOf('reuni') === 0 ? 'Ver reuniões' : 'Ver leads'), openAria: 'Ver detalhes: ' + a.title,
+        openStyle: 'height: 36px; flex-shrink: 0; padding: 0 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; color: #f6f7f9; border: 1px solid ' + (on ? '#5757d3' : '#4e5d7f') + '; background: ' + (on ? '#5757d3' : '#313a4f'),
+        open: function () { self.setState({ sel: a.id, note: '' }); }
+      };
+    });
+
+    var counts = { urgente: 0, importante: 0, atencao: 0 };
+    open.forEach(function (a) { counts[a.sev]++; });
+    var summary = ['urgente', 'importante', 'atencao'].map(function (k) { var s = SEV[k]; return { label: s.label, hint: s.hint, count: counts[k], iconBox: iconBox(k, 36), icon: s.icon }; });
+
+    var sel = selA ? {
+      sev: SEV[selA.sev].label, sevStyle: sevStyle(selA.sev), since: selA.since, title: selA.title, what: selA.what, todo: selA.todo,
+      isCards: !!selA.retry, isTable: !selA.retry, reopen: selA.reopen, col1: selA.col1, col2: selA.col2 || 'SDR', col3: selA.col3, resolveLabel: selA.resolveLabel || 'Resolver',
+      listTitle: 'Afetados: ' + selA.count + ' ' + selA.unit + (selA.leads.length < selA.count ? ' (mostrando ' + selA.leads.length + ')' : ''),
+      allLink: selA.leads.length < selA.count ? 'Ver todos' : '',
+      leads: selA.leads.map(function (l, i) { var k = selA.id + i, tried = (st.retried || {})[k]; return { name: l[0], sdr: l[1], info: l[2], sub: l[3] || '', hasSub: !!l[3], link: selA.link, isLink: !selA.retry, isRetry: !!selA.retry, retryAria: 'Tentar de novo: ' + l[0], retryNote: tried ? 'Nova tentativa às 14:05 · aguardando o Google' : '', retry: function () { var r = Object.assign({}, st.retried || {}); r[k] = true; self.setState({ retried: r }); } }; })
+    } : null;
+
+    var DONE = [
+      ['urgente', 'A automação parou: leads novos sem abertura', '13/10 08:02', '3 h 40 min', '412', 'Felipe · 13/10 11:42', 'Fluxo do n8n tinha desligado. Religuei e reenviei.'],
+      ['urgente', 'Clique esperando a SDR há mais de 10 min', '15/10 08:25', '18 min', '3', 'Iago · 15/10 08:43', 'Pedi para a Elisa responder os leads do Diego.'],
+      ['importante', 'Lead do Calendly sem link da reunião', '14/10 10:10', '1 h 05 min', '1', 'Iago · 14/10 11:15', 'Gerei o Meet e mandei.'],
+      ['atencao', 'Reunião passada ainda como "agendada"', '10/10 12:00', '1 dia', '7', 'Felipe · 11/10 09:30', 'Atualizei os status de 09/10.']
+    ];
+    var resolvedNow = ALERTS.filter(function (a) { return st.resolved.indexOf(a.id) >= 0; }).map(function (a) {
+      return [a.sev, a.title, a.since.replace('Desde ', ''), 'até 14:05', String(a.count), 'Você · 15/10 14:05', (st.notes && st.notes[a.id]) || '—'];
+    });
+    var done = resolvedNow.concat(DONE).map(function (d) { return { sev: SEV[d[0]].label, sevStyle: sevStyle(d[0]), title: d[1], opened: d[2], duration: d[3], count: d[4], by: d[5], note: d[6] }; });
+
+    var CFG = [
+      ['automacao', 'A automação parou', 'Em 13/10, 79% dos leads novos ficaram sem template', 'urgente', 'Lead novo sem abertura há mais de', 'min'],
+      ['clique', 'Clique esperando a SDR', '10% dos cliques da noite nunca tiveram resposta', 'urgente', 'Clique sem resposta há mais de', 'min'],
+      ['meta', 'Falha no envio de template', 'Erro 100 ao enviar o template', 'importante', 'A Meta recusar um envio', null],
+      ['limite', 'Regra da jornada pausada pelo limite', 'Só vale para regras com limite. Hoje nenhuma tem.', 'importante', 'Uma regra com limite pausar sozinha', null],
+      ['semconversa', 'Lead sem conversa no Poli', '102 leads em outubro, 39 do Calendly sem telefone', 'atencao', 'Lead no HubSpot sem conversa há mais de', 'min'],
+      ['dsq', 'Lead que deveria estar em DSQ', '170 leads em outubro', 'atencao', 'Clicou "Sou Autônomo" e seguiu na cadência', null],
+      ['calendly', 'Lead do Calendly sem link da reunião', 'Leads marcaram e não receberam o Meet', 'importante', 'Reunião sem link há mais de', 'min'],
+      ['reuniao', 'Reunião passada ainda como "agendada"', 'Reuniões de 09/10 continuavam abertas', 'atencao', 'Passou do horário há mais de', 'h'],
+      ['google', 'Problema no Google', 'Evento apagado ou agenda desconectada', 'importante', 'O Google avisar o problema', null],
+      ['cancelada', 'Reunião cancelada ainda na agenda do closer', 'Em 15/10, 2 reuniões canceladas ficaram na agenda do Jerferson', 'urgente', 'O Google recusar tirar o evento. Urgente se for hoje ou amanhã', null],
+      ['descartado', 'Respondeu e foi descartado aos 7 dias', '11 leads como "Término de carteira"', 'atencao', 'Lead que respondeu ser descartado', null]
+    ];
+    function setCfg(id, patch) { var c = Object.assign({}, self.state.cfg); c[id] = Object.assign({}, c[id], patch); self.setState({ cfg: c, saved: false }); }
+    var cfg = CFG.map(function (c) {
+      var v = st.cfg[c[0]];
+      return {
+        title: c[1], why: c[2], sev: SEV[c[3]].label, sevStyle: sevStyle(c[3]),
+        pre: c[4], hasNum: !!c[5], num: v.num, post: c[5] || '', numAria: c[1] + ': limite em ' + (c[5] || ''),
+        onNum: function (e) { setCfg(c[0], { num: e.target.value }); },
+        notify: v.notify, notifyAria: 'Avisar também: ' + c[1], onNotify: function (e) { setCfg(c[0], { notify: e.target.value }); },
+        checked: v.on ? 'true' : 'false', switchAria: 'Ligar alerta ' + c[1],
+        toggle: function () { setCfg(c[0], { on: !v.on }); },
+        switchStyle: 'width: 40px; height: 22px; flex-shrink: 0; border-radius: 9999px; border: 1px solid ' + (v.on ? '#5757d3' : '#4e5d7f') + '; background: ' + (v.on ? '#5757d3' : '#313a4f') + '; position: relative; cursor: pointer; padding: 0',
+        knobStyle: 'position: absolute; top: 2px; left: ' + (v.on ? '20px' : '2px') + '; width: 16px; height: 16px; border-radius: 9999px; background: #f6f7f9'
+      };
+    });
+
+    var TABS = [['open', 'Abertos (' + open.length + ')'], ['done', 'Resolvidos'], ['config', 'Configurar']];
+    return {
+      navCount: open.length,
+      tabs: TABS.map(function (t) { var on = st.tab === t[0]; return { label: t[1], selected: on ? 'true' : 'false', pick: function () { self.setState({ tab: t[0] }); }, style: 'height: 36px; display: flex; align-items: center; padding: 0 12px; border-radius: 8px; border: 1px solid ' + (on ? '#5757d3' : '#4e5d7f') + '; background: ' + (on ? '#5757d3' : '#313a4f') + '; color: #f6f7f9; font-size: 14px; font-weight: ' + (on ? '600' : '400') + '; cursor: pointer' }; }),
+      isOpen: st.tab === 'open', isDone: st.tab === 'done', isConfig: st.tab === 'config',
+      summary: summary, alerts: alerts, noOpen: open.length === 0,
+      hasSel: !!sel, sel: sel,
+      detailBox: 'background: #181828; border: 1px solid #5757d3; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 16px',
+      note: st.note, onNote: function (e) { self.setState({ note: e.target.value }); },
+      resolve: function () {
+        if (!selA) return;
+        var notes = Object.assign({}, st.notes || {}); notes[selA.id] = st.note.trim();
+        var rest = open.filter(function (a) { return a.id !== selA.id; });
+        self.setState({ resolved: st.resolved.concat([selA.id]), notes: notes, note: '', sel: rest.length ? rest[0].id : '' });
+      },
+      done: done,
+      cfg: cfg,
+      saveCfg: function () { self.setState({ saved: true }); },
+      saveCfgLabel: st.saved ? 'Salvo' : 'Salvar'
+    };
+  }
+}
+</script>
+</body>
+</html>

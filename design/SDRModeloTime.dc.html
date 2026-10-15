@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>SDR Modelo: visão do time</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#1a1a1a;font-family:"Rubik",system-ui,sans-serif;color:#f6f7f9}
+a{color:#f6f7f9}a:hover{color:#cecff0}
+button,input,select{font-family:inherit}
+input[type="date"]{color-scheme:dark}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #f6f7f9;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1460px; display: flex; flex-direction: column; background: #1a1a1a; font-family: Rubik, system-ui, sans-serif; color: #f6f7f9">
+
+<div style="height: 46px; flex-shrink: 0; display: flex; align-items: center; gap: 4px; padding: 0 16px; border-bottom: 1px solid #252c3c; font-size: 14px; line-height: 20px">
+<img src="/_blob/836dc846171f77c8e53729b39de898fe" alt="Poli" style="height: 24px; margin-right: 12px">
+<a href="Main.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Painel</a>
+<a href="SDRModeloTime.dc.html" aria-current="page" style="padding: 6px 12px; border-radius: 8px; text-decoration: none; font-weight: 600; background: #20203a">SDR Modelo</a>
+<a href="Reunioes.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Reuniões</a>
+<a href="Agendar.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Agendar</a>
+<a href="Carrossel.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Carrosséis</a>
+<a href="#" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Relatório</a>
+<a href="JornadaRegras.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Jornada</a>
+<a href="Alertas.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Alertas</a>
+<a href="Configuracoes.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Configurações</a>
+<a href="Usuarios.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Usuários</a>
+</div>
+
+<div style="flex-grow: 1; padding: 20px 16px 16px 16px; display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; align-items: flex-start; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: center; gap: 12px">
+<h1 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; color: #6868d7">SDR Modelo · visão do time</h1>
+<span style="background: #20293a; border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600">Dados de exemplo</span>
+</div>
+<p style="margin: 0; font-size: 14px; line-height: 22px">Onde cada SDR está fora do SDR Ideal, para levar ao 1:1. Não é ranking: os SDRs aparecem em ordem alfabética.</p>
+</div>
+<div style="flex-grow: 1"></div>
+<div style="display: flex; align-items: flex-end; gap: 8px">
+<div style="display: flex; flex-direction: column; gap: 4px"><label for="de" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">De</label><input id="de" type="date" value="{{from}}" onChange="{{onFrom}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px"></div>
+<div style="display: flex; flex-direction: column; gap: 4px"><label for="ate" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Até</label><input id="ate" type="date" value="{{to}}" onChange="{{onTo}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px"></div>
+<a href="SDRIdeal.dc.html" style="height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border: 1px solid #4e5d7f; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"></path><circle cx="16" cy="6" r="2"></circle><circle cx="10" cy="12" r="2"></circle><circle cx="18" cy="18" r="2"></circle></svg>SDR Ideal</a>
+</div>
+</div>
+
+<section aria-labelledby="sec-train" style="background: #181828; border: 1px solid #f0a93b; border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 16px">
+<div style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 8px; background: rgba(240,169,59,0.12); display: flex; align-items: center; justify-content: center; color: #f0a93b"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-5l9 5l-9 5z"></path><path d="M7 11v5c3 2 7 2 10 0v-5M21 9v6"></path></svg></div>
+<div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1">
+<h2 id="sec-train" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Onde treinar o time</h2>
+<span style="font-size: 14px; line-height: 20px">{{trainText}}</span>
+</div>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5; max-width: 300px">Marcamos "treino coletivo" quando metade dos SDRs avaliados ou mais está fora da faixa.</span>
+</section>
+
+<div style="display: flex; align-items: center; gap: 16px">
+<div style="display: flex; align-items: center; gap: 8px">
+<span id="lbl-sort" style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Ordenar comportamentos</span>
+<div role="group" aria-labelledby="lbl-sort" style="display: flex; gap: 8px">
+<sc-for list="{{sorts}}" as="o" hint-placeholder-count="2">
+<button type="button" onClick="{{o.pick}}" aria-pressed="{{o.pressed}}" style="{{o.style}}">{{o.label}}</button>
+</sc-for>
+</div>
+</div>
+<div style="flex-grow: 1"></div>
+<div aria-label="Legenda" style="display: flex; align-items: center; gap: 16px; font-size: 12px; line-height: 16px">
+<span style="display: flex; align-items: center; gap: 6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6868d7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l9-10"></path></svg>Na faixa ou melhor</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 4px; background: rgba(240,169,59,0.12)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f0a93b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M6 11l6-6l6 6"></path></svg></span>Fora: acima ou abaixo da faixa</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="display: inline-block; width: 16px; height: 16px; border: 1px dashed #4e5d7f; border-radius: 4px"></span>Amostra pequena: fica fora da nota</span>
+</div>
+</div>
+
+<div style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; overflow: hidden">
+<table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; line-height: 20px">
+<caption style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Aderência de cada SDR ao SDR Ideal, por comportamento</caption>
+<thead>
+<tr style="background: #20203a; text-align: left; vertical-align: bottom">
+<th scope="col" style="width: 290px; padding: 12px 16px; font-size: 12px; line-height: 16px; font-weight: 600">Comportamento</th>
+<sc-for list="{{sdrs}}" as="c" hint-placeholder-count="6">
+<th scope="col" style="padding: 12px 10px; font-weight: 400"><div style="display: flex; flex-direction: column; gap: 4px"><a href="SDRModeloUm.dc.html" aria-label="{{c.openAria}}" style="font-size: 14px; line-height: 20px; font-weight: 600; text-decoration: none">{{c.name}}</a><span style="font-size: 12px; line-height: 16px; color: #a7abb5">Aderência</span><span style="font-size: 24px; line-height: 28px; font-weight: 600">{{c.score}}<span style="font-size: 12px; font-weight: 500; color: #a7abb5"> /100</span></span><div role="img" aria-label="{{c.barAria}}" style="height: 6px; border-radius: 9999px; background: #313a4f; overflow: hidden"><div style="{{c.barStyle}}"></div></div><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{c.base}}</span></div></th>
+</sc-for>
+<th scope="col" style="width: 170px; padding: 12px 16px; font-size: 12px; line-height: 16px; font-weight: 600">SDRs fora da faixa</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{groups}}" as="g" hint-placeholder-count="2">
+<tr style="background: #1a1a2c; border-top: 1px solid #252c3c">
+<th scope="rowgroup" style="padding: 8px 16px; text-align: left; font-size: 12px; line-height: 16px; font-weight: 600; color: #a7abb5; white-space: nowrap">{{g.label}}</th>
+<sc-for list="{{sdrs}}" as="c" hint-placeholder-count="6"><td></td></sc-for>
+<td></td>
+</tr>
+<sc-for list="{{g.rows}}" as="r" hint-placeholder-count="5">
+<tr style="border-top: 1px solid #252c3c">
+<th scope="row" style="padding: 10px 16px; text-align: left; font-weight: 400; vertical-align: top"><div style="display: flex; flex-direction: column; gap: 2px"><div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap"><span style="font-size: 14px; line-height: 20px; font-weight: 600">{{r.name}}</span><sc-if value="{{r.collective}}" hint-placeholder-val="{{false}}"><span style="border-radius: 9999px; padding: 1px 8px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f0a93b; background: rgba(240,169,59,0.12)">Treino coletivo</span></sc-if></div><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{r.measure}}</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">Faixa ideal {{r.range}} · peso {{r.weight}}</span></div></th>
+<sc-for list="{{r.cells}}" as="x" hint-placeholder-count="6">
+<td style="padding: 4px"><button type="button" onClick="{{x.pick}}" aria-pressed="{{x.pressed}}" aria-label="{{x.aria}}" title="{{x.aria}}" style="{{x.style}}"><span style="{{x.valueStyle}}">{{x.value}}</span><span style="display: flex; align-items: center; gap: 4px; font-size: 12px; line-height: 16px; color: #a7abb5"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="{{x.iconColor}}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{x.iconPath}}"></path></svg>{{x.status}}</span></button></td>
+</sc-for>
+<td style="padding: 10px 16px; vertical-align: middle"><div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 14px; line-height: 20px; font-weight: 600">{{r.outLabel}}</span><div role="img" aria-label="{{r.outAria}}" style="width: 120px; height: 6px; border-radius: 9999px; background: #313a4f; overflow: hidden"><div style="{{r.outBar}}"></div></div></div></td>
+</tr>
+</sc-for>
+</sc-for>
+</tbody>
+</table>
+</div>
+
+<section aria-live="polite" aria-label="Detalhe da célula escolhida" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: flex; align-items: center; gap: 24px">
+<div style="display: flex; flex-direction: column; gap: 4px; flex-grow: 1">
+<span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">Detalhe</span>
+<span style="font-size: 14px; line-height: 22px; font-weight: 600">{{detail.title}}</span>
+<span style="font-size: 14px; line-height: 20px">{{detail.body}}</span>
+</div>
+<sc-if value="{{detail.has}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; gap: 12px; flex-shrink: 0">
+<a href="SDR.dc.html" style="height: 40px; display: flex; align-items: center; padding: 0 14px; border: 1px solid #4e5d7f; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 500">Ver conversas de exemplo</a>
+<a href="SDRModeloUm.dc.html" style="height: 40px; display: flex; align-items: center; padding: 0 16px; border: 1px solid #5757d3; border-radius: 8px; background: #5757d3; text-decoration: none; font-size: 14px; font-weight: 600">{{detail.cta}}</a>
+</div>
+</sc-if>
+</section>
+
+<p style="margin: 0; font-size: 12px; line-height: 16px; color: #a7abb5">{{footnote}}</p>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1460}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { from: '2026-10-01', to: '2026-10-14', sort: 'default', sel: 'conf|gr' };
+  }
+  renderVals() {
+    var self = this, st = this.state;
+    var SDRS = [
+      { id: 'as', name: 'Ana Souza', convs: 74, meets: 9 },
+      { id: 'bl', name: 'Bruno Lima', convs: 51, meets: 6 },
+      { id: 'cm', name: 'Carla Mendes', convs: 88, meets: 12 },
+      { id: 'dr', name: 'Diego Rocha', convs: 34, meets: 2 },
+      { id: 'ep', name: 'Elisa Prado', convs: 69, meets: 10 },
+      { id: 'gr', name: 'Gustavo Reis', convs: 57, meets: 7 }
+    ];
+    // v: valor exibido; d: -1 abaixo, 0 na faixa, 1 acima; n: amostra pequena.
+    var B = [
+      { id: 'vol', group: 'num', name: 'Volume', measure: 'Leads abordados por dia útil', range: '18 a 25', better: 1, weight: 15,
+        vals: { as: ['22', 0], bl: ['15', -1], cm: ['27', 1], dr: ['19', 0], ep: ['19', 0], gr: ['21', 0] } },
+      { id: 'pri', group: 'num', name: '1ª resposta', measure: 'Mediana do tempo de primeira resposta', range: '2 a 6 min', better: -1, weight: 15,
+        vals: { as: ['4min 10s', 0], bl: ['3min 20s', 0], cm: ['2min 40s', 0], dr: ['11min 05s', 1], ep: ['1min 50s', -1], gr: ['6min 20s', 1] } },
+      { id: 'res', group: 'num', name: 'Tempo de resposta', measure: 'Mediana do tempo de resposta', range: '4 a 10 min', better: -1, weight: 10,
+        vals: { as: ['7min 30s', 0], bl: ['5min 10s', 0], cm: ['5min 20s', 0], dr: ['18min 40s', 1], ep: ['4min 50s', 0], gr: ['9min 10s', 0] } },
+      { id: 'tax', group: 'num', name: 'Taxa de resposta', measure: 'Leads que responderam ÷ abordados', range: '35% a 50%', better: 1, weight: 15,
+        vals: { as: ['41%', 0], bl: ['33%', -1], cm: ['45%', 0], dr: ['28%', -1], ep: ['47%', 0], gr: ['38%', 0] } },
+      { id: 'des', group: 'num', name: 'Descartes', measure: 'Descartados ÷ leads que responderam', range: '10% a 25%', better: 0, weight: 10,
+        vals: { as: ['18%', 0], bl: ['22%', 0], cm: ['12%', 0], dr: ['24%', 0], ep: ['15%', 0], gr: ['27%', 1] } },
+      { id: 'val', group: 'num', name: 'Reuniões validadas', measure: 'Validadas ÷ leads que responderam', range: '8% a 14%', better: 1, weight: 15,
+        vals: { as: ['9%', 0], bl: ['6%', -1], cm: ['12%', 0], dr: ['—', 0, 1], ep: ['13%', 0], gr: ['7%', -1] } },
+      { id: 'conf', group: 'num', name: 'Confirmação de reunião', measure: 'Reuniões com confirmação no dia e mensagem até 60 min antes', range: '80% a 100%', better: 1, weight: 10,
+        vals: { as: ['62%', -1], bl: ['55%', -1], cm: ['84%', 0], dr: ['—', 0, 1], ep: ['71%', -1], gr: ['58%', -1] } },
+      { id: 'per', group: 'ia', name: 'Perguntas', measure: 'Nota da IA, de 0 a 10', range: '7 a 9', better: 1, weight: 5,
+        vals: { as: ['7,4', 0], bl: ['6,1', -1], cm: ['8,2', 0], dr: ['5,8', -1], ep: ['7,9', 0], gr: ['7,1', 0] } },
+      { id: 'gat', group: 'ia', name: 'Gatilhos mentais', measure: 'Nota da IA, de 0 a 10', range: '6 a 9', better: 1, weight: 5,
+        vals: { as: ['5,2', -1], bl: ['4,8', -1], cm: ['6,6', 0], dr: ['4,1', -1], ep: ['5,5', -1], gr: ['6,2', 0] } }
+    ];
+    function cell(b, s) { var v = b.vals[s.id]; var better = v[1] !== 0 && b.better !== 0 && v[1] === b.better; return { value: v[0], dir: v[1], small: !!v[2], better: better, ok: v[1] === 0 || better }; }
+
+    var sdrs = SDRS.map(function (s) {
+      var valid = 0, ok = 0;
+      B.forEach(function (b) { var c = cell(b, s); if (c.small) return; valid += b.weight; if (c.ok) ok += b.weight; });
+      var score = valid ? Math.round(ok / valid * 100) : 0;
+      return {
+        name: s.name, score: score, openAria: 'Abrir o SDR Modelo de ' + s.name,
+        barAria: 'Aderência ' + score + ' de 100',
+        barStyle: 'height: 6px; border-radius: 9999px; background: #6868d7; width: ' + score + '%',
+        base: s.convs + ' conversas · ' + s.meets + ' reuniões'
+      };
+    });
+
+    var UP = 'M12 19V5M6 11l6-6l6 6', DOWN = 'M12 5v14M6 13l6 6l6-6', CHECK = 'M5 12l5 5l9-10', DASH = 'M6 12h12';
+    var rows = B.map(function (b, bi) {
+      var evaluated = 0, out = 0;
+      var cells = SDRS.map(function (s) {
+        var c = cell(b, s), key = b.id + '|' + s.id, on = st.sel === key;
+        if (!c.small) { evaluated++; if (!c.ok) out++; }
+        var status = c.small ? 'amostra pequena' : (c.better ? 'melhor que a faixa' : c.dir === 0 ? 'na faixa' : (c.dir > 0 ? 'acima da faixa' : 'abaixo da faixa'));
+        var bg = c.small ? 'transparent' : (c.ok ? 'transparent' : 'rgba(240,169,59,0.12)');
+        var border = on ? '2px solid #f6f7f9' : (c.small ? '1px dashed #4e5d7f' : '1px solid transparent');
+        return {
+          value: c.value, status: status,
+          iconPath: c.small ? DASH : (c.ok ? CHECK : (c.dir > 0 ? UP : DOWN)),
+          iconColor: c.small ? '#a7abb5' : (c.ok ? '#6868d7' : '#f0a93b'),
+          valueStyle: 'font-size: 16px; line-height: 22px; font-weight: 600; color: ' + (c.small ? '#a7abb5' : '#f6f7f9'),
+          style: 'width: 100%; min-height: 58px; box-sizing: border-box; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; padding: 8px 10px; border-radius: 8px; border: ' + border + '; background: ' + bg + '; color: #f6f7f9; cursor: pointer; text-align: left',
+          aria: s.name + ', ' + b.name + ': ' + c.value + ', ' + status + ' (faixa ' + b.range + ')',
+          pressed: on ? 'true' : 'false',
+          pick: function () { self.setState({ sel: key }); }
+        };
+      });
+      var collective = evaluated > 0 && out / evaluated >= 0.5;
+      return {
+        id: b.id, group: b.group, order: bi, out: out, evaluated: evaluated, weight: b.weight,
+        name: b.name, measure: b.measure, range: b.range, collective: collective, cells: cells,
+        outLabel: out + ' de ' + evaluated,
+        outAria: out + ' de ' + evaluated + ' SDRs fora da faixa',
+        outBar: 'height: 6px; border-radius: 9999px; background: #f0a93b; width: ' + (evaluated ? out / evaluated * 100 : 0) + '%'
+      };
+    });
+
+    function sortRows(list) {
+      if (st.sort !== 'out') return list;
+      return list.slice().sort(function (a, b) { var d = b.out / Math.max(1, b.evaluated) - a.out / Math.max(1, a.evaluated); return Math.abs(d) > 0.001 ? d : b.weight - a.weight; });
+    }
+    var groups = [
+      { label: 'Números (calculados no banco)', rows: sortRows(rows.filter(function (r) { return r.group === 'num'; })) },
+      { label: 'Conversa (avaliada pela IA)', rows: sortRows(rows.filter(function (r) { return r.group === 'ia'; })) }
+    ];
+
+    var coll = rows.filter(function (r) { return r.collective; });
+    var trainText = coll.length
+      ? coll.map(function (r) { return r.name + ' (' + r.out + ' de ' + r.evaluated + ' SDRs fora)'; }).join(' e ') + '. Um treino para o time inteiro resolve mais aqui do que 1:1 separados.'
+      : 'Nenhum comportamento com metade do time fora da faixa neste período.';
+
+    var sorts = [['default', 'Ordem padrão'], ['out', 'Mais SDRs fora primeiro']].map(function (o) {
+      var on = st.sort === o[0];
+      return {
+        label: o[1], pressed: on ? 'true' : 'false',
+        style: 'height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid ' + (on ? '#5757d3' : '#4e5d7f') + '; background: ' + (on ? '#5757d3' : '#313a4f') + '; color: #f6f7f9; font-size: 14px; font-weight: ' + (on ? '600' : '400') + '; cursor: pointer',
+        pick: function () { self.setState({ sort: o[0] }); }
+      };
+    });
+
+    var detail = { has: false, title: 'Clique numa célula para ver o detalhe.', body: '', cta: '' };
+    if (st.sel) {
+      var p = st.sel.split('|');
+      var b = B.filter(function (x) { return x.id === p[0]; })[0];
+      var s = SDRS.filter(function (x) { return x.id === p[1]; })[0];
+      if (b && s) {
+        var c = cell(b, s);
+        var first = s.name.split(' ')[0];
+        var body;
+        if (c.small) body = 'Amostra pequena no período (' + s.meets + ' reuniões; o mínimo é 3). Não entra na nota de aderência.';
+        else body = 'Valor no período: ' + c.value + '. Faixa ideal: ' + b.range + '. ' + (c.better ? 'Melhor que a faixa: conta como dentro.' : c.dir === 0 ? 'Dentro da faixa.' : (c.dir > 0 ? 'Fora, acima da faixa.' : 'Fora, abaixo da faixa.')) + ' Peso ' + b.weight + ' na aderência.';
+        detail = { has: true, title: first + ' · ' + b.name, body: body, cta: 'Abrir o SDR Modelo de ' + first };
+      }
+    }
+
+    return {
+      from: st.from, to: st.to,
+      onFrom: function (e) { self.setState({ from: e.target.value }); },
+      onTo: function (e) { self.setState({ to: e.target.value }); },
+      sdrs: sdrs, groups: groups, sorts: sorts, trainText: trainText, detail: detail,
+      footnote: 'Aderência = soma dos pesos dos comportamentos na faixa ou melhores que ela (descartes não têm lado melhor) ÷ soma dos pesos dos comportamentos avaliados, de 0 a 100. Amostra pequena (menos de 10 conversas avaliadas ou menos de 3 reuniões) fica fora da conta. SDR Ideal versão 1, criada a partir dos 3 SDRs com mais reuniões validadas nos últimos 30 dias.'
+    };
+  }
+}
+</script>
+</body>
+</html>

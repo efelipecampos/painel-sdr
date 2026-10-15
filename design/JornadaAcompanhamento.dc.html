@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Jornada · Acompanhamento</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#1a1a1a;font-family:"Rubik",system-ui,sans-serif;color:#f6f7f9}
+a{color:#f6f7f9}a:hover{color:#cecff0}
+button,input,select{font-family:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #f6f7f9;outline-offset:2px}
+</style>
+</helmet>
+<div style="position: relative; width: 1440px; height: 1800px; display: flex; flex-direction: column; background: #1a1a1a; font-family: Rubik, system-ui, sans-serif; color: #f6f7f9">
+
+<div style="height: 46px; flex-shrink: 0; display: flex; align-items: center; gap: 4px; padding: 0 16px; border-bottom: 1px solid #252c3c; font-size: 14px; line-height: 20px">
+<img src="/_blob/836dc846171f77c8e53729b39de898fe" alt="Poli" style="height: 24px; margin-right: 12px">
+<a href="Main.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Painel</a>
+<a href="Reunioes.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Reuniões</a>
+<a href="Agendar.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Agendar</a>
+<a href="Carrossel.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Carrosséis</a>
+<a href="#" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Relatório</a>
+<a href="JornadaRegras.dc.html" aria-current="page" style="padding: 6px 12px; border-radius: 8px; text-decoration: none; font-weight: 600; background: #20203a">Jornada</a>
+<a href="Alertas.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Alertas</a>
+<a href="Configuracoes.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Configurações</a>
+<a href="Usuarios.dc.html" style="padding: 6px 12px; border-radius: 8px; text-decoration: none">Usuários</a>
+</div>
+
+<div style="flex-grow: 1; padding: 20px 16px 16px 16px; display: flex; flex-direction: column; gap: 16px">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<h1 style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; color: #6868d7">Jornada</h1>
+<span style="background: #20293a; border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600">Dados de exemplo</span>
+<nav aria-label="Seções da jornada" style="display: flex; gap: 4px; margin-left: 12px">
+<a href="JornadaRegras.dc.html" style="height: 36px; display: flex; align-items: center; padding: 0 12px; border-radius: 8px; border: 1px solid #4e5d7f; background: #313a4f; text-decoration: none; font-size: 14px">Regras</a>
+<a href="JornadaAcompanhamento.dc.html" aria-current="page" style="height: 36px; display: flex; align-items: center; padding: 0 12px; border-radius: 8px; border: 1px solid #5757d3; background: #5757d3; text-decoration: none; font-size: 14px; font-weight: 600">Acompanhamento</a>
+<span aria-disabled="true" style="height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: 8px; border: 1px dashed #4e5d7f; font-size: 14px; color: #a7abb5">Prioridade da lista <span style="font-size: 12px">em breve</span></span>
+</nav>
+</div>
+
+<div style="display: flex; align-items: center; gap: 16px">
+<div role="group" aria-label="Período" style="display: flex; gap: 8px">
+<sc-for list="{{periods}}" as="p" hint-placeholder-count="4"><button type="button" onClick="{{p.pick}}" aria-pressed="{{p.pressed}}" style="{{p.style}}">{{p.label}}</button></sc-for>
+</div>
+<div style="display: flex; align-items: center; gap: 8px">
+<label for="from" style="font-size: 12px; font-weight: 500; color: #a7abb5">De</label>
+<input id="from" type="date" value="{{from}}" onChange="{{onFrom}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+<label for="to" style="font-size: 12px; font-weight: 500; color: #a7abb5">Até</label>
+<input id="to" type="date" value="{{to}}" onChange="{{onTo}}" style="height: 40px; box-sizing: border-box; padding: 0 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px">
+</div>
+<div style="flex-grow: 1"></div>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Leads novos sem DSQ criados no período · atualizado às 14:02</span>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px">
+<sc-for list="{{kpis}}" as="k" hint-placeholder-count="4">
+<div style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 12px; line-height: 16px; font-weight: 500; color: #a7abb5">{{k.label}}</span>
+<span style="font-size: 28px; line-height: 36px; font-weight: 700; font-variant-numeric: tabular-nums">{{k.value}}</span>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{k.note}}</span>
+</div>
+</sc-for>
+</div>
+
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 440px; gap: 16px; align-items: start">
+
+<section aria-labelledby="sec-funil" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; align-items: flex-start; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1">
+<h2 id="sec-funil" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Funil da jornada</h2>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Separado pela hora em que o lead clicou. Passe o mouse numa etapa para ver a passagem.</span>
+</div>
+<div aria-hidden="true" style="display: flex; gap: 16px; font-size: 12px; line-height: 16px">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #6868d7"></span>Expediente</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 12px; height: 12px; border-radius: 3px; background: #199e70"></span>Fora do expediente</span>
+</div>
+</div>
+
+<div style="display: flex; gap: 12px; padding: 12px; border-radius: 8px; background: #20293a; font-size: 14px; line-height: 20px">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px"><path d="M3 3v18h18"></path><path d="M7 15l4-4 3 3 6-6"></path></svg>
+<span>{{insight}}</span>
+</div>
+
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px">
+<caption style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Funil da jornada por etapa, expediente e fora do expediente</caption>
+<thead>
+<tr style="text-align: left; color: #a7abb5">
+<th scope="col" style="width: 210px; padding: 0 12px 8px 0; font-size: 12px; line-height: 16px; font-weight: 500">Etapa</th>
+<th scope="col" style="padding: 0 12px 8px 0; font-size: 12px; line-height: 16px; font-weight: 500">Leads</th>
+<th scope="col" style="width: 130px; padding: 0 12px 8px 0; font-size: 12px; line-height: 16px; font-weight: 500; text-align: right">Passou para a próxima</th>
+<th scope="col" style="width: 150px; padding: 0 0 8px 0; font-size: 12px; line-height: 16px; font-weight: 500; text-align: right">Tempo até a próxima</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{stages}}" as="s" hint-placeholder-count="6">
+<tr onMouseEnter="{{s.hover}}" onMouseLeave="{{unhover}}" style="{{s.rowStyle}}">
+<th scope="row" style="padding: 10px 12px 10px 8px; text-align: left; font-weight: 600; vertical-align: middle">{{s.name}}</th>
+<td style="padding: 10px 12px 10px 0">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="display: flex; align-items: center; gap: 8px"><div style="{{s.barExp}}"></div><span style="font-size: 12px; line-height: 16px; font-weight: 600; font-variant-numeric: tabular-nums">{{s.nExp}}</span></div>
+<div style="display: flex; align-items: center; gap: 8px"><div style="{{s.barFora}}"></div><span style="font-size: 12px; line-height: 16px; font-weight: 600; font-variant-numeric: tabular-nums">{{s.nFora}}</span></div>
+</div>
+</td>
+<td style="position: relative; padding: 10px 12px 10px 0; text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; line-height: 18px">
+<sc-if value="{{s.hasNext}}" hint-placeholder-val="{{true}}"><div style="display: flex; flex-direction: column"><span><span style="position: absolute; width: 1px; height: 1px; overflow: hidden">Expediente: </span><span aria-hidden="true" style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; background: #6868d7"></span>{{s.pExp}}</span><span><span style="position: absolute; width: 1px; height: 1px; overflow: hidden">Fora: </span><span aria-hidden="true" style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; background: #199e70"></span>{{s.pFora}}</span></div></sc-if>
+</td>
+<td style="padding: 10px 8px 10px 0; text-align: right; font-variant-numeric: tabular-nums; font-size: 12px; line-height: 18px">
+<sc-if value="{{s.hasNext}}" hint-placeholder-val="{{true}}"><div style="display: flex; flex-direction: column"><span style="{{s.tExpStyle}}"><span aria-hidden="true" style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; background: #6868d7"></span>{{s.tExp}}</span><span style="{{s.tForaStyle}}"><span aria-hidden="true" style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; background: #199e70"></span>{{s.tFora}}</span></div></sc-if>
+</td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+
+<div role="status" style="min-height: 20px; border-top: 1px solid #252c3c; padding-top: 12px; font-size: 12px; line-height: 16px; color: #a7abb5">{{detail}}</div>
+</section>
+
+<div style="display: flex; flex-direction: column; gap: 16px">
+<section aria-labelledby="sec-tempos" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px">
+<h2 id="sec-tempos" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Tempos</h2>
+<sc-for list="{{times}}" as="t" hint-placeholder-count="4">
+<div style="display: flex; align-items: flex-start; gap: 12px; padding-top: 12px; border-top: 1px solid #252c3c">
+<div style="{{t.iconBox}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{t.icon}}"></path></svg></div>
+<div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1">
+<span style="font-size: 14px; line-height: 20px">{{t.label}}</span>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{t.ref}}</span>
+</div>
+<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0">
+<span style="font-size: 18px; line-height: 24px; font-weight: 700; font-variant-numeric: tabular-nums">{{t.value}}</span>
+<span style="{{t.verdictStyle}}">{{t.verdict}}</span>
+</div>
+</div>
+</sc-for>
+</section>
+
+<section aria-labelledby="sec-base" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+<h2 id="sec-base" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Linha de base para comparar</h2>
+<span style="font-size: 14px; line-height: 20px">Setembro e outubro, antes da jornada pelo painel:</span>
+<ul style="margin: 0; padding-left: 18px; font-size: 14px; line-height: 22px">
+<li>9% a 10% de agendamento sobre os leads novos sem DSQ</li>
+<li>47% de resposta à abertura</li>
+<li>Fora do expediente agendava 11%, contra 26% no expediente</li>
+</ul>
+</section>
+</div>
+
+</div>
+
+<section aria-labelledby="sec-regra" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; overflow: hidden">
+<div style="padding: 16px; display: flex; flex-direction: column; gap: 2px">
+<h2 id="sec-regra" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Por regra</h2>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">Cliques = envios + falhas + pulados. Responderam e agendaram contam só quem recebeu o envio.</span>
+</div>
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px">
+<thead>
+<tr style="background: #20203a; text-align: left">
+<th scope="col" style="padding: 10px 16px; font-size: 12px; line-height: 16px; font-weight: 600">Regra</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Situação</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: right">Cliques</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: right">Envios</th>
+<th scope="col" style="width: 210px; padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Falhas</th>
+<th scope="col" style="width: 210px; padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600">Pulados</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: right">Responderam</th>
+<th scope="col" style="padding: 10px 16px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: right">Agendaram</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{rules}}" as="r" hint-placeholder-count="4">
+<tr style="border-top: 1px solid #252c3c">
+<td style="padding: 12px 16px; vertical-align: top">
+<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{r.origin}}</span>
+<span style="border: 1px solid #4e5d7f; border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600; white-space: nowrap">{{r.button}}</span>
+<span aria-hidden="true" style="color: #a7abb5">→</span>
+<span style="font-weight: 600">{{r.dest}}</span>
+</div>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{r.when}}</span>
+</td>
+<td style="padding: 12px; vertical-align: top"><span style="{{r.badge}}">{{r.status}}</span></td>
+<td style="padding: 12px; vertical-align: top; text-align: right; font-variant-numeric: tabular-nums">{{r.clicks}}</td>
+<td style="padding: 12px; vertical-align: top; text-align: right; font-variant-numeric: tabular-nums"><div style="display: flex; flex-direction: column"><span style="font-weight: 600">{{r.sent}}</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{r.sentNote}}</span></div></td>
+<td style="padding: 12px; vertical-align: top"><div style="display: flex; flex-direction: column; gap: 2px"><span style="{{r.failStyle}}">{{r.fails}}</span><sc-for list="{{r.failReasons}}" as="fr" hint-placeholder-count="1"><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{fr}}</span></sc-for></div></td>
+<td style="padding: 12px; vertical-align: top"><div style="display: flex; flex-direction: column; gap: 2px"><span style="font-weight: 600; font-variant-numeric: tabular-nums">{{r.skips}}</span><sc-for list="{{r.skipReasons}}" as="sr" hint-placeholder-count="1"><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{sr}}</span></sc-for></div></td>
+<td style="padding: 12px; vertical-align: top; text-align: right; font-variant-numeric: tabular-nums"><div style="display: flex; flex-direction: column"><span style="font-weight: 600">{{r.replied}}</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{r.repliedPct}}</span></div></td>
+<td style="padding: 12px 16px; vertical-align: top; text-align: right; font-variant-numeric: tabular-nums"><div style="display: flex; flex-direction: column"><span style="font-weight: 600">{{r.booked}}</span><span style="font-size: 12px; line-height: 16px; color: #a7abb5">{{r.bookedPct}}</span></div></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</section>
+
+<section aria-labelledby="sec-sdr" style="background: #181828; border: 1px solid #252c3c; border-radius: 12px; overflow: hidden">
+<div style="padding: 16px; display: flex; align-items: center; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1">
+<h2 id="sec-sdr" style="margin: 0; font-size: 14px; line-height: 22px; font-weight: 600">Por SDR</h2>
+<span style="font-size: 12px; line-height: 16px; color: #a7abb5">O mesmo funil, lado a lado. Ordem alfabética.</span>
+</div>
+<div role="group" aria-label="Hora do clique" style="display: flex; gap: 8px">
+<sc-for list="{{splits}}" as="sp" hint-placeholder-count="3"><button type="button" onClick="{{sp.pick}}" aria-pressed="{{sp.pressed}}" style="{{sp.style}}">{{sp.label}}</button></sc-for>
+</div>
+</div>
+<table style="width: 100%; border-collapse: collapse; font-size: 14px; line-height: 20px; font-variant-numeric: tabular-nums">
+<thead>
+<tr style="background: #20203a">
+<th scope="col" style="padding: 10px 16px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: left">SDR</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: right">Leads</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: right">Abertura enviada</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: right">Clicou</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: right">"3 ou mais" ou "Eu e mais 1"</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: right">A SDR respondeu</th>
+<th scope="col" style="padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: right">Agendou</th>
+<th scope="col" style="width: 200px; padding: 10px 12px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: left">% agendou sobre leads</th>
+<th scope="col" style="padding: 10px 16px; font-size: 12px; line-height: 16px; font-weight: 600; text-align: right">{{timeHeader}}</th>
+</tr>
+</thead>
+<tbody>
+<sc-for list="{{sdrs}}" as="d" hint-placeholder-count="6">
+<tr style="{{d.rowStyle}}">
+<th scope="row" style="{{d.nameStyle}}">{{d.name}}</th>
+<td style="padding: 10px 12px; text-align: right">{{d.leads}}</td>
+<td style="padding: 10px 12px; text-align: right">{{d.open}}</td>
+<td style="padding: 10px 12px; text-align: right">{{d.click}}</td>
+<td style="padding: 10px 12px; text-align: right">{{d.qual}}</td>
+<td style="padding: 10px 12px; text-align: right">{{d.reply}}</td>
+<td style="padding: 10px 12px; text-align: right; font-weight: 600">{{d.booked}}</td>
+<td style="padding: 10px 12px"><div style="display: flex; align-items: center; gap: 8px"><div style="width: 120px; height: 8px; border-radius: 4px; background: #252c3c; overflow: hidden"><div style="{{d.bar}}"></div></div><span style="font-weight: 600">{{d.pct}}</span></div></td>
+<td style="padding: 10px 16px; text-align: right"><div style="display: flex; align-items: center; justify-content: flex-end; gap: 8px"><sc-if value="{{d.slow}}" hint-placeholder-val="{{false}}"><span style="border-radius: 9999px; padding: 1px 8px; font-size: 12px; line-height: 16px; font-weight: 600; color: #f0a93b; background: rgba(240,169,59,0.12)">acima da meta</span></sc-if><span>{{d.time}}</span></div></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</section>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1800}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { period: 'mes', from: '2026-10-01', to: '2026-10-15', hover: -1, split: 'tudo' };
+  }
+  renderVals() {
+    var self = this, st = this.state;
+    function n(x) { return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+    function pct(a, b, d) { if (!b) return '—'; var v = a / b * 100; return (d ? v.toFixed(1) : Math.round(v)).toString().replace('.', ',') + '%'; }
+    function chip(on) { return 'height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid ' + (on ? '#5757d3' : '#4e5d7f') + '; background: ' + (on ? '#5757d3' : '#313a4f') + '; color: #f6f7f9; font-size: 14px; font-weight: ' + (on ? '600' : '400') + '; cursor: pointer'; }
+
+    var STAGES = ['Lead criado', 'Abertura enviada', 'Clicou em um botão', '"3 ou mais" ou "Eu e mais 1"', 'A SDR respondeu', 'Agendou'];
+    var EXP = [600, 596, 310, 290, 282, 73];
+    var FORA = [400, 394, 205, 182, 168, 18];
+    // mediana até a próxima etapa; [texto, acima da meta?]
+    var T_EXP = [['3 min 40 s', false], ['12 min', false], ['no mesmo clique', false], ['6 min 20 s', true], ['1 dia', false]];
+    var T_FORA = [['4 min 10 s', false], ['25 min', false], ['no mesmo clique', false], ['52 min úteis', false], ['2 dias', false]];
+    var MAX = 600, TRACK = 300;
+
+    var stages = STAGES.map(function (name, i) {
+      var last = i === STAGES.length - 1, on = st.hover === i;
+      function bar(v, color) { return 'height: 12px; width: ' + Math.max(2, Math.round(v / MAX * TRACK)) + 'px; border-radius: 0 4px 4px 0; background: ' + color; }
+      function tStyle(t) { return 'white-space: nowrap; color: ' + (t && t[1] ? '#f0a93b' : '#f6f7f9') + '; font-weight: ' + (t && t[1] ? '600' : '400'); }
+      return {
+        name: name, hasNext: !last, nExp: n(EXP[i]), nFora: n(FORA[i]),
+        barExp: bar(EXP[i], '#6868d7'), barFora: bar(FORA[i], '#199e70'),
+        pExp: last ? '' : pct(EXP[i + 1], EXP[i]), pFora: last ? '' : pct(FORA[i + 1], FORA[i]),
+        tExp: last ? '' : T_EXP[i][0] + (T_EXP[i][1] ? ' · meta 5 min' : ''), tFora: last ? '' : T_FORA[i][0],
+        tExpStyle: tStyle(last ? null : T_EXP[i]), tForaStyle: tStyle(last ? null : T_FORA[i]),
+        rowStyle: 'border-top: 1px solid #252c3c; background: ' + (on ? '#20203a' : 'transparent'),
+        hover: function () { if (self.state.hover !== i) self.setState({ hover: i }); }
+      };
+    });
+    var h = st.hover, detail;
+    if (h >= 0 && h < STAGES.length - 1) {
+      detail = STAGES[h] + ' → ' + STAGES[h + 1] + ': expediente ' + n(EXP[h]) + ' → ' + n(EXP[h + 1]) + ' (' + pct(EXP[h + 1], EXP[h]) + ', ' + T_EXP[h][0] + '), fora do expediente ' + n(FORA[h]) + ' → ' + n(FORA[h + 1]) + ' (' + pct(FORA[h + 1], FORA[h]) + ', ' + T_FORA[h][0] + ').';
+    } else if (h === STAGES.length - 1) {
+      detail = 'Agendou sobre os leads criados: expediente ' + pct(EXP[5], EXP[0], true) + ', fora do expediente ' + pct(FORA[5], FORA[0], true) + '.';
+    } else {
+      detail = 'Fora do expediente, os tempos contam só horas úteis, a partir das 08:20 do dia seguinte. Leads com DSQ ficam fora do funil.';
+    }
+
+    var totLeads = EXP[0] + FORA[0], totOpen = EXP[1] + FORA[1], totClick = EXP[2] + FORA[2], totBooked = EXP[5] + FORA[5];
+
+    var RULES = [
+      { origin: 'Abertura', button: 'Eu e mais 1', dest: 'Encerramento', when: 'Sempre', status: 'ativa', clicks: 212, sent: 190, fails: [['1', 'número sem WhatsApp'], ['1', 'erro da Meta 100']], skips: [['18', 'a SDR já respondeu'], ['2', 'lead sem dono']], replied: 41, booked: 6 },
+      { origin: 'Abertura', button: '3 ou mais', dest: 'Manhã ou Tarde', when: 'Fora do expediente', status: 'ativa', clicks: 120, sent: 112, fails: [['1', 'erro da Meta 100']], skips: [['5', 'a SDR já respondeu'], ['2', 'lead sem dono']], replied: 88, booked: 14 },
+      { origin: 'Abertura', button: 'Sou autônomo', dest: 'Encerramento autônomo', when: 'Sempre', status: 'teste', clicks: 34, sent: 0, test: 31, fails: [], skips: [['3', 'a SDR já respondeu']], replied: null, booked: null },
+      { origin: 'Cadência D2', button: '3 ou mais', dest: 'Manhã ou Tarde', when: 'Fora do expediente · pausada desde 15/10 08:10', status: 'pausada', clicks: 41, sent: 38, fails: [], skips: [['3', 'a SDR já respondeu']], replied: 22, booked: 3 }
+    ];
+    var BADGE = { teste: ['Em teste', '#f6f7f9', '#20293a'], ativa: ['Ativa', '#f6f7f9', '#5757d3'], pausada: ['Pausada', '#a7abb5', 'transparent'] };
+    function sum(list) { return list.reduce(function (t, x) { return t + Number(x[0]); }, 0); }
+    var rules = RULES.map(function (r) {
+      var b = BADGE[r.status], f = sum(r.fails), test = r.status === 'teste';
+      return {
+        origin: r.origin, button: r.button, dest: r.dest, when: r.when,
+        status: b[0], badge: 'display: inline-block; white-space: nowrap; border-radius: 9999px; padding: 2px 10px; font-size: 12px; line-height: 16px; font-weight: 600; color: ' + b[1] + '; background: ' + b[2] + (r.status === 'pausada' ? '; border: 1px solid #4e5d7f' : ''),
+        clicks: n(r.clicks),
+        sent: test ? '0 a leads' : n(r.sent), sentNote: test ? r.test + ' ao telefone de teste' : '',
+        fails: f ? n(f) : 'nenhuma', failStyle: 'font-variant-numeric: tabular-nums; font-weight: 600; color: ' + (f ? '#f0a93b' : '#a7abb5'),
+        failReasons: r.fails.map(function (x) { return x[0] + ' ' + x[1]; }),
+        skips: n(sum(r.skips)), skipReasons: r.skips.map(function (x) { return x[0] + ' ' + x[1]; }),
+        replied: r.replied === null ? '—' : n(r.replied), repliedPct: r.replied === null ? 'em teste' : pct(r.replied, r.sent) + ' dos envios',
+        booked: r.booked === null ? '—' : n(r.booked), bookedPct: r.booked === null ? 'em teste' : pct(r.booked, r.sent) + ' dos envios'
+      };
+    });
+
+    // [nome, leads, abertura, clicou, 3+/E1, respondeu, agendou, tempo exp (min), tempo fora (min úteis)]
+    var SDR = [
+      ['Ana Souza', 180, 178, 93, 86, 82, 20, 4.8, 38],
+      ['Bruno Lima', 170, 168, 87, 80, 76, 14, 7.2, 65],
+      ['Carla Mendes', 165, 163, 85, 78, 75, 17, 5.5, 47],
+      ['Diego Rocha', 160, 159, 82, 74, 70, 9, 9.7, 80],
+      ['Elisa Prado', 170, 168, 87, 80, 77, 18, 4.3, 35],
+      ['Gustavo Reis', 155, 154, 81, 74, 70, 13, 6.8, 58]
+    ];
+    var TOT = [totLeads, totOpen, totClick, EXP[3] + FORA[3], EXP[4] + FORA[4], totBooked];
+    var SHARE = TOT.map(function (t, i) { return EXP[i] / t; });
+    function fmtMin(m) { if (m >= 60) { var hh = Math.floor(m / 60), mm = Math.round(m % 60); return hh + ' h' + (mm ? ' ' + (mm < 10 ? '0' : '') + mm : ''); } var s = Math.round((m % 1) * 60); return Math.floor(m) + ' min' + (s ? ' ' + s + ' s' : ''); }
+    var sp = st.split;
+    var rowsData = SDR.map(function (d) {
+      var vals = d.slice(1, 7).map(function (v, i) {
+        if (sp === 'tudo') return v;
+        var e = Math.round(v * SHARE[i]);
+        return sp === 'exp' ? e : v - e;
+      });
+      var t = sp === 'fora' ? d[8] : d[7];
+      return { name: d[0], vals: vals, t: t, slow: sp === 'fora' ? t > 60 : t > 5 };
+    });
+    var colTot = [0, 1, 2, 3, 4, 5].map(function (i) { return rowsData.reduce(function (a, r) { return a + r.vals[i]; }, 0); });
+    var maxPct = Math.max.apply(null, rowsData.map(function (r) { return r.vals[5] / r.vals[0]; }));
+    var scale = Math.ceil(maxPct * 20) / 20;
+    function sdrRow(name, vals, time, slow, total) {
+      var p = vals[5] / vals[0];
+      return {
+        name: name, leads: n(vals[0]), open: n(vals[1]), click: n(vals[2]), qual: n(vals[3]), reply: n(vals[4]), booked: n(vals[5]),
+        pct: pct(vals[5], vals[0], true), bar: 'height: 8px; border-radius: 0 4px 4px 0; width: ' + Math.round(p / scale * 120) + 'px; background: ' + (total ? '#a7abb5' : '#6868d7'),
+        time: time, slow: slow,
+        rowStyle: 'border-top: 1px solid ' + (total ? '#4e5d7f' : '#252c3c') + (total ? '; background: #20203a' : ''),
+        nameStyle: 'padding: 10px 16px; text-align: left; font-weight: ' + (total ? '700' : '600')
+      };
+    }
+    var sdrs = rowsData.map(function (r) { return sdrRow(r.name, r.vals, fmtMin(r.t), r.slow, false); });
+    sdrs.push(sdrRow('Time', colTot, sp === 'fora' ? '52 min' : (sp === 'exp' ? '6 min 20 s' : '6 min 20 s'), sp !== 'fora', true));
+
+    var PERIODS = [['hoje', 'Hoje'], ['7d', '7 dias'], ['mes', 'Este mês'], ['passado', 'Mês passado']];
+    var SPLITS = [['tudo', 'Tudo'], ['exp', 'Expediente'], ['fora', 'Fora do expediente']];
+
+    return {
+      periods: PERIODS.map(function (p) { var on = st.period === p[0]; return { label: p[1], pressed: on ? 'true' : 'false', style: chip(on), pick: function () { self.setState({ period: p[0] }); } }; }),
+      from: st.from, to: st.to,
+      onFrom: function (e) { self.setState({ from: e.target.value, period: 'custom' }); },
+      onTo: function (e) { self.setState({ to: e.target.value, period: 'custom' }); },
+      kpis: [
+        { label: 'Leads novos sem DSQ', value: n(totLeads), note: n(EXP[0]) + ' no expediente · ' + n(FORA[0]) + ' fora' },
+        { label: 'Resposta à abertura', value: pct(totClick, totOpen), note: 'Linha de base: 47%' },
+        { label: 'Agendamento sobre leads', value: pct(totBooked, totLeads, true), note: 'Linha de base: 9% a 10%' },
+        { label: 'Reuniões agendadas', value: n(totBooked), note: n(EXP[5]) + ' de cliques no expediente · ' + n(FORA[5]) + ' fora' }
+      ],
+      insight: 'A maior perda é depois que a SDR responde: no expediente ' + pct(EXP[5], EXP[4]) + ' agendam, fora do expediente só ' + pct(FORA[5], FORA[4]) + '.',
+      stages: stages,
+      unhover: function () { if (self.state.hover !== -1) self.setState({ hover: -1 }); },
+      detail: detail,
+      times: [
+        { label: 'Do cadastro até a abertura', ref: 'Referência: cerca de 4 min', value: '3 min 50 s', verdict: 'dentro', ok: true },
+        { label: 'Do clique até a SDR responder, no expediente', ref: 'Meta: 5 min', value: '6 min 20 s', verdict: 'acima da meta', ok: false },
+        { label: 'Clique da noite até a SDR responder de manhã', ref: 'Referência: cerca de 1 h útil', value: '52 min', verdict: 'dentro', ok: true },
+        { label: 'Cliques que ninguém da equipe respondeu', ref: 'Antes: 10% dos cliques da noite', value: '14', verdict: pct(14, totClick, true) + ' dos cliques', ok: true }
+      ].map(function (t) {
+        t.iconBox = 'width: 28px; height: 28px; flex-shrink: 0; border-radius: 9999px; display: flex; align-items: center; justify-content: center; color: ' + (t.ok ? '#f6f7f9' : '#f0a93b') + '; background: ' + (t.ok ? '#20293a' : 'rgba(240,169,59,0.12)');
+        t.icon = t.ok ? 'M5 12l5 5L19 7' : 'M12 8v5M12 17h.01';
+        t.verdictStyle = 'font-size: 12px; line-height: 16px; font-weight: 600; color: ' + (t.ok ? '#a7abb5' : '#f0a93b');
+        return t;
+      }),
+      rules: rules,
+      splits: SPLITS.map(function (s) { var on = sp === s[0]; return { label: s[1], pressed: on ? 'true' : 'false', style: chip(on), pick: function () { self.setState({ split: s[0] }); } }; }),
+      timeHeader: sp === 'fora' ? 'Clique da noite → resposta (meta 1 h útil)' : 'Clique → resposta (meta 5 min)',
+      sdrs: sdrs
+    };
+  }
+}
+</script>
+</body>
+</html>
