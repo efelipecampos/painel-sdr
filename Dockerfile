@@ -5,7 +5,10 @@ COPY package.json package-lock.json ./
 COPY apps/web/package.json apps/web/
 COPY apps/worker/package.json apps/worker/
 COPY packages/shared/package.json packages/shared/
-RUN npm ci
+# O npm 11.19 (node:24-slim de out/2026) deixa de fora o binário nativo do TypeScript 7 (pacote opcional por
+# plataforma) e o "next build" quebra no passo de TypeScript. Instala o da plataforma da imagem, na mesma versão.
+RUN npm ci && npm install --no-save --no-audit --no-fund \
+  "@typescript/typescript-$(node -p 'process.platform + "-" + process.arch')@$(node -p 'require("typescript/package.json").version')"
 
 FROM deps AS web-build
 COPY . .
