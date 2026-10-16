@@ -73,6 +73,28 @@ export class PoliApi {
     return this.send("enviar_teste", `/accounts/${accountUuid}/contacts/${encodeURIComponent(phone)}/messages?include=contact`, s);
   }
 
+  /** Envia texto livre a um contato (só vale com a janela de 24 h do WhatsApp aberta). Devolve o uuid da mensagem. */
+  sendTextToContact(contactUuid: string, channelUuid: string, texto: string): Promise<string | null> {
+    return this.sendText("enviar_texto", `/contacts/${contactUuid}/messages`, channelUuid, texto);
+  }
+
+  /** Envia texto livre a um telefone (modo teste; o telefone precisa ter escrito para o canal nas últimas 24 h). */
+  sendTextToPhone(accountUuid: string, phone: string, channelUuid: string, texto: string): Promise<string | null> {
+    return this.sendText("enviar_texto_teste", `/accounts/${accountUuid}/contacts/${encodeURIComponent(phone)}/messages?include=contact`, channelUuid, texto);
+  }
+
+  private async sendText(op: string, path: string, channelUuid: string, texto: string): Promise<string | null> {
+    const j = await this.call<{ uuid?: string; data?: { uuid?: string } }>(op, path, {
+      provider: "WHATSAPP",
+      account_channel_uuid: channelUuid,
+      type: "TEXT",
+      version: "v3",
+      direction: "OUT",
+      components: { body: { text: texto } },
+    });
+    return j.uuid ?? j.data?.uuid ?? null;
+  }
+
   private async send(op: string, path: string, s: SendTemplate): Promise<string | null> {
     const j = await this.call<{ uuid?: string; data?: { uuid?: string } }>(op, path, {
       provider: "WHATSAPP",

@@ -34,7 +34,7 @@ export default async function JornadaRegrasPage() {
 
   const [{ data: conf }, { data: regras }, { data: horas }] = await Promise.all([
     db.from("journey_config").select("paused, test_phone, updated_at, updated_by").single(),
-    db.from("journey_rules").select("id, origin_template_uuid, origin_button, janela, dest_template_uuid, status, daily_limit, paused_reason, created_at").order("created_at"),
+    db.from("journey_rules").select("id, origin_template_uuid, origin_button, janela, tipo, dest_template_uuid, texto, status, daily_limit, paused_reason, created_at").order("created_at"),
     db.from("business_hours").select("weekday, enabled, start_time, end_time"),
   ]);
   const ids = (regras ?? []).map((r) => r.id);
@@ -68,7 +68,7 @@ export default async function JornadaRegrasPage() {
     if (!data || data.length < 1000) break;
   }
   // Texto completo só dos usados no mês e dos que estão em regras; os outros carregam o texto quando escolhidos.
-  const emRegras = new Set((regras ?? []).flatMap((r) => [r.origin_template_uuid, r.dest_template_uuid]));
+  const emRegras = new Set((regras ?? []).flatMap((r) => [r.origin_template_uuid, r.dest_template_uuid]).filter(Boolean));
   for (const t of templates) {
     t.recente = usos.has(t.key);
     if (!t.recente && !emRegras.has(t.uuid)) t.body = null;
@@ -80,7 +80,7 @@ export default async function JornadaRegrasPage() {
     const hist = (mudancas ?? []).filter((m) => m.rule_id === r.id);
     const limite = r.status === "pausada" && r.paused_reason === "limite_diario";
     return {
-      id: r.id, origin: r.origin_template_uuid, button: r.origin_button, janela: r.janela, dest: r.dest_template_uuid,
+      id: r.id, origin: r.origin_template_uuid, button: r.origin_button, janela: r.janela, tipo: r.tipo, dest: r.dest_template_uuid ?? "", texto: r.texto ?? "",
       status: limite ? "limite" : r.status, limit: r.daily_limit,
       enviados: meus.filter((e) => e.status === "enviado").length,
       falhas: meus.filter((e) => e.status === "falhou").length,

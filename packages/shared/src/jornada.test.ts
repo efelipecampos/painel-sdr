@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { botaoClicado, escolherRegra, preencher, previa, variaveis, variaveisDesconhecidas, type Regra } from "./jornada";
+import { botaoClicado, escolherRegra, montarTexto, preencher, previa, variaveis, variaveisDesconhecidas, type Regra } from "./jornada";
 
 const regra = (p: Partial<Regra>): Regra => ({
   id: "r", origin_template_uuid: "abertura", origin_button: "Eu e mais 1", janela: "sempre",
-  dest_template_uuid: "fim", status: "ativa", daily_limit: null, ...p,
+  tipo: "template", dest_template_uuid: "fim", texto: null, status: "ativa", daily_limit: null, ...p,
 });
 
 describe("botaoClicado", () => {
@@ -59,5 +59,15 @@ describe("variáveis", () => {
   });
   it("template sem variável não precisa de dado nenhum", () => {
     expect(preencher("Obrigado!", { leadNome: null, sdrNome: null })).toEqual({ ok: true, params: [] });
+  });
+});
+
+describe("montarTexto", () => {
+  it("preenche as variáveis no texto livre", () => {
+    expect(montarTexto("Oi, [contact_first_name]! Aqui é a [operator_name].", { leadNome: "Ana Lima", sdrNome: "Jessica F" }))
+      .toEqual({ ok: true, texto: "Oi, Ana! Aqui é a Jessica." });
+  });
+  it("diz qual variável faltou", () => {
+    expect(montarTexto("Aqui é a [operator_name].", { leadNome: "Ana", sdrNome: null })).toEqual({ ok: false, falta: "operator_name" });
   });
 });

@@ -3,14 +3,14 @@
 // Jornada · Regras: reproduz design/JornadaRegras.dc.html (status da jornada, telefone de teste, aviso de limite,
 // tabela de regras, editor com prévia e histórico, diálogo de pausa geral).
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { previa, variaveis, variaveisDesconhecidas, type Janela } from "@painel/shared/jornada";
+import { previa, variaveis, variaveisDesconhecidas, type Janela, type TipoEnvio } from "@painel/shared/jornada";
 import { alternarRegra, ativarRegra, enviarTeste, pausarJornada, salvarRegra, salvarTelefone, textoTemplate, type Resultado } from "./actions";
 import { TemplateBusca } from "./TemplateBusca";
 import s from "./jornada.module.css";
 
 export interface TemplateOpcao { uuid: string; key: string; status: string | null; body: string | null; trecho: string; buttons: string[]; recente: boolean }
 export interface RegraLinha {
-  id: string; origin: string; button: string; janela: Janela; dest: string;
+  id: string; origin: string; button: string; janela: Janela; tipo: TipoEnvio; dest: string; texto: string;
   status: "teste" | "ativa" | "pausada" | "limite"; limit: number | null;
   enviados: number; falhas: number; limiteEm: string | null;
   historico: { quando: string; oque: string }[];
@@ -23,7 +23,7 @@ const VAR_NOME: Record<string, string> = {
 };
 const LEAD_EXEMPLO = "Renata Exemplo";
 
-interface Form { origin: string; button: string; janela: Janela; dest: string; limit: number | null }
+interface Form { origin: string; button: string; janela: Janela; tipo: TipoEnvio; dest: string; texto: string; limit: number | null }
 
 function Badge({ status }: { status: RegraLinha["status"] }) {
   return <span className={`${s.badge} ${s[`b_${status}`]}`}>{STATUS[status]}</span>;
@@ -39,10 +39,11 @@ export function RegrasView(p: {
   const comBotoes = useMemo(() => p.templates.filter((t) => t.buttons.length), [p.templates]);
   const validados = useMemo(() => p.templates.filter((t) => t.status === "VALIDATED"), [p.templates]);
 
-  const formDe = (r: RegraLinha): Form => ({ origin: r.origin, button: r.button, janela: r.janela, dest: r.dest, limit: r.limit });
+  const formDe = (r: RegraLinha): Form => ({ origin: r.origin, button: r.button, janela: r.janela, tipo: r.tipo, dest: r.dest, texto: r.texto, limit: r.limit });
   const novoForm = (): Form => {
     const o = comBotoes[0];
-    return { origin: o?.uuid ?? "", button: o?.buttons[0] ?? "", janela: "expediente", dest: validados[0]?.uuid ?? "", limit: null };
+    // Regra nova nasce como texto: a jornada responde a um clique, com a janela aberta (texto não é cobrado pela Meta).
+    return { origin: o?.uuid ?? "", button: o?.buttons[0] ?? "", janela: "expediente", tipo: "texto", dest: validados[0]?.uuid ?? "", texto: "", limit: null };
   };
   const [editando, setEditando] = useState<string | null>(p.regras[0]?.id ?? null);
   const atual = p.regras.find((r) => r.id === editando) ?? null;
@@ -56,11 +57,12 @@ export function RegrasView(p: {
 
   // Template sem texto na carga da página: busca quando é escolhido.
   const dest = porUuid.get(form.dest);
-  const destTexto = dest?.body ?? textos[form.dest]?.body ?? null;
-  const destBotoes = dest?.buttons ?? textos[form.dest]?.buttons ?? [];
+  const ehTexto = form.tipo === "texto";
+  const destTexto = ehTexto ? form.texto : (dest?.body ?? textos[form.dest]?.body ?? null);
+  const destBotoes = ehTexto ? [] : (dest?.buttons ?? textos[form.dest]?.buttons ?? []);
   useEffect(() => {
-    if (form.dest && destTexto === null) textoTemplate(form.dest).then((t) => t && setTextos((x) => ({ ...x, [form.dest]: t })));
-  }, [form.dest, destTexto]);
+    if (!ehTexto && form.dest && destTexto === null) textoTemplate(form.dest).then((t) => t && setTextos((x) => ({ ...x, [form.dest]: t })));
+  }, [form.dest, destTexto, ehTexto]);
 
   const carregar = (r: RegraLinha | null) => {
     // Leva o foco ao formulário: com a tela já em "Nova regra", o clique senão não mostra nada.
@@ -89,12 +91,13 @@ export function RegrasView(p: {
   const origem = porUuid.get(form.origin);
   const ruins = destTexto ? variaveisDesconhecidas(destTexto) : [];
   const vars = destTexto ? [...new Set(variaveis(destTexto))] : [];
-  const podeAtivar = !!atual && atual.status === "teste" && !!destTexto && ruins.length === 0;
-  const podeTestar = !!p.telefone && !!destTexto && ruins.length === 0;
+  const podeAtivar = !!atual && atual.status === "teste" && !!destTexto?.trim() && ruins.length === 0;
+  const podeTestar = !!p.telefone && !!destTexto?.trim() && ruins.length === 0;
   const temLimite = form.limit !== null;
   const textoPrevia = destTexto
     ? previa(destTexto, { leadNome: LEAD_EXEMPLO, sdrNome: p.sdrExemplo })
-    : "Carregando o texto do template…";
+    : ehTexto ? "Escreva a mensagem ao lado." : "Carregando o texto do template…";
+  const inserir = (v: string) => setForm({ ...form, texto: `${form.texto}${form.texto && !/\s$/.test(form.texto) ? " " : ""}[${v}]` });
 
   return (
     <>
@@ -172,7 +175,7 @@ export function RegrasView(p: {
                   <tr key={r.id} className={editando === r.id ? s.rowOn : undefined}>
                     <td><div className={s.origin}><span className={s.originName}>{nomeTpl(r.origin)}</span><span className={s.pill}>{r.button}</span></div></td>
                     <td>{JANELA[r.janela]}</td>
-                    <td className={s.dest}>{nomeTpl(r.dest)}</td>
+                    <td className={s.dest}>{r.tipo === "texto" ? <><span className={s.originName}>Texto</span><br />&ldquo;{r.texto.length > 60 ? `${r.texto.slice(0, 60)}…` : r.texto}&rdquo;</> : nomeTpl(r.dest)}</td>
                     <td><Badge status={r.status} /></td>
                     <td className={s.right}>
                       <div className={s.today}>
@@ -207,9 +210,34 @@ export function RegrasView(p: {
           <div className={s.two}>
             <TemplateBusca id="f-origin" rotulo="1. Template de origem" lista={comBotoes} valor={form.origin}
               onEscolher={(uuid) => { const o = porUuid.get(uuid); setForm({ ...form, origin: uuid, button: o?.buttons[0] ?? "" }); }} />
-            <TemplateBusca id="f-dest" rotulo="4. Template a enviar" lista={validados} valor={form.dest}
-              onEscolher={(uuid) => { setTesteMsg(null); setForm({ ...form, dest: uuid }); }} />
+            <div className={s.field}>
+              <span id="lbl-tipo" className={s.lbl}>4. O que enviar</span>
+              <div role="group" aria-labelledby="lbl-tipo" className={s.chips}>
+                {([["texto", "Mensagem de texto"], ["template", "Template"]] as const).map(([k, rotulo]) => (
+                  <button key={k} type="button" aria-pressed={form.tipo === k} onClick={() => { setTesteMsg(null); setForm({ ...form, tipo: k }); }}
+                    className={`${s.chip} ${form.tipo === k ? s.chipOn : ""}`}>{rotulo}</button>
+                ))}
+              </div>
+              <span className={s.note}>{ehTexto ? "Sem cobrança da Meta: a janela de 24 h está aberta porque o lead acabou de clicar. Texto não leva botão." : "Template de Marketing é cobrado pela Meta mesmo com a janela aberta."}</span>
+            </div>
           </div>
+
+          {ehTexto ? (
+            <div className={s.field}>
+              <label htmlFor="f-texto" className={s.lbl}>Mensagem</label>
+              <textarea id="f-texto" rows={5} value={form.texto} onChange={(e) => { setTesteMsg(null); setForm({ ...form, texto: e.target.value }); }}
+                placeholder="Ex.: Oi, [contact_first_name]! Aqui é a [operator_name], da Poli. Prefere conversar de manhã ou à tarde?"
+                className={s.textarea} />
+              <div className={s.chips}>
+                <span className={s.note}>Inserir:</span>
+                <button type="button" onClick={() => inserir("contact_first_name")} className={s.ghostSm}>Primeiro nome do lead</button>
+                <button type="button" onClick={() => inserir("operator_name")} className={s.ghostSm}>Nome da SDR</button>
+              </div>
+            </div>
+          ) : (
+            <TemplateBusca id="f-dest" rotulo="Template a enviar" lista={validados} valor={form.dest}
+              onEscolher={(uuid) => { setTesteMsg(null); setForm({ ...form, dest: uuid }); }} />
+          )}
 
           <div className={s.field}>
             <span id="lbl-btn" className={s.lbl}>2. Botão em que o lead clicou</span>
@@ -248,12 +276,12 @@ export function RegrasView(p: {
             </div>
             <div className={s.row}>
               <button type="button" aria-disabled={!podeTestar} disabled={pending}
-                onClick={() => podeTestar && rodar(() => enviarTeste(form.dest), setTesteMsg)} className={`${s.sendTest} ${podeTestar ? "" : s.sendTestOff}`}>
+                onClick={() => podeTestar && rodar(() => enviarTeste({ tipo: form.tipo, dest: form.dest, texto: form.texto }), setTesteMsg)} className={`${s.sendTest} ${podeTestar ? "" : s.sendTestOff}`}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z" /></svg>
                 Enviar esta mensagem para o telefone de teste
               </button>
               <span role="status" className={testeMsg && !testeMsg.ok ? s.msgErr : s.note}>
-                {testeMsg ? testeMsg.msg : !p.telefone ? "Cadastre o telefone de teste acima." : ruins.length ? "Corrija a variável antes de enviar." : `Vai para ${p.telefone}.`}
+                {testeMsg ? testeMsg.msg : !p.telefone ? "Cadastre o telefone de teste acima." : ruins.length ? "Corrija a variável antes de enviar." : ehTexto ? `Vai para ${p.telefone}. Texto só chega se esse WhatsApp escreveu para o Canal Principal nas últimas 24 h.` : `Vai para ${p.telefone}.`}
               </span>
             </div>
           </div>

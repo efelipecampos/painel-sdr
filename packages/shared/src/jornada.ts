@@ -4,15 +4,22 @@
 export type Janela = "expediente" | "fora" | "sempre";
 export type RegraStatus = "teste" | "ativa" | "pausada";
 
+export type TipoEnvio = "template" | "texto";
+
 export interface Regra {
   id: string;
   origin_template_uuid: string;
   origin_button: string;
   janela: Janela;
-  dest_template_uuid: string;
+  tipo: TipoEnvio;                  // template, ou texto livre (janela de 24 h aberta: sem cobrança da Meta)
+  dest_template_uuid: string | null;
+  texto: string | null;
   status: RegraStatus;
   daily_limit: number | null;
 }
+
+/** Janela do WhatsApp: texto só sai até 23 h depois do clique (a Meta fecha a janela em 24 h). */
+export const JANELA_TEXTO_MS = 23 * 3600_000;
 
 /** Compara textos de botão sem diferença de maiúsculas, acentos de espaço e espaços nas pontas. */
 export function normalizar(t: string): string {
@@ -75,6 +82,14 @@ export function preencher(texto: string, d: DadosEnvio): { ok: true; params: str
     params.push(valor);
   }
   return { ok: true, params };
+}
+
+/** Texto livre com as variáveis preenchidas, ou qual variável faltou (o envio é pulado, nunca sai com variável vazia). */
+export function montarTexto(texto: string, d: DadosEnvio): { ok: true; texto: string } | { ok: false; falta: string } {
+  const r = preencher(texto, d);
+  if (!r.ok) return r;
+  let i = 0;
+  return { ok: true, texto: texto.replace(/\[([a-z_]+)\]/gi, () => r.params[i++]) };
 }
 
 /** Texto como o lead vai receber (prévia da tela). */

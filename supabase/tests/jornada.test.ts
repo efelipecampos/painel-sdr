@@ -121,3 +121,11 @@ describe("acesso", () => {
     await expect(envio(id, ev, "c1")).rejects.toThrow();
   });
 });
+
+describe("mensagem de texto (16/10)", () => {
+  it("regra de texto precisa de texto e não precisa de template; regra de template precisa do template", async () => {
+    await db.query("insert into painel.journey_rules (origin_template_uuid, origin_button, janela, tipo, texto) values ('t-ab', 'Eu e mais 1', 'fora', 'texto', 'Oi [contact_first_name]!')");
+    await expect(db.query("insert into painel.journey_rules (origin_template_uuid, origin_button, janela, tipo, texto) values ('t-ab', '3 ou mais', 'fora', 'texto', '  ')")).rejects.toThrow();
+    await expect(db.query("insert into painel.journey_rules (origin_template_uuid, origin_button, janela, tipo) values ('t-ab', '3 ou mais', 'expediente', 'template')")).rejects.toThrow();
+  });
+});

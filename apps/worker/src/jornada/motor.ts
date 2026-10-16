@@ -5,7 +5,8 @@
 // mesmo lead com o mesmo template, não envia se alguém da equipe já escreveu depois do clique, e respeita a pausa geral e o limite diário.
 // Logs e registros: só ids, situação e motivo. Nada de telefone nem texto de mensagem.
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { botaoClicado, escolherRegra, preencher, type Regra } from "@painel/shared/jornada";
+import { createHash } from "node:crypto";
+import { botaoClicado, escolherRegra, JANELA_TEXTO_MS, montarTexto, preencher, type Regra } from "@painel/shared/jornada";
 import { PoliApi, PoliError, type PoliTemplate } from "@painel/shared/poli";
 
 const CURSOR_KEY = "journey_cursor";
@@ -67,7 +68,7 @@ export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: Jorna
     return out;
   }
 
-  const { data: regrasRaw } = await p.from("journey_rules").select("id, origin_template_uuid, origin_button, janela, dest_template_uuid, status, daily_limit").neq("status", "pausada");
+  const { data: regrasRaw } = await p.from("journey_rules").select("id, origin_template_uuid, origin_button, janela, tipo, dest_template_uuid, texto, status, daily_limit").neq("status", "pausada");
   const regras = (regrasRaw ?? []) as Regra[];
   if (!regras.length) {
     await salvarCursor(db, Number(evs[evs.length - 1].id));
@@ -139,7 +140,9 @@ export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: Jorna
       out.cliques++;
 
       const modo = regra.status === "teste" ? "teste" : "real";
-      const base = { rule_id: regra.id, click_event_id: evId, poli_contact_uuid: ev.contato as string, lead_id: lead.id, clicked_at: clicouEm, mode: modo, dest_template_uuid: regra.dest_template_uuid };
+      // O que foi enviado, para a trava "uma vez por lead": o template ou, para texto, o md5 do texto.
+      const destino = regra.tipo === "texto" ? `texto:${createHash("md5").update(regra.texto ?? "").digest("hex")}` : regra.dest_template_uuid;
+      const base = { rule_id: regra.id, click_event_id: evId, poli_contact_uuid: ev.contato as string, lead_id: lead.id, clicked_at: clicouEm, mode: modo, dest_template_uuid: destino };
       const pular = async (reason: string, sdrId: string | null = null) => {
         const { error: e } = await p.from("journey_sends").upsert({ ...base, sdr_id: sdrId, status: "pulado", reason }, { onConflict: "rule_id,click_event_id", ignoreDuplicates: true });
         if (e) throw new Error(`registrar envio pulado: ${e.message}`);
@@ -151,7 +154,7 @@ export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: Jorna
       if (ms.slice(iClique + 1).some(humano)) return pular("equipe_ja_escreveu");
       if (modo === "real") {
         const { count: ja } = await p.from("journey_sends").select("id", { count: "exact", head: true })
-          .eq("rule_id", regra.id).eq("poli_contact_uuid", ev.contato).eq("dest_template_uuid", regra.dest_template_uuid).eq("mode", "real").eq("status", "enviado");
+          .eq("rule_id", regra.id).eq("poli_contact_uuid", ev.contato).eq("dest_template_uuid", destino!).eq("mode", "real").eq("status", "enviado");
         if (ja) return pular("ja_enviado");
         if (regra.daily_limit) {
           const desde = new Date(Date.now() - 864e5).toISOString(); // 24 h corridas
@@ -164,11 +167,22 @@ export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: Jorna
         }
       }
 
-      const { data: dest } = await p.from("poli_templates").select("uuid, body").eq("uuid", regra.dest_template_uuid).maybeSingle();
-      if (!dest) return pular("template_nao_encontrado");
+      // Texto livre só sai com a janela de 24 h aberta (margem de 1 h).
+      if (regra.tipo === "texto" && Date.now() - Date.parse(clicouEm) > JANELA_TEXTO_MS) return pular("janela_fechada");
       const sdr = await sdrDono(db, lead.hubspot_contact_id);
-      const dados = preencher(dest.body ?? "", { leadNome: lead.name, sdrNome: sdr?.name ?? null });
-      if (!dados.ok) return pular(dados.falta === "operator_name" ? "sem_sdr_dona" : `falta_${dados.falta}`, sdr?.id ?? null);
+      const dados = { leadNome: lead.name as string | null, sdrNome: sdr?.name ?? null };
+      let envio: { tipo: "template"; templateUuid: string; bodyParams: string[] } | { tipo: "texto"; texto: string };
+      if (regra.tipo === "texto") {
+        const t = montarTexto(regra.texto ?? "", dados);
+        if (!t.ok) return pular(t.falta === "operator_name" ? "sem_sdr_dona" : `falta_${t.falta}`, sdr?.id ?? null);
+        envio = { tipo: "texto", texto: t.texto };
+      } else {
+        const { data: dest } = await p.from("poli_templates").select("uuid, body").eq("uuid", regra.dest_template_uuid!).maybeSingle();
+        if (!dest) return pular("template_nao_encontrado");
+        const t = preencher(dest.body ?? "", dados);
+        if (!t.ok) return pular(t.falta === "operator_name" ? "sem_sdr_dona" : `falta_${t.falta}`, sdr?.id ?? null);
+        envio = { tipo: "template", templateUuid: dest.uuid as string, bodyParams: t.params };
+      }
 
       // Reserva o clique antes de chamar o Poli: se o worker cair no meio, o mesmo clique não envia de novo.
       const { data: reserva, error: eRes } = await p.from("journey_sends")
@@ -177,11 +191,13 @@ export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: Jorna
       if (eRes) throw new Error(`reservar envio: ${eRes.message}`);
       if (!reserva?.length) return; // outro ciclo já tratou este clique
 
-      const envio = { templateUuid: dest.uuid as string, channelUuid: cfg.channelUuid, bodyParams: dados.params };
       try {
-        const msgUuid = modo === "teste"
-          ? await poli.sendToPhone(cfg.accountUuid, String(conf!.test_phone), envio)
-          : await poli.sendToContact(ev.contato as string, envio);
+        const fone = String(conf?.test_phone ?? "");
+        const msgUuid = envio.tipo === "texto"
+          ? (modo === "teste" ? await poli.sendTextToPhone(cfg.accountUuid, fone, cfg.channelUuid, envio.texto)
+                              : await poli.sendTextToContact(ev.contato as string, cfg.channelUuid, envio.texto))
+          : (modo === "teste" ? await poli.sendToPhone(cfg.accountUuid, fone, { templateUuid: envio.templateUuid, channelUuid: cfg.channelUuid, bodyParams: envio.bodyParams })
+                              : await poli.sendToContact(ev.contato as string, { templateUuid: envio.templateUuid, channelUuid: cfg.channelUuid, bodyParams: envio.bodyParams }));
         await p.from("journey_sends").update({ status: "enviado", reason: null, poli_message_uuid: msgUuid }).eq("id", reserva[0].id);
         out.enviados++;
       } catch (e) {
