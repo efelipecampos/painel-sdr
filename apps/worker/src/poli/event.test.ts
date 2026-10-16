@@ -61,6 +61,12 @@ describe("parsePoliEvent", () => {
     expect(e).toMatchObject({ sender: "template", byHuman: true, templateName: "polichat_quick_message_582039", body: "Olá!" });
   });
 
+  it("template embutido com a categoria em número (disparo real de 16/10)", () => {
+    const e = parsePoliEvent(payload({ type: "CHAT", template: null,
+      components: { name: "polichat_quick_message_582039", category: 12, body: { text: "Olá!" } } }))!;
+    expect(e).toMatchObject({ sender: "template", templateName: "polichat_quick_message_582039" });
+  });
+
   it("mensagem comum da SDR continua sendo da SDR", () => {
     const e = parsePoliEvent(payload({ type: "CHAT", template: null, components: { body: { text: "oi" } } }))!;
     expect(e.sender).toBe("sdr");
