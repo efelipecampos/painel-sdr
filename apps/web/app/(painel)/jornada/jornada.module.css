@@ -135,3 +135,13 @@
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
 .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .detail { min-height: 20px; border-top: 1px solid #252c3c; padding-top: 12px; font-size: 12px; line-height: 16px; color: #a7abb5; }
+
+/* Busca de template (pedido do Felipe, 16/10) */
+.busca { position: absolute; top: 100%; left: 0; right: 0; margin: 4px 0 0; padding: 4px; list-style: none; max-height: 340px; overflow-y: auto; background: #181828; border: 1px solid #4e5d7f; border-radius: 8px; z-index: 20; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
+.buscaItem { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.buscaAtivo { background: #20203a; }
+.buscaItem[aria-selected="true"] .buscaNome { color: #cecff0; }
+.buscaNome { font-size: 14px; line-height: 20px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.buscaTag { font-size: 11px; line-height: 14px; font-weight: 600; color: #a7abb5; border: 1px solid #4e5d7f; border-radius: 9999px; padding: 0 6px; }
+.buscaTexto { font-size: 12px; line-height: 16px; color: #a7abb5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.buscaVazio { padding: 8px 10px; font-size: 12px; color: #a7abb5; }

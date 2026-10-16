@@ -5,9 +5,10 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { previa, variaveis, variaveisDesconhecidas, type Janela } from "@painel/shared/jornada";
 import { alternarRegra, ativarRegra, enviarTeste, pausarJornada, salvarRegra, salvarTelefone, textoTemplate, type Resultado } from "./actions";
+import { TemplateBusca } from "./TemplateBusca";
 import s from "./jornada.module.css";
 
-export interface TemplateOpcao { uuid: string; key: string; status: string | null; body: string | null; buttons: string[]; recente: boolean }
+export interface TemplateOpcao { uuid: string; key: string; status: string | null; body: string | null; trecho: string; buttons: string[]; recente: boolean }
 export interface RegraLinha {
   id: string; origin: string; button: string; janela: Janela; dest: string;
   status: "teste" | "ativa" | "pausada" | "limite"; limit: number | null;
@@ -204,19 +205,10 @@ export function RegrasView(p: {
             <span className={s.noteWarn}>Os templates do Poli ainda não foram carregados. O painel busca a lista a cada 30 minutos; tente de novo em instantes.</span>
           )}
           <div className={s.two}>
-            <div className={s.field}>
-              <label htmlFor="f-origin" className={s.lbl}>1. Template de origem</label>
-              <select id="f-origin" value={form.origin} className={s.select}
-                onChange={(e) => { const o = porUuid.get(e.target.value); setForm({ ...form, origin: e.target.value, button: o?.buttons[0] ?? "" }); }}>
-                <Opcoes lista={comBotoes} />
-              </select>
-            </div>
-            <div className={s.field}>
-              <label htmlFor="f-dest" className={s.lbl}>4. Template a enviar</label>
-              <select id="f-dest" value={form.dest} className={s.select} onChange={(e) => { setTesteMsg(null); setForm({ ...form, dest: e.target.value }); }}>
-                <Opcoes lista={validados} />
-              </select>
-            </div>
+            <TemplateBusca id="f-origin" rotulo="1. Template de origem" lista={comBotoes} valor={form.origin}
+              onEscolher={(uuid) => { const o = porUuid.get(uuid); setForm({ ...form, origin: uuid, button: o?.buttons[0] ?? "" }); }} />
+            <TemplateBusca id="f-dest" rotulo="4. Template a enviar" lista={validados} valor={form.dest}
+              onEscolher={(uuid) => { setTesteMsg(null); setForm({ ...form, dest: uuid }); }} />
           </div>
 
           <div className={s.field}>
@@ -327,17 +319,6 @@ export function RegrasView(p: {
           </div>
         </div>
       )}
-    </>
-  );
-}
-
-/** Templates usados no último mês primeiro; os demais em seguida, em ordem alfabética. */
-function Opcoes({ lista }: { lista: TemplateOpcao[] }) {
-  const recentes = lista.filter((t) => t.recente), outros = lista.filter((t) => !t.recente);
-  return (
-    <>
-      {recentes.length > 0 && <optgroup label="Usados nos últimos 30 dias">{recentes.map((t) => <option key={t.uuid} value={t.uuid}>{t.key}</option>)}</optgroup>}
-      <optgroup label="Outros templates">{outros.map((t) => <option key={t.uuid} value={t.uuid}>{t.key}</option>)}</optgroup>
     </>
   );
 }
