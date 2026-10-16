@@ -38,7 +38,7 @@ export function PorTemplate({ templates, escolhido, linhas }: { templates: Templ
   );
 
   return (
-    <section aria-labelledby="sec-tpl" className={s.card}>
+    <section aria-labelledby="sec-tpl" className={`${s.card} ${s.cardAberto}`}>
       <div className={s.cardHead}>
         <div>
           <h2 id="sec-tpl" className={s.h2}>Por template</h2>

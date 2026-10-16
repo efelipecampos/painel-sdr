@@ -148,3 +148,7 @@
 
 /* Mensagem de texto da regra (16/10) */
 .textarea { width: 100%; min-height: 110px; padding: 10px; background: #313a4f; border: 1px solid #4e5d7f; border-radius: 8px; color: #f6f7f9; font-size: 14px; line-height: 20px; resize: vertical; }
+
+/* Cartão que tem a busca de template: a lista abre por cima da borda e não pode ser cortada (16/10). */
+.cardAberto { overflow: visible; }
+.cardAberto > table { border-radius: 0 0 12px 12px; }
