@@ -1,7 +1,7 @@
 "use client";
 
 // Período do Acompanhamento, como no desenho: Hoje, 7 dias, Este mês, Mês passado, ou De/Até. Fica na URL.
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import s from "../jornada.module.css";
 
 const OPCOES = [["hoje", "Hoje"], ["7d", "7 dias"], ["mes", "Este mês"], ["passado", "Mês passado"]] as const;
@@ -9,7 +9,8 @@ const OPCOES = [["hoje", "Hoje"], ["7d", "7 dias"], ["mes", "Este mês"], ["pass
 export function PeriodoJornada({ atual, de, ate }: { atual: string; de: string; ate: string }) {
   const router = useRouter();
   const path = usePathname();
-  const ir = (q: Record<string, string>) => router.push(`${path}?${new URLSearchParams(q).toString()}`);
+  const tpl = useSearchParams().get("template");
+  const ir = (q: Record<string, string>) => router.push(`${path}?${new URLSearchParams({ ...q, ...(tpl ? { template: tpl } : {}) }).toString()}`);
   return (
     <>
       <div role="group" aria-label="Período" className={s.chips}>

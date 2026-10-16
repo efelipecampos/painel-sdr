@@ -4,7 +4,8 @@ import { createClient, getMe, isManager } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { localToDate, localDay } from "@/lib/time";
 import { JornadaTabs } from "./JornadaTabs";
-import { RegrasView, type RegraLinha, type TemplateOpcao } from "./RegrasView";
+import { carregarTemplates } from "./templates";
+import { RegrasView, type RegraLinha } from "./RegrasView";
 import s from "./jornada.module.css";
 
 export const dynamic = "force-dynamic";
@@ -53,27 +54,8 @@ export default async function JornadaRegrasPage() {
   const { data: perfis } = pessoas.size ? await admin.from("profiles").select("id, name").in("id", [...pessoas]) : { data: [] };
   const nome = (id: string | null) => (id === me!.id ? "você" : ((perfis ?? []).find((p) => p.id === id)?.name ?? "").split(" ")[0] || "alguém");
 
-  // Templates: os usados nos últimos 30 dias primeiro; depois todos os validados.
-  const templates: TemplateOpcao[] = [];
-  for (let i = 0; ; i += 1000) {
-    const { data } = await db.from("poli_templates").select("uuid, key, status, body, buttons").order("key").range(i, i + 999);
-    for (const t of data ?? []) templates.push({ uuid: t.uuid, key: t.key, status: t.status, body: t.body ?? "", trecho: (t.body ?? "").slice(0, 160), buttons: ((t.buttons as { text: string }[]) ?? []).map((b) => b.text), recente: false });
-    if (!data || data.length < 1000) break;
-  }
-  const desde = new Date(Date.now() - 30 * 864e5).toISOString();
-  const usos = new Map<string, number>();
-  for (let i = 0; i < 20000; i += 1000) {
-    const { data } = await admin.from("chat_messages").select("template_name").eq("sender", "template").gte("sent_at", desde).not("template_name", "is", null).range(i, i + 999);
-    for (const m of data ?? []) usos.set(m.template_name!, (usos.get(m.template_name!) ?? 0) + 1);
-    if (!data || data.length < 1000) break;
-  }
-  // Texto completo só dos usados no mês e dos que estão em regras; os outros carregam o texto quando escolhidos.
-  const emRegras = new Set((regras ?? []).flatMap((r) => [r.origin_template_uuid, r.dest_template_uuid]).filter(Boolean));
-  for (const t of templates) {
-    t.recente = usos.has(t.key);
-    if (!t.recente && !emRegras.has(t.uuid)) t.body = null;
-  }
-  templates.sort((a, b) => (usos.get(b.key) ?? 0) - (usos.get(a.key) ?? 0) || a.key.localeCompare(b.key));
+  // Templates para a busca: os usados no mês primeiro (texto completo também dos que estão em regras).
+  const templates = await carregarTemplates(db, new Set((regras ?? []).flatMap((r) => [r.origin_template_uuid, r.dest_template_uuid]).filter(Boolean) as string[]));
 
   const linhas: RegraLinha[] = (regras ?? []).map((r) => {
     const meus = (envios ?? []).filter((e) => e.rule_id === r.id);

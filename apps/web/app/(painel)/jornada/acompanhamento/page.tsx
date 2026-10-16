@@ -6,6 +6,8 @@ import { addDays, localDay, localToDate } from "@/lib/time";
 import { JornadaTabs } from "../JornadaTabs";
 import { FunilView, type Etapa } from "./FunilView";
 import { PeriodoJornada } from "./PeriodoJornada";
+import { PorTemplate, type LinhaTemplate } from "./PorTemplate";
+import { carregarTemplates } from "../templates";
 import s from "../jornada.module.css";
 
 export const dynamic = "force-dynamic";
@@ -25,15 +27,20 @@ function periodo(sp: { periodo?: string; de?: string; ate?: string }) {
   return { key: "mes", de: mes, ate: hoje };
 }
 
-export default async function JornadaAcompanhamentoPage({ searchParams }: { searchParams: Promise<{ periodo?: string; de?: string; ate?: string }> }) {
+export default async function JornadaAcompanhamentoPage({ searchParams }: { searchParams: Promise<{ periodo?: string; de?: string; ate?: string; template?: string }> }) {
   const me = await getMe();
   if (!isManager(me)) redirect("/");
-  const p = periodo(await searchParams);
+  const sp = await searchParams;
+  const p = periodo(sp);
   const db = (await createClient()).schema("painel");
-  const { data, error } = await db.rpc("jornada_funil", {
-    p_from: localToDate(`${p.de}T00:00`).toISOString(),
-    p_to: localToDate(`${addDays(p.ate, 1)}T00:00`).toISOString(),
-  });
+  const de = localToDate(`${p.de}T00:00`).toISOString(), ate = localToDate(`${addDays(p.ate, 1)}T00:00`).toISOString();
+  const escolhido = sp.template ?? null;
+  const [{ data, error }, templates] = await Promise.all([
+    db.rpc("jornada_funil", { p_from: de, p_to: ate }),
+    carregarTemplates(db, new Set(escolhido ? [escolhido] : [])),
+  ]);
+  const chave = escolhido ? templates.find((t) => t.uuid === escolhido)?.key ?? null : null;
+  const { data: porTpl } = chave ? await db.rpc("template_resultado", { p_template: chave, p_from: de, p_to: ate }) : { data: null };
   const linhas = (data ?? []) as { etapa: number; nome: string; expediente: number; fora: number }[];
   const etapas: Etapa[] = ETAPAS.map((nome, i) => {
     const l = linhas.find((x) => x.etapa === i + 1);
@@ -50,6 +57,7 @@ export default async function JornadaAcompanhamentoPage({ searchParams }: { sear
         <span className={s.note}>Leads novos sem DSQ criados no período · atualizado às {atualizado}</span>
       </div>
       {error ? <div className={s.limitAlert}><span>Não foi possível calcular o funil agora. Tente de novo em instantes.</span></div> : <FunilView etapas={etapas} />}
+      <PorTemplate templates={templates} escolhido={escolhido} linhas={chave ? ((porTpl ?? []) as LinhaTemplate[]) : null} />
     </main>
   );
 }
