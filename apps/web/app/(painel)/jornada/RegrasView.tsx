@@ -11,6 +11,7 @@ import s from "./jornada.module.css";
 export interface TemplateOpcao { uuid: string; key: string; status: string | null; body: string | null; trecho: string; buttons: string[]; recente: boolean }
 export interface RegraLinha {
   id: string; origin: string; button: string; janela: Janela; tipo: TipoEnvio; dest: string; texto: string;
+  descartar: boolean; descarteMotivo: string; descarteObs: string;
   status: "teste" | "ativa" | "pausada" | "limite"; limit: number | null;
   enviados: number; falhas: number; limiteEm: string | null;
   historico: { quando: string; oque: string }[];
@@ -23,7 +24,10 @@ const VAR_NOME: Record<string, string> = {
 };
 const LEAD_EXEMPLO = "Renata Exemplo";
 
-interface Form { origin: string; button: string; janela: Janela; tipo: TipoEnvio; dest: string; texto: string; limit: number | null }
+interface Form {
+  origin: string; button: string; janela: Janela; tipo: TipoEnvio; dest: string; texto: string; limit: number | null;
+  descartar: boolean; descarteMotivo: string; descarteObs: string;
+}
 
 function Badge({ status }: { status: RegraLinha["status"] }) {
   return <span className={`${s.badge} ${s[`b_${status}`]}`}>{STATUS[status]}</span>;
@@ -31,7 +35,7 @@ function Badge({ status }: { status: RegraLinha["status"] }) {
 
 export function RegrasView(p: {
   regras: RegraLinha[]; templates: TemplateOpcao[]; pausada: boolean; pausaInfo: string;
-  telefone: string; telefoneInfo: string; expediente: string; sdrExemplo: string;
+  telefone: string; telefoneInfo: string; expediente: string; sdrExemplo: string; motivos: string[];
 }) {
   const [pending, start] = useTransition();
   const porUuid = useMemo(() => new Map(p.templates.map((t) => [t.uuid, t])), [p.templates]);
@@ -39,11 +43,13 @@ export function RegrasView(p: {
   const comBotoes = useMemo(() => p.templates.filter((t) => t.buttons.length), [p.templates]);
   const validados = useMemo(() => p.templates.filter((t) => t.status === "VALIDATED"), [p.templates]);
 
-  const formDe = (r: RegraLinha): Form => ({ origin: r.origin, button: r.button, janela: r.janela, tipo: r.tipo, dest: r.dest, texto: r.texto, limit: r.limit });
+  const formDe = (r: RegraLinha): Form => ({ origin: r.origin, button: r.button, janela: r.janela, tipo: r.tipo, dest: r.dest, texto: r.texto, limit: r.limit,
+    descartar: r.descartar, descarteMotivo: r.descarteMotivo, descarteObs: r.descarteObs });
   const novoForm = (): Form => {
     const o = comBotoes[0];
     // Regra nova nasce como texto: a jornada responde a um clique, com a janela aberta (texto não é cobrado pela Meta).
-    return { origin: o?.uuid ?? "", button: o?.buttons[0] ?? "", janela: "expediente", tipo: "texto", dest: validados[0]?.uuid ?? "", texto: "", limit: null };
+    return { origin: o?.uuid ?? "", button: o?.buttons[0] ?? "", janela: "expediente", tipo: "texto", dest: validados[0]?.uuid ?? "", texto: "", limit: null,
+      descartar: false, descarteMotivo: "", descarteObs: "" };
   };
   const [editando, setEditando] = useState<string | null>(p.regras[0]?.id ?? null);
   const atual = p.regras.find((r) => r.id === editando) ?? null;
@@ -175,7 +181,7 @@ export function RegrasView(p: {
                   <tr key={r.id} className={editando === r.id ? s.rowOn : undefined}>
                     <td><div className={s.origin}><span className={s.originName}>{nomeTpl(r.origin)}</span><span className={s.pill}>{r.button}</span></div></td>
                     <td>{JANELA[r.janela]}</td>
-                    <td className={s.dest}>{r.tipo === "texto" ? <><span className={s.originName}>Texto</span><br />&ldquo;{r.texto.length > 60 ? `${r.texto.slice(0, 60)}…` : r.texto}&rdquo;</> : nomeTpl(r.dest)}</td>
+                    <td className={s.dest}>{r.descartar && <span className={s.originName} style={{ display: "block" }}>+ descarta no HubSpot</span>}{r.tipo === "texto" ? <><span className={s.originName}>Texto</span><br />&ldquo;{r.texto.length > 60 ? `${r.texto.slice(0, 60)}…` : r.texto}&rdquo;</> : nomeTpl(r.dest)}</td>
                     <td><Badge status={r.status} /></td>
                     <td className={s.right}>
                       <div className={s.today}>
@@ -292,6 +298,30 @@ export function RegrasView(p: {
               <span>Ao ativar, desligue no n8n a regra equivalente no mesmo dia. Senão o lead recebe em dobro.</span>
             </div>
           )}
+
+          <div className={s.field}>
+            <span id="lbl-hs" className={s.lbl}>No HubSpot, quando o lead clicar</span>
+            <div role="group" aria-labelledby="lbl-hs" className={s.chips}>
+              <button type="button" aria-pressed={!form.descartar} onClick={() => setForm({ ...form, descartar: false })} className={`${s.chip} ${!form.descartar ? s.chipOn : ""}`}>Não mexer</button>
+              <button type="button" aria-pressed={form.descartar}
+                onClick={() => setForm({ ...form, descartar: true,
+                  descarteMotivo: form.descarteMotivo || (p.motivos.includes("Possui uma equipe com menos de 3 atendentes") ? "Possui uma equipe com menos de 3 atendentes" : ""),
+                  descarteObs: form.descarteObs || `Clicou no botão do template de corte "${form.button}"` })}
+                className={`${s.chip} ${form.descartar ? s.chipOn : ""}`}>Descartar o Lead</button>
+            </div>
+            {form.descartar && (
+              <>
+                <label htmlFor="f-motivo" className={s.lbl}>[SDR] Motivo de Perda</label>
+                <select id="f-motivo" value={form.descarteMotivo} onChange={(e) => setForm({ ...form, descarteMotivo: e.target.value })} className={s.select}>
+                  <option value="">Escolha o motivo</option>
+                  {p.motivos.map((m) => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <label htmlFor="f-obs" className={s.lbl}>Observação de desqualificação do lead</label>
+                <textarea id="f-obs" rows={2} value={form.descarteObs} onChange={(e) => setForm({ ...form, descarteObs: e.target.value })} className={s.textarea} style={{ minHeight: 60 }} />
+                <span className={s.note}>Move o Lead mais recente do contato para Descartado e põe &quot;D. Auto. Botões | &quot; no começo do nome. Descarta mesmo se a mensagem não sair. Não mexe em Lead já descartado, em DSQ, em Garantir Agendamento ou Qualificado. Regra em teste só registra, sem mexer no HubSpot.</span>
+              </>
+            )}
+          </div>
 
           <div className={s.field}>
             <span id="lbl-limit" className={s.lbl}>Limite de envios por dia</span>

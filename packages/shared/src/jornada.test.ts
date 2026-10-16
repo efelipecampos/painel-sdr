@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { botaoClicado, escolherRegra, montarTexto, preencher, previa, variaveis, variaveisDesconhecidas, type Regra } from "./jornada";
+import { botaoClicado, escolherRegra, montarTexto, nomeDescartado, preencher, previa, variaveis, variaveisDesconhecidas, type Regra } from "./jornada";
 
 const regra = (p: Partial<Regra>): Regra => ({
   id: "r", origin_template_uuid: "abertura", origin_button: "Eu e mais 1", janela: "sempre",
@@ -69,5 +69,13 @@ describe("montarTexto", () => {
   });
   it("diz qual variável faltou", () => {
     expect(montarTexto("Aqui é a [operator_name].", { leadNome: "Ana", sdrNome: null })).toEqual({ ok: false, falta: "operator_name" });
+  });
+});
+
+describe("nomeDescartado", () => {
+  it("põe o prefixo no começo do nome, sem repetir", () => {
+    expect(nomeDescartado("Clínica Sorriso")).toBe("D. Auto. Botões | Clínica Sorriso");
+    expect(nomeDescartado("D. Auto. Botões | Clínica Sorriso")).toBe("D. Auto. Botões | Clínica Sorriso");
+    expect(nomeDescartado(null)).toBe("D. Auto. Botões | ");
   });
 });

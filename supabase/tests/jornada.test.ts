@@ -129,3 +129,10 @@ describe("mensagem de texto (16/10)", () => {
     await expect(db.query("insert into painel.journey_rules (origin_template_uuid, origin_button, janela, tipo) values ('t-ab', '3 ou mais', 'expediente', 'template')")).rejects.toThrow();
   });
 });
+
+describe("descarte no HubSpot (16/10)", () => {
+  it("regra que descarta precisa de motivo e observação", async () => {
+    await db.query("insert into painel.journey_rules (origin_template_uuid, origin_button, janela, tipo, texto, descartar, descarte_motivo, descarte_obs) values ('t-cx', 'Eu e mais 1', 'sempre', 'texto', 'Obrigado!', true, 'Possui uma equipe com menos de 3 atendentes', 'Clicou no botão')");
+    await expect(db.query("insert into painel.journey_rules (origin_template_uuid, origin_button, janela, tipo, texto, descartar) values ('t-cx', '3 ou mais', 'sempre', 'texto', 'Oi', true)")).rejects.toThrow();
+  });
+});

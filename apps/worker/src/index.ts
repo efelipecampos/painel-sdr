@@ -127,7 +127,7 @@ async function jornada(): Promise<void> {
   if (!poli || !config.poli) return;
   const t = await syncTemplates(db, poli, config.poli);
   if (t) console.log(`[worker] jornada: ${t} templates do Poli atualizados`);
-  const r = await rodarJornada(db, poli, config.poli);
+  const r = await rodarJornada(db, poli, config.poli, hubspot);
   if (r.cliques) console.log(`[worker] jornada: ${r.cliques} cliques com regra, ${r.enviados} enviados, ${r.falhas} falhas, ${r.pulados} pulados`);
 }
 

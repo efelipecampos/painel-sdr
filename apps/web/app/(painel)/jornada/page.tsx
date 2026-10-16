@@ -27,6 +27,20 @@ const ACAO: Record<string, string> = {
   criou: "criou, em teste", mudou: "mudou a regra", ativou: "ativou", pausou: "pausou", retomou: "retomou", voltou_teste: "voltou para teste",
 };
 
+/** Opções de [SDR] Motivo de Perda do Lead, direto do HubSpot (guardadas por 1 h). */
+async function motivosDePerda(): Promise<string[]> {
+  const token = process.env.HUBSPOT_PRIVATE_APP_TOKEN?.trim();
+  if (!token) return [];
+  try {
+    const r = await fetch("https://api.hubapi.com/crm/v3/properties/leads/sdr__motivo_de_perda", { headers: { Authorization: `Bearer ${token}` }, next: { revalidate: 3600 } });
+    if (!r.ok) return [];
+    const j = (await r.json()) as { options?: { value: string; hidden?: boolean }[] };
+    return (j.options ?? []).filter((o) => !o.hidden).map((o) => o.value);
+  } catch {
+    return [];
+  }
+}
+
 export default async function JornadaRegrasPage() {
   const me = await getMe();
   if (!isManager(me)) redirect("/");
@@ -35,7 +49,7 @@ export default async function JornadaRegrasPage() {
 
   const [{ data: conf }, { data: regras }, { data: horas }] = await Promise.all([
     db.from("journey_config").select("paused, test_phone, updated_at, updated_by").single(),
-    db.from("journey_rules").select("id, origin_template_uuid, origin_button, janela, tipo, dest_template_uuid, texto, status, daily_limit, paused_reason, created_at").order("created_at"),
+    db.from("journey_rules").select("id, origin_template_uuid, origin_button, janela, tipo, dest_template_uuid, texto, status, daily_limit, paused_reason, created_at, descartar, descarte_motivo, descarte_obs").order("created_at"),
     db.from("business_hours").select("weekday, enabled, start_time, end_time"),
   ]);
   const ids = (regras ?? []).map((r) => r.id);
@@ -63,6 +77,7 @@ export default async function JornadaRegrasPage() {
     const limite = r.status === "pausada" && r.paused_reason === "limite_diario";
     return {
       id: r.id, origin: r.origin_template_uuid, button: r.origin_button, janela: r.janela, tipo: r.tipo, dest: r.dest_template_uuid ?? "", texto: r.texto ?? "",
+      descartar: r.descartar, descarteMotivo: r.descarte_motivo ?? "", descarteObs: r.descarte_obs ?? "",
       status: limite ? "limite" : r.status, limit: r.daily_limit,
       enviados: meus.filter((e) => e.status === "enviado").length,
       falhas: meus.filter((e) => e.status === "falhou").length,
@@ -86,6 +101,7 @@ export default async function JornadaRegrasPage() {
         telefoneInfo={conf?.test_phone ? `${quando(conf.updated_at)} por ${nome(conf.updated_by ?? null)}` : ""}
         expediente={textoExpediente(horas ?? [])}
         sdrExemplo={me!.name}
+        motivos={await motivosDePerda()}
       />
     </main>
   );

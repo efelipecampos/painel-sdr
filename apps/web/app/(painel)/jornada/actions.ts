@@ -57,9 +57,12 @@ export interface RegraForm {
   dest: string;      // template (quando tipo = template)
   texto: string;     // mensagem (quando tipo = texto)
   limit: number | null;
+  descartar: boolean;      // descarta o Lead no HubSpot ao clicar
+  descarteMotivo: string;  // [SDR] Motivo de Perda
+  descarteObs: string;     // Observação de desqualificação do lead
 }
 
-const CAMPOS = "origin_template_uuid, origin_button, janela, tipo, dest_template_uuid, texto, status, daily_limit, paused_reason";
+const CAMPOS = "origin_template_uuid, origin_button, janela, tipo, dest_template_uuid, texto, status, daily_limit, paused_reason, descartar, descarte_motivo, descarte_obs";
 
 export async function salvarRegra(f: RegraForm): Promise<Resultado & { id?: string }> {
   const { me, db } = await guard();
@@ -68,6 +71,7 @@ export async function salvarRegra(f: RegraForm): Promise<Resultado & { id?: stri
   if (f.tipo === "texto" && !texto) return { ok: false, msg: "Escreva a mensagem de texto." };
   if (f.tipo === "template" && !f.dest) return { ok: false, msg: "Escolha o template a enviar." };
   if (f.tipo === "template" && f.origin === f.dest) return { ok: false, msg: "O template a enviar precisa ser diferente do de origem." };
+  if (f.descartar && (!f.descarteMotivo?.trim() || !f.descarteObs?.trim())) return { ok: false, msg: "Para descartar no HubSpot, escolha o motivo e escreva a observação." };
   const limite = f.limit === null ? null : Math.round(Number(f.limit));
   if (limite !== null && (!Number.isFinite(limite) || limite < 1)) return { ok: false, msg: "O limite por dia precisa ser 1 ou mais." };
   const { data: origem } = await db.from("poli_templates").select("buttons").eq("uuid", f.origin).maybeSingle();
@@ -76,6 +80,7 @@ export async function salvarRegra(f: RegraForm): Promise<Resultado & { id?: stri
   const novo = {
     origin_template_uuid: f.origin, origin_button: f.button, janela: f.janela, tipo: f.tipo,
     dest_template_uuid: f.tipo === "template" ? f.dest : null, texto: f.tipo === "texto" ? texto : null, daily_limit: limite,
+    descartar: f.descartar, descarte_motivo: f.descartar ? f.descarteMotivo.trim() : null, descarte_obs: f.descartar ? f.descarteObs.trim() : null,
   };
 
   if (!f.id) {

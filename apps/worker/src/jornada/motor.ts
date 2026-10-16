@@ -8,6 +8,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 import { botaoClicado, escolherRegra, JANELA_TEXTO_MS, montarTexto, preencher, type Regra } from "@painel/shared/jornada";
 import { PoliApi, PoliError, type PoliTemplate } from "@painel/shared/poli";
+import type { HubspotClient } from "../hubspot/leads.js";
+import { descartarNoHubspot } from "./descarte.js";
 
 const CURSOR_KEY = "journey_cursor";
 const LOTE = 500;
@@ -42,7 +44,7 @@ export async function syncTemplates(db: SupabaseClient, poli: PoliApi, cfg: Jorn
   return ts.length;
 }
 
-export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: JornadaConfig): Promise<Resumo> {
+export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: JornadaConfig, hubspot: HubspotClient | null = null): Promise<Resumo> {
   const p = db.schema("painel");
   const out: Resumo = { cliques: 0, enviados: 0, falhas: 0, pulados: 0 };
 
@@ -68,7 +70,7 @@ export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: Jorna
     return out;
   }
 
-  const { data: regrasRaw } = await p.from("journey_rules").select("id, origin_template_uuid, origin_button, janela, tipo, dest_template_uuid, texto, status, daily_limit").neq("status", "pausada");
+  const { data: regrasRaw } = await p.from("journey_rules").select("id, origin_template_uuid, origin_button, janela, tipo, dest_template_uuid, texto, status, daily_limit, descartar, descarte_motivo, descarte_obs").neq("status", "pausada");
   const regras = (regrasRaw ?? []) as Regra[];
   if (!regras.length) {
     await salvarCursor(db, Number(evs[evs.length - 1].id));
@@ -143,13 +145,20 @@ export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: Jorna
       // O que foi enviado, para a trava "uma vez por lead": o template ou, para texto, o md5 do texto.
       const destino = regra.tipo === "texto" ? `texto:${createHash("md5").update(regra.texto ?? "").digest("hex")}` : regra.dest_template_uuid;
       const base = { rule_id: regra.id, click_event_id: evId, poli_contact_uuid: ev.contato as string, lead_id: lead.id, clicked_at: clicouEm, mode: modo, dest_template_uuid: destino };
+      let descarte: string | null = null;
       const pular = async (reason: string, sdrId: string | null = null) => {
-        const { error: e } = await p.from("journey_sends").upsert({ ...base, sdr_id: sdrId, status: "pulado", reason }, { onConflict: "rule_id,click_event_id", ignoreDuplicates: true });
+        const { error: e } = await p.from("journey_sends").upsert({ ...base, hubspot_descarte: descarte, sdr_id: sdrId, status: "pulado", reason }, { onConflict: "rule_id,click_event_id", ignoreDuplicates: true });
         if (e) throw new Error(`registrar envio pulado: ${e.message}`);
         out.pulados++;
       };
 
       if (conf?.paused) return pular("jornada_pausada");
+      // Descarte no HubSpot (2026-10-16): vale mesmo que a mensagem não saia; regra em teste só registra.
+      if (regra.descartar) {
+        descarte = modo === "teste" ? "descartaria (teste)"
+          : hubspot ? await descartarNoHubspot(hubspot, lead.hubspot_contact_id, regra.descarte_motivo ?? "", regra.descarte_obs ?? "")
+          : "erro: sem acesso ao HubSpot";
+      }
       if (modo === "teste" && !conf?.test_phone) return pular("sem_telefone_teste");
       if (ms.slice(iClique + 1).some(humano)) return pular("equipe_ja_escreveu");
       if (modo === "real") {
@@ -186,7 +195,7 @@ export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: Jorna
 
       // Reserva o clique antes de chamar o Poli: se o worker cair no meio, o mesmo clique não envia de novo.
       const { data: reserva, error: eRes } = await p.from("journey_sends")
-        .upsert({ ...base, sdr_id: sdr?.id ?? null, status: "falhou", reason: "enviando" }, { onConflict: "rule_id,click_event_id", ignoreDuplicates: true })
+        .upsert({ ...base, hubspot_descarte: descarte, sdr_id: sdr?.id ?? null, status: "falhou", reason: "enviando" }, { onConflict: "rule_id,click_event_id", ignoreDuplicates: true })
         .select("id");
       if (eRes) throw new Error(`reservar envio: ${eRes.message}`);
       if (!reserva?.length) return; // outro ciclo já tratou este clique

@@ -16,6 +16,18 @@ export interface Regra {
   texto: string | null;
   status: RegraStatus;
   daily_limit: number | null;
+  descartar?: boolean;              // descarta o Lead no HubSpot quando o lead clica (2026-10-16)
+  descarte_motivo?: string | null;  // [SDR] Motivo de Perda
+  descarte_obs?: string | null;     // Observação de desqualificação do lead
+}
+
+/** Prefixo que o descarte automático põe no nome do Lead no HubSpot (decisão do Felipe, 2026-10-16). */
+export const PREFIXO_DESCARTE = "D. Auto. Botões | ";
+
+/** Nome do Lead com o prefixo do descarte automático, sem repetir se já tiver. */
+export function nomeDescartado(nome: string | null | undefined): string {
+  const n = (nome ?? "").trim();
+  return n.startsWith(PREFIXO_DESCARTE.trim()) ? n : `${PREFIXO_DESCARTE}${n}`;
 }
 
 /** Janela do WhatsApp: texto só sai até 23 h depois do clique (a Meta fecha a janela em 24 h). */
