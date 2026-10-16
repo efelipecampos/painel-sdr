@@ -64,7 +64,10 @@ export function parsePoliEvent(payload: unknown): PoliEvent | null {
   // Template "embutido" (2026-10-16): envios feitos pelo Poli (disparo, mensagem rápida) chegam sem o campo template,
   // com o template da Meta dentro de components (name = polichat_quick_message_..., category). Também é template.
   const components = obj(value.components);
-  const embutido = !template && str(value.direction) === "OUT" && !!str(components?.name) && !!str(components?.category);
+  // category vem como texto ("MARKETING") ou como número (12, visto nos disparos de 16/10)
+  const categoria = components?.category;
+  const embutido = !template && str(value.direction) === "OUT" && !!str(components?.name)
+    && (typeof categoria === "number" || !!str(categoria));
   const templateName = str(template?.key) ?? str(template?.name) ?? (embutido ? str(components?.name) : null);
   const direction = str(value.direction) ?? "";
   const messageType = str(value.type);
