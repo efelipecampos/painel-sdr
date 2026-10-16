@@ -32,7 +32,7 @@ describe("PoliApi", () => {
 
   it("lê só os botões de resposta do template", () => {
     expect(toTemplate({ uuid: "u", key: "k", message: { body: "Oi", buttons: [{ type: "reply", text: " Eu e mais 1 " }, { type: "url", text: "Site" }] } }))
-      .toEqual({ uuid: "u", key: "k", status: null, category: null, body: "Oi", buttons: ["Eu e mais 1"] });
+      .toEqual({ uuid: "u", key: "k", status: null, category: null, body: "Oi", buttons: ["Eu e mais 1"], metaName: null });
     expect(toTemplate({ uuid: "u", message: "texto antigo" }).body).toBe("texto antigo");
   });
 });

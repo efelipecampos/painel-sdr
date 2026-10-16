@@ -33,7 +33,7 @@ export async function syncTemplates(db: SupabaseClient, poli: PoliApi, cfg: Jorn
   const now = new Date().toISOString();
   for (let i = 0; i < ts.length; i += 200) {
     const { error } = await db.schema("painel").from("poli_templates").upsert(
-      ts.slice(i, i + 200).map((t) => ({ uuid: t.uuid, key: t.key, status: t.status, category: t.category, body: t.body, buttons: t.buttons.map((text) => ({ text })), synced_at: now })),
+      ts.slice(i, i + 200).map((t) => ({ uuid: t.uuid, key: t.key, status: t.status, category: t.category, body: t.body, buttons: t.buttons.map((text) => ({ text })), meta_name: t.metaName, synced_at: now })),
     );
     if (error) throw new Error(`gravar templates do Poli: ${error.message}`);
   }
@@ -90,7 +90,7 @@ export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: Jorna
       if (!ev.contato) return;
       const { data: lead } = await p.from("leads").select("id, name, hubspot_contact_id").eq("poli_contact_uuid", ev.contato).maybeSingle();
       if (!lead) return;
-      const { data: msgs } = await p.from("chat_messages").select("sender, sdr_id, raw_event_id, sent_at")
+      const { data: msgs } = await p.from("chat_messages").select("sender, sdr_id, raw_event_id, sent_at, auto_reply")
         .eq("lead_id", lead.id).order("sent_at", { ascending: true }).limit(2000);
       const ms = msgs ?? [];
       const iClique = ms.findIndex((m) => Number(m.raw_event_id) === evId);
@@ -98,23 +98,34 @@ export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: Jorna
       // Template de origem: a mensagem que o lead respondeu (o WhatsApp manda no context); sem essa informação, o
       // último template antes do clique, desde que o clique seja a primeira mensagem do lead depois dele.
       type TplEv = { uuid: string | null; botoes: unknown; contato: string | null };
+      type TplRaw = TplEv & { meta?: string | null; botoesEmb?: unknown };
+      // Template embutido (envio feito pelo Poli, sem o campo template): acha o template pelo nome da Meta.
+      const resolverEmbutido = async (r: TplRaw): Promise<TplEv | null> => {
+        if (r.uuid) return { uuid: r.uuid, botoes: r.botoes, contato: r.contato };
+        if (!r.meta) return null;
+        const { data: t } = await p.from("poli_templates").select("uuid, buttons").eq("meta_name", r.meta).maybeSingle();
+        if (!t) return null;
+        return { uuid: t.uuid, botoes: ((t.buttons as { text: string }[]) ?? []).map((b) => ({ type: "reply", text: b.text })), contato: r.contato };
+      };
       let tplEv: TplEv | null = null;
       if (ev.respondeu) {
         const { data } = await db.from("raw_events")
-          .select("uuid:payload->value->template->>uuid, botoes:payload->value->template->message->buttons, contato:payload->value->contact->>uuid")
+          .select("uuid:payload->value->template->>uuid, botoes:payload->value->template->message->buttons, contato:payload->value->contact->>uuid, meta:payload->value->components->>name, botoesEmb:payload->value->components->buttons")
           .eq("source", "poli_webhook").eq("external_id", ev.respondeu as string).maybeSingle();
-        if (data?.uuid && data.contato === ev.contato) tplEv = data as unknown as TplEv;
+        if (data && data.contato === ev.contato) tplEv = await resolverEmbutido(data as unknown as TplRaw);
       }
       if (!tplEv) {
         let iTpl = -1;
         for (let i = iClique - 1; i >= 0; i--) {
-          if (ms[i].sender === "lead") return;
+          if (ms[i].sender === "lead" && !ms[i].auto_reply) return; // resposta automática do lead não conta
+
           if (ms[i].sender === "template") { iTpl = i; break; }
         }
         if (iTpl < 0 || !ms[iTpl].raw_event_id) return;
         const { data } = await db.from("raw_events")
-          .select("uuid:payload->value->template->>uuid, botoes:payload->value->template->message->buttons").eq("id", ms[iTpl].raw_event_id).maybeSingle();
-        tplEv = data ? { ...(data as { uuid: string | null; botoes: unknown }), contato: ev.contato as string } : null;
+          .select("uuid:payload->value->template->>uuid, botoes:payload->value->template->message->buttons, meta:payload->value->components->>name, botoesEmb:payload->value->components->buttons")
+          .eq("id", ms[iTpl].raw_event_id).maybeSingle();
+        tplEv = data ? await resolverEmbutido({ ...(data as unknown as TplRaw), contato: ev.contato as string }) : null;
       }
       const tplUuid = tplEv?.uuid ?? null;
       if (!tplUuid || !origens.has(tplUuid)) return;

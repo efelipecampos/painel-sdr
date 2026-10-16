@@ -55,6 +55,17 @@ describe("parsePoliEvent", () => {
     expect(e).toMatchObject({ sender: "template", byHuman: true, templateName: "SDR_DIA1_01", body: "olá" });
   });
 
+  it("template embutido em components, sem o campo template (disparo pelo Poli, 2026-10-16)", () => {
+    const e = parsePoliEvent(payload({ type: "CHAT", template: null,
+      components: { name: "polichat_quick_message_582039", category: "MARKETING", body: { text: "Olá!" } } }))!;
+    expect(e).toMatchObject({ sender: "template", byHuman: true, templateName: "polichat_quick_message_582039", body: "Olá!" });
+  });
+
+  it("mensagem comum da SDR continua sendo da SDR", () => {
+    const e = parsePoliEvent(payload({ type: "CHAT", template: null, components: { body: { text: "oi" } } }))!;
+    expect(e.sender).toBe("sdr");
+  });
+
   it("template do app token (autor sem uuid)", () => {
     const e = parsePoliEvent(payload({
       type: "TEMPLATE", components: null, author: { type: "USER", uuid: null, attributes: { name: null } },

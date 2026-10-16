@@ -111,11 +111,36 @@ describe("rebuild_leads: tempo de resposta", () => {
 
   it("real: app token dispara template, lead responde, mede até a primeira mensagem de uma pessoa", async () => {
     const s = await scenario([
-      ["template_bot", 0], ["lead", 3], ["template_bot", 18000], ["sdr", 20602],
+      ["template_bot", 0], ["lead", 300], ["template_bot", 18000], ["sdr", 20602],
       ["template_bot", 86400], ["sdr", 92311], ["template_bot", 104400],
     ]);
     const r = await responses(s.lead);
-    expect(r.map((x) => [x.secs, x.first])).toEqual([[20599, true]]);
+    expect(r.map((x) => [x.secs, x.first])).toEqual([[20302, true]]);
+  });
+
+  it("resposta automática (2026-10-16): texto 3 s depois do template, de lead frio, não é resposta nem abre Aguardando", async () => {
+    const s = await scenario([["template_bot", 0], ["lead", 3]]);
+    expect(await responses(s.lead)).toEqual([]);
+    const w = (await db.query<{ waiting_since: string | null }>("select waiting_since from painel.chats where id = $1", [s.chats.get("A")])).rows[0];
+    expect(w.waiting_since).toBeNull();
+    const a = (await db.query<{ auto_reply: boolean }>("select auto_reply from painel.chat_messages where lead_id = $1 and sender = 'lead'", [s.lead])).rows;
+    expect(a).toEqual([{ auto_reply: true }]);
+  });
+
+  it("resposta automática: depois dela, uma resposta de verdade conta normalmente", async () => {
+    const s = await scenario([["template_bot", 0], ["lead", 3], ["lead", 600], ["sdr", 900]]);
+    expect((await responses(s.lead)).map((x) => x.secs)).toEqual([300]);
+  });
+
+  it("clique de botão 3 s depois do template não é resposta automática (vem citando a mensagem)", async () => {
+    const s = await scenario([["template_bot", 0], ["lead", 3], ["sdr", 120]]);
+    const ev = (await db.query<{ id: number }>(
+      "insert into public.raw_events (event_type, external_id, payload) values ('messages.message.received', $1, $2) returning id",
+      [`clique-${s.lead}`, JSON.stringify({ value: { context: { type: "message", message: { uuid: "x" } } } })],
+    )).rows[0].id;
+    await db.query("update painel.chat_messages set raw_event_id = $1 where lead_id = $2 and sender = 'lead'", [ev, s.lead]);
+    await db.query("select painel.rebuild_leads($1::uuid[])", [[s.lead]]);
+    expect((await responses(s.lead)).map((x) => x.secs)).toEqual([117]);
   });
 
   it("real: outra pessoa da equipe responde no chat do dono — conta e vai para o dono", async () => {

@@ -18,6 +18,7 @@ export interface PoliTemplate {
   category: string | null;
   body: string;
   buttons: string[]; // só os botões de resposta, na ordem do template
+  metaName: string | null; // nome do template na Meta (polichat_quick_message_...): vem nos envios feitos pelo Poli
 }
 
 export interface SendTemplate {
@@ -90,11 +91,12 @@ interface RawTemplate {
   key?: string;
   status?: string;
   category?: string;
-  message?: string | { body?: string; buttons?: { type?: string; text?: string }[] };
+  message?: string | { body?: string; name?: string; buttons?: { type?: string; text?: string }[] };
 }
 
 export function toTemplate(t: RawTemplate): PoliTemplate {
-  const m = typeof t.message === "string" ? { body: t.message, buttons: [] } : (t.message ?? {});
+  const m: { body?: string; name?: string; buttons?: { type?: string; text?: string }[] } =
+    typeof t.message === "string" ? { body: t.message, buttons: [] } : (t.message ?? {});
   return {
     uuid: t.uuid,
     key: t.key ?? t.uuid,
@@ -102,6 +104,7 @@ export function toTemplate(t: RawTemplate): PoliTemplate {
     category: t.category ?? null,
     body: m.body ?? "",
     buttons: (m.buttons ?? []).filter((b) => b.type === "reply" && b.text).map((b) => b.text!.trim()),
+    metaName: m.name?.trim() || null,
   };
 }
 

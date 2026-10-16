@@ -43,7 +43,7 @@ export interface ChatRow {
   poli_contact_uuid: string;
   lead_name: string | null;
   phone_masked: string | null;
-  situacao: "aguardando" | "respondido" | "lead_nao_respondeu" | "encerrado_sem_resposta" | "fora_do_funil";
+  situacao: "aguardando" | "respondido" | "lead_nao_respondeu" | "resposta_automatica" | "encerrado_sem_resposta" | "fora_do_funil";
   waiting_since: string | null;
   parado: boolean;
   templates: number;

@@ -61,7 +61,11 @@ export function parsePoliEvent(payload: unknown): PoliEvent | null {
       }
     : null;
   const template = obj(value.template);
-  const templateName = str(template?.key) ?? str(template?.name);
+  // Template "embutido" (2026-10-16): envios feitos pelo Poli (disparo, mensagem rápida) chegam sem o campo template,
+  // com o template da Meta dentro de components (name = polichat_quick_message_..., category). Também é template.
+  const components = obj(value.components);
+  const embutido = !template && str(value.direction) === "OUT" && !!str(components?.name) && !!str(components?.category);
+  const templateName = str(template?.key) ?? str(template?.name) ?? (embutido ? str(components?.name) : null);
   const direction = str(value.direction) ?? "";
   const messageType = str(value.type);
   const isSystem = direction === "SYSTEM" || direction === "EMPTY" || (str(value.event) ?? "MESSAGE") !== "MESSAGE";
@@ -69,7 +73,7 @@ export function parsePoliEvent(payload: unknown): PoliEvent | null {
   let sender: Sender;
   if (isSystem) sender = "system";
   else if (authorType === "CONTACT") sender = "lead";
-  else if (template) sender = "template";
+  else if (template || embutido) sender = "template";
   else if (authorUuid) sender = "sdr";
   else sender = "bot";
 

@@ -31,6 +31,8 @@ function Situacao({ r }: { r: ChatRow }) {
       return <span className="badge">Respondido</span>;
     case "lead_nao_respondeu":
       return <span className="badge dim">Lead não respondeu</span>;
+    case "resposta_automatica":
+      return <span className="badge dim" title="Só chegou a resposta automática do WhatsApp do lead (robô), segundos depois da nossa mensagem.">Resposta automática</span>;
     case "encerrado_sem_resposta":
       return <span className="badge dim">Encerrado sem resposta</span>;
     case "fora_do_funil":
