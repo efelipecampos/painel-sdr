@@ -2,7 +2,7 @@
 // dos eventos: olha os eventos recebidos desde o cursor, reconhece o clique num botão de template, acha a regra e
 // envia o template de destino pela API do Poli. Regra em teste envia só para o telefone de teste.
 // Travas: o mesmo clique não é processado duas vezes (índice único), a mesma regra não envia de verdade duas vezes ao
-// mesmo lead, não envia se alguém da equipe já escreveu depois do clique, e respeita a pausa geral e o limite diário.
+// mesmo lead com o mesmo template, não envia se alguém da equipe já escreveu depois do clique, e respeita a pausa geral e o limite diário.
 // Logs e registros: só ids, situação e motivo. Nada de telefone nem texto de mensagem.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { botaoClicado, escolherRegra, preencher, type Regra } from "@painel/shared/jornada";
@@ -59,7 +59,7 @@ export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: Jorna
   const processado = Number(proc?.value ?? 0);
   if (processado <= cursor) return out;
   const { data: evs, error } = await db.from("raw_events")
-    .select("id, received_at, contato:payload->value->contact->>uuid, texto:payload->value->components->body->>text")
+    .select("id, received_at, contato:payload->value->contact->>uuid, texto:payload->value->components->body->>text, respondeu:payload->value->context->message->>uuid")
     .eq("event_type", "messages.message.received").gt("id", cursor).lte("id", processado).order("id").limit(LOTE);
   if (error) throw new Error(`ler cliques: ${error.message}`);
   if (!evs?.length) {
@@ -95,16 +95,28 @@ export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: Jorna
       const ms = msgs ?? [];
       const iClique = ms.findIndex((m) => Number(m.raw_event_id) === evId);
       if (iClique < 0 || ms[iClique].sender !== "lead") return;
-      // O clique é a primeira mensagem do lead depois do último template enviado a ele.
-      let iTpl = -1;
-      for (let i = iClique - 1; i >= 0; i--) {
-        if (ms[i].sender === "lead") return;
-        if (ms[i].sender === "template") { iTpl = i; break; }
+      // Template de origem: a mensagem que o lead respondeu (o WhatsApp manda no context); sem essa informação, o
+      // último template antes do clique, desde que o clique seja a primeira mensagem do lead depois dele.
+      type TplEv = { uuid: string | null; botoes: unknown; contato: string | null };
+      let tplEv: TplEv | null = null;
+      if (ev.respondeu) {
+        const { data } = await db.from("raw_events")
+          .select("uuid:payload->value->template->>uuid, botoes:payload->value->template->message->buttons, contato:payload->value->contact->>uuid")
+          .eq("source", "poli_webhook").eq("external_id", ev.respondeu as string).maybeSingle();
+        if (data?.uuid && data.contato === ev.contato) tplEv = data as unknown as TplEv;
       }
-      if (iTpl < 0 || !ms[iTpl].raw_event_id) return;
-      const { data: tplEv } = await db.from("raw_events")
-        .select("uuid:payload->value->template->>uuid, botoes:payload->value->template->message->buttons").eq("id", ms[iTpl].raw_event_id).maybeSingle();
-      const tplUuid = tplEv?.uuid as string | null;
+      if (!tplEv) {
+        let iTpl = -1;
+        for (let i = iClique - 1; i >= 0; i--) {
+          if (ms[i].sender === "lead") return;
+          if (ms[i].sender === "template") { iTpl = i; break; }
+        }
+        if (iTpl < 0 || !ms[iTpl].raw_event_id) return;
+        const { data } = await db.from("raw_events")
+          .select("uuid:payload->value->template->>uuid, botoes:payload->value->template->message->buttons").eq("id", ms[iTpl].raw_event_id).maybeSingle();
+        tplEv = data ? { ...(data as { uuid: string | null; botoes: unknown }), contato: ev.contato as string } : null;
+      }
+      const tplUuid = tplEv?.uuid ?? null;
       if (!tplUuid || !origens.has(tplUuid)) return;
       const botoes = ((tplEv?.botoes as { type?: string; text?: string }[] | null) ?? []).filter((b) => b.type === "reply" && b.text).map((b) => b.text!);
       const botao = botaoClicado(ev.texto as string | null, botoes);
@@ -116,7 +128,7 @@ export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: Jorna
       out.cliques++;
 
       const modo = regra.status === "teste" ? "teste" : "real";
-      const base = { rule_id: regra.id, click_event_id: evId, poli_contact_uuid: ev.contato as string, lead_id: lead.id, clicked_at: clicouEm, mode: modo };
+      const base = { rule_id: regra.id, click_event_id: evId, poli_contact_uuid: ev.contato as string, lead_id: lead.id, clicked_at: clicouEm, mode: modo, dest_template_uuid: regra.dest_template_uuid };
       const pular = async (reason: string, sdrId: string | null = null) => {
         const { error: e } = await p.from("journey_sends").upsert({ ...base, sdr_id: sdrId, status: "pulado", reason }, { onConflict: "rule_id,click_event_id", ignoreDuplicates: true });
         if (e) throw new Error(`registrar envio pulado: ${e.message}`);
@@ -128,7 +140,7 @@ export async function rodarJornada(db: SupabaseClient, poli: PoliApi, cfg: Jorna
       if (ms.slice(iClique + 1).some(humano)) return pular("equipe_ja_escreveu");
       if (modo === "real") {
         const { count: ja } = await p.from("journey_sends").select("id", { count: "exact", head: true })
-          .eq("rule_id", regra.id).eq("poli_contact_uuid", ev.contato).eq("mode", "real").eq("status", "enviado");
+          .eq("rule_id", regra.id).eq("poli_contact_uuid", ev.contato).eq("dest_template_uuid", regra.dest_template_uuid).eq("mode", "real").eq("status", "enviado");
         if (ja) return pular("ja_enviado");
         if (regra.daily_limit) {
           const desde = new Date(Date.now() - 864e5).toISOString(); // 24 h corridas

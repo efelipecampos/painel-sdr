@@ -40,10 +40,10 @@ async function clique(): Promise<number> {
     "insert into public.raw_events (event_type, external_id, payload) values ('messages.message.received', $1, '{}') returning id", [`ev${++evento}`],
   )).rows[0].id;
 }
-async function envio(rule: string, ev: number, contato: string, status = "enviado", mode = "real") {
+async function envio(rule: string, ev: number, contato: string, status = "enviado", mode = "real", dest = "t-fim") {
   await db.query(
-    "insert into painel.journey_sends (rule_id, click_event_id, poli_contact_uuid, clicked_at, mode, status) values ($1, $2, $3, now(), $4, $5::painel.journey_send_status)",
-    [rule, ev, contato, mode, status],
+    "insert into painel.journey_sends (rule_id, click_event_id, poli_contact_uuid, clicked_at, mode, status, dest_template_uuid) values ($1, $2, $3, now(), $4, $5::painel.journey_send_status, $6)",
+    [rule, ev, contato, mode, status, dest],
   );
 }
 
@@ -78,6 +78,15 @@ describe("envios", () => {
     await envio(id, await clique(), "c1", "falhou", "real");
     const n = (await db.query<{ n: number }>("select count(*)::int as n from painel.journey_sends where rule_id = $1", [id])).rows[0].n;
     expect(n).toBe(3);
+  });
+});
+
+describe("trava por template (16/10)", () => {
+  it("regra editada para outro template pode enviar de novo ao mesmo lead", async () => {
+    const id = await regra();
+    await envio(id, await clique(), "c1", "enviado", "real", "t-antigo");
+    await envio(id, await clique(), "c1", "enviado", "real", "t-novo");
+    await expect(envio(id, await clique(), "c1", "enviado", "real", "t-novo")).rejects.toThrow();
   });
 });
 
