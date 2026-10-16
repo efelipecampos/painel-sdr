@@ -11,6 +11,10 @@ SSH=(ssh -i "$KEY" -o ConnectTimeout=30 "$VPS")
 var() { grep -E "^$1=" .env | cut -d= -f2- | sed 's/[[:space:]]*#.*$//'; }
 
 docker info >/dev/null 2>&1 || { echo "Abra o Docker Desktop e rode de novo." >&2; exit 1; }
+# A URL e a chave anon entram na imagem do painel no build; sem elas, todas as telas dão erro 500 (16/10/2026).
+for v in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY; do
+  [ -n "$( [ -f .env ] && var "$v" || true)" ] || { echo "$v está vazio ou falta o .env nesta pasta. Deploy cancelado." >&2; exit 1; }
+done
 
 echo "1/4 Montando as imagens (linux/amd64)..."
 docker buildx build --platform linux/amd64 --target worker -t painel-sdr-worker:latest --load .
