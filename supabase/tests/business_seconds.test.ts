@@ -80,3 +80,40 @@ describe("business_seconds", () => {
     expect(await businessSeconds("2026-10-05 12:00Z", "2026-10-05 13:00Z")).toBe(1 * HOUR);
   });
 });
+
+async function isBusinessTime(at: string): Promise<boolean> {
+  const res = await db.query<{ b: boolean }>("select painel.is_business_time($1::timestamptz) as b", [at]);
+  return res.rows[0].b;
+}
+
+describe("is_business_time", () => {
+  it("dentro do expediente, antes e depois", async () => {
+    expect(await isBusinessTime("2026-10-05 09:00-03")).toBe(true);
+    expect(await isBusinessTime("2026-10-05 07:59-03")).toBe(false);
+    expect(await isBusinessTime("2026-10-05 08:00-03")).toBe(true);
+    expect(await isBusinessTime("2026-10-05 17:59:59-03")).toBe(true);
+    expect(await isBusinessTime("2026-10-05 18:00-03")).toBe(false);
+  });
+
+  it("fim de semana e feriado ficam fora; feriado conta com holidays_off desligado", async () => {
+    expect(await isBusinessTime("2026-10-03 10:00-03")).toBe(false);
+    await db.exec(`insert into painel.holidays (day, name) values ('2026-10-12', 'Nossa Senhora Aparecida')`);
+    expect(await isBusinessTime("2026-10-12 10:00-03")).toBe(false);
+    await db.exec(`update painel.settings set value = 'false' where key = 'holidays_off'`);
+    expect(await isBusinessTime("2026-10-12 10:00-03")).toBe(true);
+  });
+
+  it("recebe UTC e converte para o fuso de negócio", async () => {
+    expect(await isBusinessTime("2026-10-05 21:30Z")).toBe(false); // 18:30 em São Paulo
+    expect(await isBusinessTime("2026-10-05 11:30Z")).toBe(true); // 08:30 em São Paulo
+  });
+
+  it("é a mesma regra de business_seconds(p, p + 1 s) numa grade de duas semanas, com feriado", async () => {
+    await db.exec(`insert into painel.holidays (day, name) values ('2026-10-12', 'Nossa Senhora Aparecida')`);
+    const res = await db.query<{ n: number }>(`
+      select count(*)::int as n
+      from generate_series('2026-10-02 00:00-03'::timestamptz, '2026-10-16 00:00-03'::timestamptz, interval '7 minutes 13.5 seconds') g
+      where painel.is_business_time(g) <> (painel.business_seconds(g, g + interval '1 second') > 0)`);
+    expect(res.rows[0].n).toBe(0);
+  });
+});
