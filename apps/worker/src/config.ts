@@ -39,6 +39,8 @@ export const config = {
   /** Horários das rodadas do score (fuso de São Paulo) e máximo de leads por rodada (controle de custo). */
   scoreTimes: parseTimes(process.env.SCORE_HORARIOS),
   scoreMaxPerRound: Number(process.env.SCORE_MAX_POR_RODADA ?? 300),
+  /** "Respondeu template" no HubSpot: 08:50 e 13:50, 10 min antes dos follow-ups do n8n (09:00 e 14:00) (decisão do Felipe, 2026-10-20). */
+  respondeuTimes: parseTimes(process.env.RESPONDEU_HORARIOS, ["08:50", "13:50"], "RESPONDEU_HORARIOS"),
   /** Score: 0 = avisa já na rodada diária que falhar. */
   alertScoreMinutes: Number(process.env.ALERTA_SCORE_MIN ?? 0),
   /** Webhook do espaço Gestão SDR no Google Chat. Sem ele, os alertas só vão para o log. */

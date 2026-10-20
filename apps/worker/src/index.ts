@@ -103,9 +103,19 @@ function tarefaHubspot(nome: string, aviso: string, fn: () => Promise<string | n
   };
 }
 
-// "Respondeu template" no Lead (follow-up do n8n, 2026-10-09)
+// "Respondeu template" no Lead (follow-up do n8n, 2026-10-09). Só às 08:50 e às 13:50 (decisão do Felipe, 2026-10-20):
+// o n8n dispara às 09:00 e às 14:00, e rodar a cada rodada do worker ocupava 38% do banco. A rodada que falha ou
+// que não termina (mais de 50 lotes) tenta de novo na rodada seguinte; deploy não dispara rodada.
+const RESPONDEU_LOTES = 50;
+let ultimoRespondeu = currentSlot(new Date(), config.respondeuTimes);
 const syncRespostas = tarefaHubspot("Respondeu template", 'marcar "Respondeu template" nos Leads do HubSpot (o follow-up do n8n pode mandar mensagem para quem já respondeu)',
-  async () => { const n = await marcarRespostas(db, hubspot!); return n ? `${n} Leads marcados como "Respondeu template"` : null; });
+  async () => {
+    const slot = currentSlot(new Date(), config.respondeuTimes);
+    if (!slot || slot === ultimoRespondeu) return null;
+    const n = await marcarRespostas(db, hubspot!, RESPONDEU_LOTES);
+    if (n < RESPONDEU_LOTES * 100) ultimoRespondeu = slot;
+    return `${n} Leads marcados como "Respondeu template" (rodada das ${slot.slice(11)})`;
+  });
 // Campos "Poli - ..." do Contato e dos Negócios abertos (2026-10-09; antes eram da integração)
 const syncCamposContato = tarefaHubspot("campos do contato", 'gravar os campos "Poli - ..." dos Contatos e Negócios no HubSpot',
   async () => { const r = await gravarCamposContato(db, hubspot!); return r.contatos || r.negocios ? `campos atualizados em ${r.contatos} contatos e ${r.negocios} negócios` : null; });

@@ -3,11 +3,11 @@ import { BUSINESS_TIMEZONE } from "@painel/shared";
 
 export const DEFAULT_SCORE_TIMES = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
 
-/** Lê "08:00,10:00,..." (SCORE_HORARIOS). Horário inválido derruba o worker na subida, para não passar despercebido. */
-export function parseTimes(raw: string | undefined): string[] {
-  if (!raw?.trim()) return DEFAULT_SCORE_TIMES;
+/** Lê "08:00,10:00,..." (SCORE_HORARIOS e afins). Horário inválido derruba o worker na subida, para não passar despercebido. */
+export function parseTimes(raw: string | undefined, defaults = DEFAULT_SCORE_TIMES, name = "SCORE_HORARIOS"): string[] {
+  if (!raw?.trim()) return defaults;
   const times = raw.split(",").map((t) => t.trim()).filter(Boolean);
-  for (const t of times) if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(t)) throw new Error(`SCORE_HORARIOS inválido: "${t}" (use HH:MM separados por vírgula)`);
+  for (const t of times) if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(t)) throw new Error(`${name} inválido: "${t}" (use HH:MM separados por vírgula)`);
   return [...new Set(times)].sort();
 }
 

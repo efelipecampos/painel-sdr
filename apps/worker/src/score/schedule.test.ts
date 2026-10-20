@@ -22,3 +22,16 @@ describe("horários do score", () => {
     expect(currentSlot(new Date("2026-10-09T01:30:00Z"), DEFAULT_SCORE_TIMES)).toBe("2026-10-08 18:00");
   });
 });
+
+describe("horários do Respondeu template", () => {
+  const times = parseTimes(undefined, ["08:50", "13:50"], "RESPONDEU_HORARIOS");
+  it("sem variável, roda às 08:50 e às 13:50 (10 min antes dos follow-ups do n8n)", () => {
+    expect(currentSlot(new Date("2026-10-20T11:49:00Z"), times)).toBeNull(); // 08:49
+    expect(currentSlot(new Date("2026-10-20T11:50:00Z"), times)).toBe("2026-10-20 08:50");
+    expect(currentSlot(new Date("2026-10-20T16:49:00Z"), times)).toBe("2026-10-20 08:50"); // 13:49
+    expect(currentSlot(new Date("2026-10-20T16:50:00Z"), times)).toBe("2026-10-20 13:50");
+  });
+  it("o erro cita a variável certa", () => {
+    expect(() => parseTimes("12h", ["12:00"], "RESPONDEU_HORARIOS")).toThrow("RESPONDEU_HORARIOS inválido");
+  });
+});
