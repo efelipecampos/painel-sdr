@@ -11,7 +11,8 @@
     "rebuild-all": "tsx src/index.ts --rebuild-all",
     "alerta-teste": "tsx src/index.ts --testar-alerta",
     "score-teste": "tsx src/score/teste.ts",
-    "usuarios": "tsx src/users.ts"
+    "usuarios": "tsx src/users.ts",
+    "historico": "tsx src/historico/carga.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.132.0",
