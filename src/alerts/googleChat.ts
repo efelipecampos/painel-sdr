@@ -47,6 +47,22 @@ export async function sendLeadNotInHubSpotAlert(message: MessageEvent, role: Att
   await postToGoogleChat(role, text);
 }
 
+/** Alerta técnico da própria integração (ex.: muitas recusas no webhook). Sem URL configurada, só fica no log. */
+export async function postOpsAlert(text: string): Promise<void> {
+  const url = env.GOOGLE_CHAT_WEBHOOK_URL_OPS;
+  if (!url) return;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
+
+  if (!res.ok) {
+    logger.error({ status: res.status }, "Falha ao enviar alerta técnico pro Google Chat");
+  }
+}
+
 export interface NotFoundContactSummary {
   leadName?: string;
   leadPhone: string;

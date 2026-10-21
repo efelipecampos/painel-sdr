@@ -20,6 +20,13 @@ const schema = z.object({
   POLI_SDR_EMAILS: z.string().optional().default(""),
   POLI_CLOSER_EMAILS: z.string().optional().default(""),
 
+  // Proteções do endpoint do webhook (ver src/webhookGuard.ts). O limite por
+  // IP deve ficar em ~3× o pico real da Poli medido nos logs.
+  WEBHOOK_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(120),
+  WEBHOOK_MAX_BODY: z.string().default("1mb"),
+  // Recusas em 10 minutos que disparam alerta (log de erro + Google Chat de ops).
+  WEBHOOK_REJECTION_ALERT_THRESHOLD: z.coerce.number().int().positive().default(20),
+
   HUBSPOT_PRIVATE_APP_TOKEN: z.string().min(1, "HUBSPOT_PRIVATE_APP_TOKEN é obrigatório"),
   HUBSPOT_PORTAL_ID: z.string().optional(),
 
@@ -36,6 +43,8 @@ const schema = z.object({
 
   GOOGLE_CHAT_WEBHOOK_URL_SDR: z.string().url().or(z.literal("")).default(""),
   GOOGLE_CHAT_WEBHOOK_URL_CLOSER: z.string().url().or(z.literal("")).default(""),
+  // Alertas técnicos da integração. Vazio = só log.
+  GOOGLE_CHAT_WEBHOOK_URL_OPS: z.string().url().or(z.literal("")).default(""),
 
   // Espelho das mensagens pro painel de análise e base da nota diária.
   // Vazio = integração roda normalmente, só sem Supabase e sem nota diária.

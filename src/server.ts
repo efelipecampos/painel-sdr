@@ -5,6 +5,7 @@ import { logger } from "./logger.js";
 import { poliWebhookBodySchema } from "./poli/types.js";
 import { parseMessageEvent } from "./poli/parser.js";
 import { webhookHandler, type RequestWithRawBody } from "./webhookHandler.js";
+import { bodyErrorGuard, contentTypeGuard, rateLimitGuard } from "./webhookGuard.js";
 import { processMessage } from "./pipeline/processMessage.js";
 import { captureRawEvent } from "./pipeline/captureRawEvent.js";
 import { runPendingDailyNotes } from "./jobs/dailyNotes.js";
@@ -24,20 +25,27 @@ import {
 
 const app = express();
 app.use(pinoHttp({ logger }));
-app.use(
-  express.json({
-    verify: (req: RequestWithRawBody, _res, buf) => {
-      req.rawBody = buf;
-    },
-  }),
-);
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.post("/", webhookHandler);
-app.post("/webhooks/poli", webhookHandler);
+// Ordem importa: limite por IP e tipo antes de ler o corpo; tamanho e JSON
+// quebrado na leitura; assinatura no handler. Ver webhookGuard.
+const webhookChain = [
+  rateLimitGuard,
+  contentTypeGuard,
+  express.json({
+    limit: env.WEBHOOK_MAX_BODY,
+    verify: (req: RequestWithRawBody, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+  bodyErrorGuard,
+  webhookHandler,
+];
+app.post("/", ...webhookChain);
+app.post("/webhooks/poli", ...webhookChain);
 
 const RETRY_INTERVAL_MS = 60_000;
 const MAX_RETRY_ATTEMPTS = 10;

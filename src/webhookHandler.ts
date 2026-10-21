@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { verifyPoliSignature } from "./poli/webhookAuth.js";
+import { logRejection } from "./webhookGuard.js";
 import { poliWebhookBodySchema } from "./poli/types.js";
 import { parseMessageEvent } from "./poli/parser.js";
 import { processMessage } from "./pipeline/processMessage.js";
@@ -16,7 +17,7 @@ export interface RequestWithRawBody extends Request {
 export const webhookHandler = async (req: RequestWithRawBody, res: Response) => {
   const signatureValid = verifyPoliSignature(req.rawBody ?? Buffer.from(""), req.headers["x-webhook-signature"] as string | undefined);
   if (!signatureValid) {
-    req.log.warn("Assinatura do webhook inválida, rejeitando");
+    logRejection(req, "invalid_signature", 401);
     return res.status(401).json({ error: "invalid_signature" });
   }
 
