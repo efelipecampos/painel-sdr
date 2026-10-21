@@ -21,8 +21,10 @@ const schema = z.object({
   POLI_CLOSER_EMAILS: z.string().optional().default(""),
 
   // Proteções do endpoint do webhook (ver src/webhookGuard.ts). O limite por
-  // IP deve ficar em ~3× o pico real da Poli medido nos logs.
-  WEBHOOK_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(120),
+  // IP fica em ~3× o pico real da Poli: em 2026-10-21 o log mostrou 225/min
+  // (5,7 requisições por mensagem) e o pico de mensagens foi 295/min →
+  // ~1.700 requisições/min.
+  WEBHOOK_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().positive().default(5000),
   WEBHOOK_MAX_BODY: z.string().default("1mb"),
   // Recusas em 10 minutos que disparam alerta (log de erro + Google Chat de ops).
   WEBHOOK_REJECTION_ALERT_THRESHOLD: z.coerce.number().int().positive().default(20),
