@@ -1,7 +1,7 @@
 import { env } from "../config/env.js";
 import { decideRawEventCapture, type CaptureDecision, type RawEventBody } from "../poli/rawEventFilter.js";
 import { isSupabaseConfigured } from "../supabase/client.js";
-import { attendanceHasRawEvent, buildRawEventRow, insertRawEvent } from "../supabase/rawEvents.js";
+import { attendanceHasRawEvent, buildRawEventRow, insertRawEvent, messageHasRawEvent } from "../supabase/rawEvents.js";
 import {
   isRawEventAttendanceKnown,
   markRawEventAttendance,
@@ -21,6 +21,8 @@ export interface CaptureDeps {
   /** Consulta se o atendimento já tem evento gravado (fallback do índice local). */
   attendanceCaptured: (attendanceUuid: string) => Promise<boolean>;
   markAttendance: (attendanceUuid: string) => void;
+  /** A mensagem do ACK já está gravada? */
+  messageCaptured: (messageUuid: string) => Promise<boolean>;
   enqueueFailure: (externalId: string, eventType: string | undefined, payload: unknown, error: string) => void;
   clearJob: (externalId: string) => void;
 }
@@ -30,9 +32,17 @@ const defaultDeps: CaptureDeps = {
   attendanceCaptured: async (attendanceUuid) =>
     isRawEventAttendanceKnown(attendanceUuid) || (await attendanceHasRawEvent(attendanceUuid)),
   markAttendance: markRawEventAttendance,
+  messageCaptured: (messageUuid) => (capturedMessages.has(messageUuid) ? Promise.resolve(true) : messageHasRawEvent(messageUuid)),
   enqueueFailure: recordRawEventFailure,
   clearJob: clearRawEventJob,
 };
+
+// Mensagens gravadas recentemente, para o ACK não consultar o banco a cada evento. Limitado e só em memória.
+const capturedMessages = new Set<string>();
+function rememberMessage(uuid: string): void {
+  if (capturedMessages.size >= 20_000) capturedMessages.delete(capturedMessages.values().next().value as string);
+  capturedMessages.add(uuid);
+}
 
 export interface CaptureResult extends CaptureDecision {
   stored?: boolean;
@@ -53,6 +63,11 @@ export async function captureRawEvent(
     decision = decideRawEventCapture(body, { headerEvent, attendanceAlreadyCaptured });
   }
 
+  if (!decision.capture && decision.needsMessageLookup) {
+    const messageAlreadyCaptured = await deps.messageCaptured(decision.needsMessageLookup);
+    decision = decideRawEventCapture(body, { headerEvent, messageAlreadyCaptured });
+  }
+
   if (!decision.capture) return decision;
   if (!decision.externalId) {
     logger.warn({ reason: decision.reason }, "Evento sem uuid, não dá pra gravar em raw_events");
@@ -63,6 +78,7 @@ export async function captureRawEvent(
   try {
     await deps.insert(row);
     if (decision.attendanceUuid) deps.markAttendance(decision.attendanceUuid);
+    if (body.object === "message" && (body.event === "sent" || body.event === "received")) rememberMessage(decision.externalId);
     deps.clearJob(decision.externalId);
     return { ...decision, stored: true };
   } catch (err) {

@@ -42,3 +42,15 @@ export async function attendanceHasRawEvent(attendanceUuid: string): Promise<boo
   const rows = await supabaseFetch<Array<{ id: number }>>(`/raw_events?${query}`);
   return rows.length > 0;
 }
+
+/** A mensagem já está gravada? (ACK da equipe) — usa a chave única (source, external_id). */
+export async function messageHasRawEvent(messageUuid: string): Promise<boolean> {
+  const query = [
+    "select=id",
+    `source=eq.${encodeURIComponent(RAW_EVENT_SOURCE)}`,
+    `external_id=eq.${encodeURIComponent(messageUuid)}`,
+    "limit=1",
+  ].join("&");
+  const rows = await supabaseFetch<Array<{ id: number }>>(`/raw_events?${query}`);
+  return rows.length > 0;
+}

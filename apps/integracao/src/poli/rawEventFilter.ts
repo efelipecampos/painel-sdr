@@ -49,6 +49,8 @@ export interface CaptureDecision {
   attendanceUuid?: string;
   /** true quando a decisão depende de o atendimento já ter evento gravado. */
   needsAttendanceLookup?: boolean;
+  /** ACK: a decisão depende de a mensagem (`uuid` do ACK) já estar gravada. */
+  needsMessageLookup?: string;
 }
 
 function asString(value: unknown): string | undefined {
@@ -105,6 +107,8 @@ export interface DecideOptions {
   headerEvent?: string;
   /** O atendimento deste evento já tem evento gravado em raw_events. */
   attendanceAlreadyCaptured?: boolean;
+  /** A mensagem deste ACK já está gravada em raw_events (então é da equipe). */
+  messageAlreadyCaptured?: boolean;
   /** Relógio (ms) para o id dos eventos sem uuid próprio; padrão Date.now(). */
   now?: number;
 }
@@ -141,6 +145,15 @@ export function decideRawEventCapture(body: RawEventBody, options: DecideOptions
     const reason: CaptureReason = object === "message" ? "ack" : object === "attendance" ? "atendimento" : "contato";
     if (object === "contact" && (event === "updated" || event === "forwarded")) {
       return { capture: false, reason: "contato_atualizado", ...base };
+    }
+    // O ACK só traz o uuid da mensagem e o status (visto em 23/10/2026): é da equipe quando a mensagem já foi gravada.
+    if (reason === "ack") {
+      const messageUuid = asString(body.uuid);
+      const id = { ...base, externalId: bodyEventId(body, base.eventType, options.now ?? Date.now()) };
+      if (!messageUuid) return { capture: false, reason: "fora_da_equipe", ...id };
+      return options.messageAlreadyCaptured
+        ? { capture: true, reason, ...id }
+        : { capture: false, reason: "fora_da_equipe", ...id, needsMessageLookup: messageUuid };
     }
     const { uuid, email } = attendanceOfNonMessage(body);
     const decided = { ...base, attendanceUuid: uuid, externalId: bodyEventId(body, base.eventType, options.now ?? Date.now()) };

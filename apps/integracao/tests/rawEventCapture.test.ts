@@ -38,6 +38,7 @@ function fakeStore(): FakeStore {
     },
     attendanceCaptured: async (uuid) => store.attendances.has(uuid),
     markAttendance: (uuid) => store.attendances.add(uuid),
+    messageCaptured: async (uuid) => store.rows.some((r) => r.external_id === uuid),
     enqueueFailure: (externalId, _eventType, _payload, error) => store.queue.push({ externalId, error }),
     clearJob: () => {},
   };
@@ -189,22 +190,23 @@ describe("captureRawEvent — filtro da equipe de pré-vendas", () => {
     expect(store.rows).toHaveLength(0);
   });
 
-  it("grava ACK de mensagem da equipe, não de fora, e não a atualização de mensagem", async () => {
-    const ack = await captureRawEvent(evento({ event: "ack", ownerEmail: SDR }), "messages.message.ack", store.deps);
-    const fora = await captureRawEvent(evento({ event: "ack", ownerEmail: FORA_DA_EQUIPE, attendanceUuid: "outro" }), "messages.message.ack", store.deps);
-    const upd = await captureRawEvent(evento({ event: "updated", ownerEmail: SDR }), undefined, store.deps);
+  it("grava ACK só de mensagem já gravada (da equipe), e não a atualização de mensagem", async () => {
+    await captureRawEvent(evento({ uuid: "msg-sdr", ownerEmail: SDR }), undefined, store.deps);
+    const ack = { object: "message", event: "ack", uuid: "msg-sdr", status: "READ_BY_CLIENT" };
+    const deFora = { object: "message", event: "ack", uuid: "msg-suporte", status: "READ_BY_CLIENT" };
 
-    expect(ack).toMatchObject({ capture: true, reason: "ack", stored: true });
-    expect(fora).toMatchObject({ capture: false, reason: "fora_da_equipe" });
-    expect(upd).toMatchObject({ capture: false, reason: "ack_ou_atualizacao" });
-    expect(store.rows).toHaveLength(1);
+    expect(await captureRawEvent(ack, "messages.message.ack", store.deps)).toMatchObject({ capture: true, reason: "ack", stored: true });
+    expect(await captureRawEvent(deFora, "messages.message.ack", store.deps)).toMatchObject({ capture: false, reason: "fora_da_equipe" });
+    expect(await captureRawEvent(evento({ event: "updated", ownerEmail: SDR }), undefined, store.deps)).toMatchObject({ capture: false, reason: "ack_ou_atualizacao" });
+    expect(store.rows).toHaveLength(2);
   });
 
   it("vários ACKs da mesma mensagem viram linhas diferentes (o uuid é da mensagem)", async () => {
-    for (const ack of ["SENT", "DELIVERED", "READ"]) {
-      await captureRawEvent({ ...evento({ event: "ack" }), ack } as RawEventBody, "messages.message.ack", store.deps);
+    await captureRawEvent(evento({ uuid: "msg-1", ownerEmail: SDR }), undefined, store.deps);
+    for (const status of ["RECEIVED_BY_PROVIDER", "RECEIVED_BY_CLIENT", "READ_BY_CLIENT"]) {
+      await captureRawEvent({ object: "message", event: "ack", uuid: "msg-1", status } as RawEventBody, "messages.message.ack", store.deps);
     }
-    expect(store.rows).toHaveLength(3);
+    expect(store.rows).toHaveLength(4);
   });
 
   it("atendimento: grava o da equipe e o fechamento de atendimento já conhecido; ignora o de fora", async () => {
