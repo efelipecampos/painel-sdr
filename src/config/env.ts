@@ -19,6 +19,9 @@ const schema = z.object({
   POLI_WEBHOOK_VERIFY_SIGNATURE: booleanFromEnv(true),
   POLI_SDR_EMAILS: z.string().optional().default(""),
   POLI_CLOSER_EMAILS: z.string().optional().default(""),
+  // Fora da pré-venda, mas com mensagens registradas no HubSpot (ex.: gestor).
+  // Não entra nas métricas do painel nem gera alerta de contato não encontrado.
+  POLI_HUBSPOT_ONLY_EMAILS: z.string().optional().default(""),
 
   // Proteções do endpoint do webhook (ver src/webhookGuard.ts). O limite por
   // IP fica em ~3× o pico real da Poli: em 2026-10-21 o log mostrou 225/min

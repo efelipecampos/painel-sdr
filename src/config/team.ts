@@ -13,6 +13,7 @@ function parseEmailList(raw: string): Set<string> {
 
 const sdrEmails = parseEmailList(env.POLI_SDR_EMAILS);
 const closerEmails = parseEmailList(env.POLI_CLOSER_EMAILS);
+const hubspotOnlyEmails = parseEmailList(env.POLI_HUBSPOT_ONLY_EMAILS);
 
 /**
  * Papel do atendente da Poli (SDR ou Closer), a partir de uma whitelist
@@ -26,6 +27,15 @@ export function getAttendantRole(email: string | undefined | null): AttendantRol
   if (sdrEmails.has(normalized)) return "SDR";
   if (closerEmails.has(normalized)) return "CLOSER";
   return null;
+}
+
+/**
+ * Quem não é SDR nem Closer, mas tem as mensagens registradas no HubSpot
+ * (ex.: gestor). Fica fora das listas de papel de propósito: assim não entra
+ * nas métricas do painel, em raw_events nem na transcrição de mídia.
+ */
+export function isHubspotOnlyAttendant(email: string | undefined | null): boolean {
+  return !!email && hubspotOnlyEmails.has(email.trim().toLowerCase());
 }
 
 export function getPreSalesEmailCount(): number {

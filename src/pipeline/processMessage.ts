@@ -1,4 +1,4 @@
-import { getAttendantRole } from "../config/team.js";
+import { getAttendantRole, isHubspotOnlyAttendant } from "../config/team.js";
 import { env } from "../config/env.js";
 import type { MessageEvent } from "../poli/parser.js";
 import { findContact } from "../hubspot/contacts.js";
@@ -18,7 +18,8 @@ export type ProcessResult =
   | { outcome: "skipped_not_presales" }
   | { outcome: "logged"; contactId: string; communicationId: string; dealIds: string[] }
   | { outcome: "dry_run"; contactId: string | null }
-  | { outcome: "alerted_contact_not_found" };
+  | { outcome: "alerted_contact_not_found" }
+  | { outcome: "skipped_contact_not_found" };
 
 export async function processMessage(message: MessageEvent): Promise<ProcessResult> {
   const result = await handleMessage(message);
@@ -67,7 +68,7 @@ export async function processMessage(message: MessageEvent): Promise<ProcessResu
 
 async function handleMessage(message: MessageEvent): Promise<ProcessResult> {
   const role = getAttendantRole(message.attendantEmail);
-  if (!role) {
+  if (!role && !isHubspotOnlyAttendant(message.attendantEmail)) {
     logger.debug({ attendantEmail: message.attendantEmail }, "Mensagem fora do time de pré-vendas, ignorada");
     return { outcome: "skipped_not_presales" };
   }
@@ -101,6 +102,11 @@ async function handleMessage(message: MessageEvent): Promise<ProcessResult> {
   }
 
   if (!contactId) {
+    if (!role) {
+      // Gestor (POLI_HUBSPOT_ONLY_EMAILS): sem papel, sem espaço de alerta.
+      logger.info({ leadPhone: message.leadPhone }, "Contato não encontrado no HubSpot, mensagem de fora da pré-venda não registrada");
+      return env.DRY_RUN ? { outcome: "dry_run", contactId: null } : { outcome: "skipped_contact_not_found" };
+    }
     logger.info({ leadPhone: message.leadPhone, role }, "Contato não encontrado no HubSpot, enviando alerta");
     await sendLeadNotInHubSpotAlert(message, role);
     return env.DRY_RUN ? { outcome: "dry_run", contactId: null } : { outcome: "alerted_contact_not_found" };
