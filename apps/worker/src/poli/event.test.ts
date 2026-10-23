@@ -30,6 +30,13 @@ function payload(value: Record<string, unknown>) {
 }
 
 describe("parsePoliEvent", () => {
+  it("ignora ACK, atendimento e contato gravados em raw_events (não são mensagem nova)", () => {
+    expect(parsePoliEvent({ ...payload({}), event: "ack" })).toBeNull();
+    expect(parsePoliEvent({ ...payload({}), object: "attendance", event: "created" })).toBeNull();
+    expect(parsePoliEvent({ ...payload({}), object: "contact", event: "forwarded" })).toBeNull();
+    expect(parsePoliEvent(payload({}))).not.toBeNull();
+  });
+
   it("mensagem do lead", () => {
     const e = parsePoliEvent(payload({ direction: "IN", type: "TEXT", author: { type: "CONTACT", uuid: "contact-1" } }))!;
     expect(e.sender).toBe("lead");

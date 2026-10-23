@@ -39,7 +39,11 @@ const str = (v: unknown): string | null => (typeof v === "string" && v !== "" ? 
 
 /** Devolve null quando o payload não tem o mínimo para virar mensagem de um chat. */
 export function parsePoliEvent(payload: unknown): PoliEvent | null {
-  const value = obj(obj(payload)?.value);
+  // Só mensagem nova: ACK, atendimento e contato também ficam em raw_events (desde 23/10/2026) e não são mensagem.
+  const body = obj(payload);
+  const kind = str(body?.event);
+  if ((body?.object !== undefined && body.object !== "message") || (kind && kind !== "sent" && kind !== "received")) return null;
+  const value = obj(body?.value);
   if (!value) return null;
   const messageId = str(value.uuid);
   const timestamp = typeof value.timestamp === "number" ? value.timestamp : null;

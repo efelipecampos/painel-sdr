@@ -180,23 +180,70 @@ describe("captureRawEvent — filtro da equipe de pré-vendas", () => {
     expect(store.rows).toHaveLength(0);
   });
 
-  it("não grava evento que não é de mensagem", async () => {
-    const result = await captureRawEvent(
-      { object: "contact", event: "updated", uuid: "evt-contato" },
-      "contacts.contact.updated",
-      store.deps,
-    );
+  it("não grava contato atualizado nem objeto desconhecido", async () => {
+    const atualizado = await captureRawEvent({ object: "contact", event: "updated", uuid: "c-1" }, "contacts.contact.updated", store.deps);
+    const outro = await captureRawEvent({ object: "chat", event: "created", uuid: "x-1" }, undefined, store.deps);
 
-    expect(result).toMatchObject({ capture: false, reason: "nao_e_mensagem" });
+    expect(atualizado).toMatchObject({ capture: false, reason: "contato_atualizado" });
+    expect(outro).toMatchObject({ capture: false, reason: "nao_e_mensagem" });
     expect(store.rows).toHaveLength(0);
   });
 
-  it("não grava ACK de entrega/leitura nem atualização de mensagem", async () => {
-    for (const event of ["ack", "updated"]) {
-      const result = await captureRawEvent(evento({ event, ownerEmail: SDR }), undefined, store.deps);
-      expect(result, event).toMatchObject({ capture: false, reason: "ack_ou_atualizacao" });
+  it("grava ACK de mensagem da equipe, não de fora, e não a atualização de mensagem", async () => {
+    const ack = await captureRawEvent(evento({ event: "ack", ownerEmail: SDR }), "messages.message.ack", store.deps);
+    const fora = await captureRawEvent(evento({ event: "ack", ownerEmail: FORA_DA_EQUIPE, attendanceUuid: "outro" }), "messages.message.ack", store.deps);
+    const upd = await captureRawEvent(evento({ event: "updated", ownerEmail: SDR }), undefined, store.deps);
+
+    expect(ack).toMatchObject({ capture: true, reason: "ack", stored: true });
+    expect(fora).toMatchObject({ capture: false, reason: "fora_da_equipe" });
+    expect(upd).toMatchObject({ capture: false, reason: "ack_ou_atualizacao" });
+    expect(store.rows).toHaveLength(1);
+  });
+
+  it("vários ACKs da mesma mensagem viram linhas diferentes (o uuid é da mensagem)", async () => {
+    for (const ack of ["SENT", "DELIVERED", "READ"]) {
+      await captureRawEvent({ ...evento({ event: "ack" }), ack } as RawEventBody, "messages.message.ack", store.deps);
     }
-    expect(store.rows).toHaveLength(0);
+    expect(store.rows).toHaveLength(3);
+  });
+
+  it("atendimento: grava o da equipe e o fechamento de atendimento já conhecido; ignora o de fora", async () => {
+    const daEquipe = { object: "attendance", event: "created", uuid: "a-1", value: { uuid: "a-1", attendant: { email: SDR } } };
+    const fechadoPorFora = { object: "attendance", event: "closed", uuid: "a-1", value: { uuid: "a-1", attendant: { email: FORA_DA_EQUIPE } } };
+    const deFora = { object: "attendance", event: "created", uuid: "a-9", value: { uuid: "a-9", attendant: { email: FORA_DA_EQUIPE } } };
+
+    expect(await captureRawEvent(daEquipe, "attendances.attendance.created", store.deps)).toMatchObject({ capture: true, reason: "atendimento" });
+    expect(await captureRawEvent(fechadoPorFora, "attendances.attendance.closed", store.deps)).toMatchObject({ capture: true, reason: "atendimento" });
+    expect(await captureRawEvent(deFora, "attendances.attendance.created", store.deps)).toMatchObject({ capture: false, reason: "fora_da_equipe" });
+    expect(store.rows).toHaveLength(2);
+  });
+
+  it("contato: grava criado e tag com atendimento da equipe; ignora sem dono, atualizado e encaminhado", async () => {
+    const comSdr = (event: string) => ({ object: "contact", event, uuid: "c-1", value: { current_attendance: { uuid: "a-2", attendant: { email: SDR } } } });
+
+    expect(await captureRawEvent(comSdr("created"), "contacts.contact.created", store.deps)).toMatchObject({ capture: true, reason: "contato" });
+    expect(await captureRawEvent(comSdr("tag_attached"), "contacts.contact.tag_attached", store.deps)).toMatchObject({ capture: true, reason: "contato" });
+    expect(await captureRawEvent({ object: "contact", event: "created", uuid: "c-2", value: { current_attendance: null } }, undefined, store.deps)).toMatchObject({ capture: false });
+    expect(await captureRawEvent(comSdr("updated"), "contacts.contact.updated", store.deps)).toMatchObject({ capture: false, reason: "contato_atualizado" });
+    expect(await captureRawEvent(comSdr("forwarded"), "contacts.contact.forwarded", store.deps)).toMatchObject({ capture: false, reason: "contato_atualizado" });
+    expect(store.rows).toHaveLength(2);
+  });
+
+  it("evento igual: reentrega não duplica, mas repetido 10 min depois entra", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-10-23T15:00:00Z"));
+      const corpo = { object: "attendance", event: "updated", uuid: "a-1", value: { uuid: "a-1", attendant: { email: SDR } } };
+      await captureRawEvent(corpo, "attendances.attendance.updated", store.deps);
+      await captureRawEvent(corpo, "attendances.attendance.updated", store.deps);
+      expect(store.rows).toHaveLength(1);
+
+      vi.setSystemTime(new Date("2026-10-23T15:10:00Z"));
+      await captureRawEvent(corpo, "attendances.attendance.updated", store.deps);
+      expect(store.rows).toHaveLength(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("reentrega do mesmo evento não duplica", async () => {

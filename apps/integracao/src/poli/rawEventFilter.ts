@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { env } from "../config/env.js";
 import { getAttendantRole } from "../config/team.js";
 
@@ -18,6 +19,10 @@ export type CaptureReason =
   | "saida_do_chat_da_equipe"
   | "nao_e_mensagem"
   | "ack_ou_atualizacao"
+  | "ack"
+  | "atendimento"
+  | "contato"
+  | "contato_atualizado"
   | "fora_da_equipe";
 
 export interface RawEventBody {
@@ -31,6 +36,8 @@ export interface RawEventBody {
     template?: unknown;
     author?: { type?: unknown; uuid?: unknown } | null;
     attendance?: { uuid?: unknown; attendant?: { email?: unknown } | null } | null;
+    current_attendance?: { uuid?: unknown; attendant?: { email?: unknown } | null } | null;
+    attendant?: { email?: unknown } | null;
   } | null;
 }
 
@@ -62,6 +69,18 @@ export function attendanceUuidOf(body: RawEventBody): string | undefined {
   return asString(body.value?.attendance?.uuid);
 }
 
+/**
+ * Atendimento e e-mail do dono nos eventos que não são mensagem: no atendimento
+ * o próprio `value` é o atendimento; no contato é o `value.current_attendance`;
+ * no ACK, se vier, o `value.attendance` (formato ainda não visto).
+ */
+function attendanceOfNonMessage(body: RawEventBody): { uuid?: string; email?: string } {
+  const v = body.value;
+  if (asString(body.object) === "attendance") return { uuid: asString(v?.uuid), email: asString(v?.attendant?.email) };
+  const a = v?.current_attendance ?? v?.attendance;
+  return { uuid: asString(a?.uuid), email: asString(a?.attendant?.email) };
+}
+
 /** SYSTEM = transferência, encerramento e afins; não é conversa com o lead. */
 export function isSystemEvent(body: RawEventBody): boolean {
   const direction = asString(body.value?.direction);
@@ -86,6 +105,20 @@ export interface DecideOptions {
   headerEvent?: string;
   /** O atendimento deste evento já tem evento gravado em raw_events. */
   attendanceAlreadyCaptured?: boolean;
+  /** Relógio (ms) para o id dos eventos sem uuid próprio; padrão Date.now(). */
+  now?: number;
+}
+
+/**
+ * ACK, atendimento e contato (decisão do Felipe, 2026-10-23): o `uuid` desses
+ * eventos é o da mensagem, do atendimento ou do contato, não o do evento, e se
+ * repete a cada ACK, encaminhamento ou mudança. O id vira tipo + hash do corpo
+ * + janela de 10 min: a reentrega igual não duplica, e o mesmo evento repetido
+ * depois (ex.: o contato encaminhado de novo à mesma SDR) entra como novo.
+ */
+export function bodyEventId(body: RawEventBody, eventType: string | undefined, now: number): string {
+  const hash = createHash("sha256").update(JSON.stringify(body)).digest("hex").slice(0, 32);
+  return `${eventType ?? "evento"}:${hash}:${Math.floor(now / 600_000)}`;
 }
 
 export function decideRawEventCapture(body: RawEventBody, options: DecideOptions = {}): CaptureDecision {
@@ -95,9 +128,30 @@ export function decideRawEventCapture(body: RawEventBody, options: DecideOptions
     attendanceUuid: attendanceUuidOf(body),
   };
 
-  if (asString(body.object) !== "message") return { capture: false, reason: "nao_e_mensagem", ...base };
-
+  const object = asString(body.object);
   const event = asString(body.event);
+
+  // ACK, atendimento e contato (decisão do Felipe, 2026-10-23): só da equipe de pré-vendas, pela mesma
+  // regra das mensagens: o dono do atendimento é da equipe, ou o atendimento já tem evento gravado
+  // (o que cobre o fechamento e a saída do chat da equipe). O contato "atualizado" fica de fora (volume
+  // alto, nada útil) e o "encaminhado" também: ele não traz o e-mail de quem recebe, e o atendimento
+  // criado por encaminhamento (INITIATED_BY_FORWARDING) já registra o mesmo momento com o dono.
+  const naoMensagem = (object === "message" && event === "ack") || object === "attendance" || object === "contact";
+  if (naoMensagem) {
+    const reason: CaptureReason = object === "message" ? "ack" : object === "attendance" ? "atendimento" : "contato";
+    if (object === "contact" && (event === "updated" || event === "forwarded")) {
+      return { capture: false, reason: "contato_atualizado", ...base };
+    }
+    const { uuid, email } = attendanceOfNonMessage(body);
+    const decided = { ...base, attendanceUuid: uuid, externalId: bodyEventId(body, base.eventType, options.now ?? Date.now()) };
+    if (getAttendantRole(email)) return { capture: true, reason, ...decided };
+    if (!uuid) return { capture: false, reason: "fora_da_equipe", ...decided };
+    return options.attendanceAlreadyCaptured
+      ? { capture: true, reason, ...decided }
+      : { capture: false, reason: "fora_da_equipe", ...decided, needsAttendanceLookup: true };
+  }
+
+  if (object !== "message") return { capture: false, reason: "nao_e_mensagem", ...base };
   if (event !== "received" && event !== "sent") return { capture: false, reason: "ack_ou_atualizacao", ...base };
 
   // 1) Dono do chat é da equipe: a conversa inteira entra, qualquer autor.

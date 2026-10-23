@@ -14,6 +14,8 @@ export interface RequestWithRawBody extends Request {
 // A Poli está configurada (no painel deles) pra entregar na raiz "/" — o
 // alias "/webhooks/poli" fica mantido por clareza/documentação, caso o
 // painel seja reconfigurado depois.
+let ackFormatLogged = false;
+
 export const webhookHandler = async (req: RequestWithRawBody, res: Response) => {
   const signatureValid = verifyPoliSignature(req.rawBody ?? Buffer.from(""), req.headers["x-webhook-signature"] as string | undefined);
   if (!signatureValid) {
@@ -26,12 +28,11 @@ export const webhookHandler = async (req: RequestWithRawBody, res: Response) => 
   // atrasar o 200 e sem afetar nada abaixo. Ver captureRawEvent.
   captureRawEventSafely(req.body, req.headers["x-webhook-event"] as string | undefined);
 
-  // Eventos que não são de mensagem (ex.: contacts.contact.updated) ainda
-  // não têm handler — loga o corpo bruto pra investigação e confirma
-  // recebido, pra Poli não ficar reentregando à toa.
+  // Eventos que não são de mensagem (contato, atendimento) não vão pro HubSpot:
+  // o evento cru já foi pro raw_events acima. Confirma recebido, pra Poli não
+  // reentregar. Sem o corpo no log: ele traz nome e telefone do lead (LGPD).
   const rawObjectType = (req.body as { object?: unknown } | undefined)?.object;
   if (rawObjectType !== "message") {
-    req.log.info({ event: req.headers["x-webhook-event"], object: rawObjectType, body: req.body }, "Evento não-mensagem recebido, ainda sem handler");
     return res.status(200).json({ received: true, handled: false });
   }
 
@@ -40,6 +41,13 @@ export const webhookHandler = async (req: RequestWithRawBody, res: Response) => 
   // formato e são muito frequentes — confirma recebido sem logar, pra não
   // virar 400 e reentrega em massa do lado da Poli.
   const rawEvent = (req.body as { event?: unknown }).event;
+  // Formato do ACK ainda não visto: registra uma vez por processo só as chaves (nada de valor, LGPD).
+  if (rawEvent === "ack" && !ackFormatLogged) {
+    ackFormatLogged = true;
+    const value = (req.body as { value?: Record<string, unknown> }).value ?? {};
+    const attendance = value.attendance && typeof value.attendance === "object" ? Object.keys(value.attendance) : null;
+    req.log.info({ keys: Object.keys(req.body as object), valueKeys: Object.keys(value), attendanceKeys: attendance }, "Formato do ACK (só chaves)");
+  }
   if (rawEvent !== "received" && rawEvent !== "sent") {
     return res.status(200).json({ received: true, handled: false });
   }
