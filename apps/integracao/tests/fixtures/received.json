@@ -1,0 +1,68 @@
+{
+  "object": "message",
+  "event": "received",
+  "account_uuid": "9b8af98e-0407-49a2-bce9-3620f29c513a",
+  "uuid": "rec-1-msg-1789582848.5904-784",
+  "unread_messages": 2,
+  "value": {
+    "uuid": "rec-1-msg-1789582848.5904-784",
+    "event": "MESSAGE",
+    "type": "CHAT",
+    "account_channel": {
+      "uuid": "9b8bae9e-2fe2-4f2a-82a2-abb931c7d7ce",
+      "uid": "556299800123@c.us",
+      "name": "Canal Principal",
+      "status": "ACTIVE",
+      "provider": "WABA",
+      "channel_type": "WABA"
+    },
+    "ack": "UNDEFINED",
+    "direction": "IN",
+    "timestamp": 1789582847,
+    "template": null,
+    "author": {
+      "type": "CONTACT",
+      "uuid": "a21bb5bf-8b92-4bc3-859e-b48f130970f8",
+      "attributes": {
+        "name": "Marcos Poli quassio",
+        "phone": "5516997220323",
+        "origin_category": "orgânico",
+        "from_campaign": false
+      }
+    },
+    "contact": {
+      "uuid": "a21bb5bf-8b92-4bc3-859e-b48f130970f8",
+      "attributes": {
+        "name": "Marcos Poli quassio",
+        "phone": "5516997220323",
+        "origin_category": "orgânico",
+        "from_campaign": false
+      }
+    },
+    "preview": null,
+    "components": {
+      "body": {
+        "text": "Vamos marcar"
+      }
+    },
+    "attendance": {
+      "uuid": "a2c1077f-5904-4913-a481-5b956081d3f3",
+      "status": "IN_PROGRESS",
+      "type": "INITIATED_BY_FORWARDING",
+      "closed_reason": null,
+      "attendant": {
+        "uuid": "df6a7a41-a7e9-4fb2-810e-3a4df246a69a",
+        "email": "julliana.reis@poli.digital",
+        "attributes": {
+          "name": "Julliana Reis"
+        }
+      }
+    },
+    "metadata": {
+      "external_message_id": "wamid.HBgNNTUxNjk5NzIyMDMyMxUCABIYIEFDRDJBRkNFQTQ1OEU3RTZFMzJCRjEzQzA3NTZEMTc2AA==",
+      "direction": "IN",
+      "created_at": "2026-09-16T18:20:48.000000Z",
+      "deprecated_contact_id": 67912511
+    }
+  }
+}
