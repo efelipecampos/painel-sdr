@@ -51,6 +51,39 @@ services:
     env_file:
       - .env
 
+  # Integração Poli → HubSpot (antes no repositório PoliChat-Hubspot, trazida em 23/10/2026). Recebe o webhook da Poli,
+  # registra no HubSpot e grava os eventos crus em public.raw_events. Mesmo domínio e mesmo volume da fila SQLite de antes.
+  # O .env dela fica em apps/integracao/.env na VPS (copiado de /root/poli-hubspot/.env na troca).
+  integracao:
+    image: poli-hubspot:latest
+    build:
+      context: apps/integracao
+    container_name: poli-hubspot
+    restart: unless-stopped
+    env_file:
+      - apps/integracao/.env
+    volumes:
+      - poli-hubspot-data:/app/data
+    networks:
+      - coolify
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - traefik.http.services.poli-hubspot.loadbalancer.server.port=3000
+      - traefik.http.routers.poli-hubspot-https.rule=Host(`poli-hubspot.camposai.com.br`)
+      - traefik.http.routers.poli-hubspot-https.entrypoints=https
+      - traefik.http.routers.poli-hubspot-https.tls.certresolver=letsencrypt
+      - traefik.http.routers.poli-hubspot-https.service=poli-hubspot
+      - traefik.http.routers.poli-hubspot-http.rule=Host(`poli-hubspot.camposai.com.br`)
+      - traefik.http.routers.poli-hubspot-http.entrypoints=http
+      - traefik.http.routers.poli-hubspot-http.middlewares=redirect-to-https@file
+
 networks:
   coolify:
     external: true
+
+volumes:
+  # Volume criado pelo projeto antigo (/root/poli-hubspot); guarda a fila SQLite da integração.
+  poli-hubspot-data:
+    external: true
+    name: poli-hubspot_poli-hubspot-data

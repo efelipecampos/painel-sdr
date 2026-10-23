@@ -18,16 +18,16 @@ Dono do projeto: Felipe (Head of Revenue). Usuários da V1: Felipe e, depois, os
 - App web: Next.js (App Router) + TypeScript.
 - Worker (processamento de eventos, sync HubSpot, score): Node + TypeScript, processo separado.
 - IA do score: Celeris (`celeris-1-magnus`), escolhida por `SCORE_IA=celeris` no `.env`; o Claude (API da Anthropic, SDK oficial) continua como alternativa (`SCORE_IA=anthropic`). Modelo e chave em variáveis de ambiente. As conversas vão mascaradas (decisão do Felipe, 2026-10-08).
-- Deploy: VPS Hostinger que já roda **Coolify**. O Traefik do Coolify cuida de domínio e HTTPS. Não instale Caddy, Nginx nem nada que use as portas 80/443. Siga o padrão do projeto `PoliChat-Hubspot`: Docker Compose com labels do Traefik na rede `coolify`.
+- Deploy: VPS Hostinger que já roda **Coolify**. O Traefik do Coolify cuida de domínio e HTTPS. Não instale Caddy, Nginx nem nada que use as portas 80/443. Docker Compose com labels do Traefik na rede `coolify`.
 - Migrations: Supabase CLI (`supabase/migrations`). Nunca altere o banco de produção à mão.
 
-## Relação com a integração PoliChat-Hubspot
+## Integração Poli → HubSpot (`apps/integracao`)
 
-- Este projeto NÃO recebe o webhook da Poli. Quem recebe é o serviço `PoliChat-Hubspot` (repositório separado, já em produção na mesma VPS), que grava cada evento cru em `public.raw_events` no Supabase.
+- Quem recebe o webhook da Poli é a integração em `apps/integracao` (antes no repositório separado `PoliChat-Hubspot`, trazida para cá em 23/10/2026, com o histórico). Ela registra as mensagens no HubSpot e grava cada evento cru em `public.raw_events`. Roda num container próprio (`poli-hubspot`), separado do painel, para que um deploy do painel não derrube o webhook. O repositório antigo está aposentado: não mexa nele.
 - O banco é um só (Supabase `pabbgxaphooftdsdewmq`) e as migrations de TODO o banco ficam neste repositório, inclusive as tabelas que a integração usa (`public.messages` e `public.raw_events`).
-- A integração ESCREVE em `public.messages` e `public.raw_events`; o painel só LÊ essas duas. O formato delas é um contrato com o código da integração: nunca mude coluna, tipo ou nome delas sem mudar a integração junto.
+- A integração ESCREVE em `public.messages` e `public.raw_events`; o painel só LÊ essas duas. O formato delas é um contrato com o código da integração: coluna, tipo ou nome só mudam no mesmo commit que ajusta `apps/integracao`.
 - As tabelas do painel ficam no schema `painel`.
-- Qualquer mudança necessária na integração é feita no repositório dela, não aqui.
+- A integração está em produção e grava no HubSpot de verdade: mudança nela segue as mesmas regras do painel (branch, testes, aprovação do Felipe, deploy coordenado).
 
 ## Regras
 

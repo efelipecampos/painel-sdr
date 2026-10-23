@@ -21,13 +21,14 @@ docker buildx build --platform linux/amd64 --target worker -t painel-sdr-worker:
 docker buildx build --platform linux/amd64 --target web -t painel-sdr-web:latest --load \
   --build-arg NEXT_PUBLIC_SUPABASE_URL="$(var NEXT_PUBLIC_SUPABASE_URL)" \
   --build-arg NEXT_PUBLIC_SUPABASE_ANON_KEY="$(var NEXT_PUBLIC_SUPABASE_ANON_KEY)" .
+docker buildx build --platform linux/amd64 -t poli-hubspot:latest --load apps/integracao
 
 echo "2/4 Copiando arquivos de configuração (sem o .env, que já está na VPS)..."
 rsync -az -e "ssh -i $KEY" --exclude node_modules --exclude .git --exclude .next --exclude .env --exclude .claude --exclude coverage \
   ./ "$VPS:/root/painel-sdr/"
 
 echo "3/4 Enviando as imagens para a VPS..."
-docker save painel-sdr-worker:latest painel-sdr-web:latest | gzip -1 | "${SSH[@]}" 'gunzip | docker load'
+docker save painel-sdr-worker:latest painel-sdr-web:latest poli-hubspot:latest | gzip -1 | "${SSH[@]}" 'gunzip | docker load'
 
 echo "4/4 Trocando os containers..."
 "${SSH[@]}" 'cd /root/painel-sdr && docker compose up -d --no-build && docker image prune -f >/dev/null && docker ps --format "{{.Names}} | {{.Status}}" | grep -E "painel|poli-hubspot"'
