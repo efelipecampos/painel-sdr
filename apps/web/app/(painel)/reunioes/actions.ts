@@ -1,7 +1,7 @@
 "use server";
 
-// Ações da tela Reuniões (Fase 10d.2): status (com arquivo no Google) e mudança de horário (mesmo evento).
-// A permissão é conferida no banco (permissao_reuniao / definir_status_reuniao) com a sessão do usuário.
+// Ações da tela Reuniões (Fase 10d.2): mudança de horário (mesmo evento) e troca de closer. A situação vem do
+// HubSpot desde 2026-10-27 (não se marca mais aqui). A permissão é conferida no banco (permissao_reuniao).
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { isFree } from "@painel/shared/google";
@@ -19,19 +19,6 @@ const admin = () => createAdminClient().schema("painel");
 async function permissao(id: string): Promise<string | null> {
   const { data } = await (await createClient()).schema("painel").rpc("permissao_reuniao", { p_id: id });
   return (data as string | null) ?? null;
-}
-
-export async function mudarStatus(id: string, status: string): Promise<{ erro?: string }> {
-  const { error } = await (await createClient()).schema("painel").rpc("definir_status_reuniao", { p_id: id, p_status: status });
-  if (error) return { erro: error.message.includes("acesso negado") ? "Você não pode alterar esta reunião." : error.message };
-  revalidatePath("/reunioes");
-  try {
-    const m = await loadMeeting(id);
-    if (m) await syncEventWithStatus(m);
-  } catch (e) {
-    return { erro: `Status salvo, mas a agenda do Google não foi atualizada: ${(e as Error).message}` };
-  }
-  return {};
 }
 
 /** Closers que podem ficar com a reunião no novo horário: os elegíveis do carrossel e o closer atual. */

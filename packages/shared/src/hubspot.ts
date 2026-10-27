@@ -126,3 +126,12 @@ export function suggestCarousel<T extends { brand: string; suggest_min_users: nu
     && (c.suggest_min_users == null || users >= c.suggest_min_users)
     && (c.suggest_max_users == null || users <= c.suggest_max_users)) ?? null;
 }
+
+/** Tempo para a integração do Calendar criar a Reunião no HubSpot antes de contar como "não está no HubSpot". */
+export const ESPERA_MIN = 10;
+
+/** Está no Calendar e não está no HubSpot (nem a Reunião do Calendar, nem uma criada pelo painel antes). */
+export function semHubspot(m: { status: string; google_event_id?: string | null; hubspot_agenda_meeting_id?: string | null; hubspot_meeting_id?: string | null; created_at?: string }, now: number): boolean {
+  return !!m.google_event_id && m.status !== "cancelada" && !m.hubspot_agenda_meeting_id && !m.hubspot_meeting_id
+    && !!m.created_at && now - Date.parse(m.created_at) >= ESPERA_MIN * 60_000;
+}

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { semHubspot } from "@painel/shared/hubspot";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getMe, isManager } from "@/lib/supabase/server";
 import { addDays, formatDateTime, localDay, localToDate } from "@/lib/time";
@@ -41,11 +42,11 @@ export default async function ReunioesPage({ searchParams }: { searchParams: Pro
   const ids = all.map((r) => r.id);
   const adm = createAdminClient().schema("painel");
   const [extra, aprovados, pedidosRes] = await Promise.all([
-    ids.length ? adm.from("meetings").select("id, assigned_by, meet_url").in("id", ids) : Promise.resolve({ data: [] }),
+    ids.length ? adm.from("meetings").select("id, assigned_by, meet_url, status, google_event_id, hubspot_agenda_meeting_id, hubspot_meeting_id, created_at").in("id", ids) : Promise.resolve({ data: [] }),
     ids.length ? adm.from("closer_swap_requests").select("meeting_id, status").in("meeting_id", ids).in("status", ["aprovado", "pendente"]) : Promise.resolve({ data: [] }),
     me.role === "closer" ? Promise.resolve({ data: [] }) : db.rpc("pedidos_troca", { p_status: "pendente" }),
   ]);
-  const ex = new Map(((extra.data ?? []) as { id: string; assigned_by: string | null; meet_url: string | null }[]).map((e) => [e.id, e]));
+  const ex = new Map(((extra.data ?? []) as ({ id: string; assigned_by: string | null; meet_url: string | null } & Parameters<typeof semHubspot>[0])[]).map((e) => [e.id, e]));
   const reqs = (aprovados.data ?? []) as { meeting_id: string; status: string }[];
   const pedidos = (pedidosRes.data ?? []) as Pedido[];
 
@@ -140,7 +141,7 @@ export default async function ReunioesPage({ searchParams }: { searchParams: Pro
                     <td>{r.sdr ?? "—"}</td>
                     <td><div className="rn-stack"><span>{r.closer ?? "—"}</span><span className="ag-hint">{assigned}</span>
                       {req.some((x) => x.status === "pendente") && <span className="ag-warn">Troca pedida</span>}</div></td>
-                    <td><StatusCell id={r.id} status={r.status} permissao={r.permissao} problema={problem(r) ? r.google_state : null} company={r.company ?? "lead"} /></td>
+                    <td><StatusCell id={r.id} status={r.status} problema={problem(r) ? r.google_state : null} semHubspot={!!e && semHubspot(e, now)} /></td>
                     <td><ActionsCell id={r.id} status={r.status} futura={Date.parse(r.starts_at) > now} permissao={r.permissao} brand={r.brand}
                       meetUrl={e?.meet_url ?? null} pedidoPendente={req.some((x) => x.status === "pendente")} company={r.company ?? "lead"} /></td>
                   </tr>

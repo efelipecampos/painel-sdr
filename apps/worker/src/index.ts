@@ -6,12 +6,14 @@
 import { Monitor, postToGoogleChat } from "./alerts.js";
 import { config } from "./config.js";
 import { HubspotClient, resetLeadsCursor, syncLeads, syncOwners, syncStages } from "./hubspot/leads.js";
-import { dailyCheck, stuckMeetings, syncMeetings } from "./hubspot/meetings.js";
+import { syncMeetings } from "./hubspot/meetings.js";
+import { alertaSemHubspot, sincronizarReunioesAgenda } from "./hubspot/reunioesAgenda.js";
 import { marcarRespostas } from "./hubspot/respostas.js";
 import { gravarCamposContato } from "./hubspot/contatos.js";
 import { marcarDiaResposta } from "./hubspot/diaResposta.js";
 import { processarTagsDescarte } from "./jornada/tagDescarte.js";
 import { checkGoogle } from "./google.js";
+import { GoogleCalendar, accessToken, decryptToken } from "@painel/shared/google";
 import { rodarJornada, syncTemplates } from "./jornada/motor.js";
 import { PoliApi } from "@painel/shared/poli";
 import { createDb, processBatch, rebuildAll, syncRoles } from "./processor.js";
@@ -63,23 +65,33 @@ async function syncGoogle(): Promise<void> {
 }
 
 /** Devolve false quando não era hora de sincronizar. */
-/** Reuniões do painel no HubSpot: cria/atualiza a cada rodada; status uma vez por dia (17:55). */
+/** Reuniões no HubSpot (2026-10-27): a do Calendar é a oficial; liga e lê o status a cada 5 min, alerta a cada 30. */
+let lastAgenda = 0;
+/** Agenda do closer para liberar o horário de reunião cancelada no HubSpot (sem Google configurado: não mexe). */
+const calendarDe = async (closerId: string): Promise<GoogleCalendar | null> => {
+  if (!config.google) return null;
+  const { data } = await db.schema("painel").from("google_connections").select("refresh_token_enc").eq("closer_id", closerId).maybeSingle();
+  if (!data) return null;
+  return new GoogleCalendar(await accessToken(config.google, decryptToken(data.refresh_token_enc, config.google.tokenKey)));
+};
+let lastAlertaAgenda = 0;
 async function syncHubspotMeetings(): Promise<void> {
   // pedidos de troca de closer que passaram do prazo (2 h antes da reunião) expiram
   const { data: expirados } = await db.schema("painel").rpc("expirar_pedidos_troca");
   if (expirados) console.log(`[worker] ${expirados} pedidos de troca de closer expirados`);
   if (!hubspot) return;
   const r = await syncMeetings(db, hubspot);
-  if (r.criadas || r.atualizadas || r.erros) console.log(`[worker] HubSpot reuniões: ${r.criadas} criadas, ${r.atualizadas} atualizadas, ${r.erros} com erro`);
-  for (const m of await stuckMeetings(db)) {
-    await postToGoogleChat(`⚠️ *Painel SDR:* a reunião "${m.title ?? "sem título"}" não foi gravada no HubSpot há mais de 15 min. Erro: ${m.error ?? "—"}. O painel continua tentando.`);
-  }
-  const d = await dailyCheck(db, hubspot);
-  if (d) {
-    console.log(`[worker] HubSpot 17:55: ${d.conferidas} conferidas, ${d.corrigidas} corrigidas, ${d.recriadas} recriadas, ${d.duplicadas.length} possíveis duplicadas`);
-    await postToGoogleChat(`📋 *HubSpot, conferência das 17:55* (reuniões do painel dos últimos 5 dias)\n${d.conferidas} conferidas · ${d.corrigidas} corrigidas · ${d.recriadas} recriadas (tinham sido apagadas)`
-      + (d.duplicadas.length ? `\n⚠️ Possível reunião duplicada no HubSpot (outra reunião do mesmo contato no mesmo dia, criada fora do painel):\n${d.duplicadas.map((x) => `• ${x}`).join("\n")}` : "\nNenhuma reunião duplicada encontrada."));
-  }
+  if (r.atualizadas || r.erros) console.log(`[worker] HubSpot reuniões antigas do painel: ${r.atualizadas} atualizadas, ${r.erros} com erro`);
+  if (Date.now() - lastAgenda < 5 * 60_000) return;
+  lastAgenda = Date.now();
+  const g = await sincronizarReunioesAgenda(db, hubspot, calendarDe);
+  if (g.ligadas || g.status || g.liberadas || g.erros) console.log(`[worker] HubSpot reuniões do Calendar: ${g.ligadas} ligadas, ${g.status} status atualizados, ${g.liberadas} horários liberados/retomados no Google, ${g.erros} com erro`);
+  if (Date.now() - lastAlertaAgenda < 30 * 60_000) return;
+  const { data: comercial } = await db.schema("painel").rpc("is_business_time", { p_at: new Date().toISOString() });
+  if (!comercial) return;
+  lastAlertaAgenda = Date.now();
+  const texto = await alertaSemHubspot(db);
+  if (texto) await postToGoogleChat(texto);
 }
 
 /** Tarefa que grava no HubSpot a cada rodada; alerta no Gestão SDR se falhar por mais de 15 min seguidos. */
