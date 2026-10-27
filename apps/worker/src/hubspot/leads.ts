@@ -43,6 +43,14 @@ export interface MetricStages {
   descartado: string | null;
   dsq: string | null;
   agendado?: string[];   // etapas que contam como "agendou" (hubspot_agendado_stages)
+  cadencia?: string[];   // etapas da cadência D1–D4 e Finalizar Cadência (chaves de hubspot_cadencia_etapas)
+}
+
+/** Etapas cuja data de entrada vai para etapas_entrada: a cadência e as de saída dela (dia da primeira resposta). */
+export function etapasEntrada(stages: MetricStages): string[] {
+  const c = stages.cadencia ?? [];
+  if (!c.length) return [];
+  return [...new Set([...c, stages.descartado, stages.dsq, ...(stages.agendado ?? [])].filter((s): s is string => !!s))];
 }
 
 /** Converte um Lead da API na linha de painel.hubspot_leads. */
@@ -50,6 +58,7 @@ export function toRow(lead: HubspotLead, contactId: string | null, stages: Metri
   const p = lead.properties;
   const entered = (stage: string | null) => (stage ? (p[`hs_v2_date_entered_${stage}`] ?? null) : null);
   const agendado = (stages.agendado ?? []).map((s) => entered(s)).filter((d): d is string => !!d).sort()[0] ?? null;
+  const etapas = Object.fromEntries(etapasEntrada(stages).map((s) => [s, entered(s)]).filter(([, d]) => !!d));
   return {
     hubspot_lead_id: lead.id,
     hubspot_contact_id: contactId,
@@ -62,6 +71,7 @@ export function toRow(lead: HubspotLead, contactId: string | null, stages: Metri
     entered_dsq_at: entered(stages.dsq),
     entered_agendado_at: agendado,
     // "Respondeu template" (lido pelo follow-up do n8n); o painel marca em hubspot/respostas.ts
+    etapas_entrada: Object.keys(etapas).length ? etapas : null,
     respondeu_template: p.respondeu_template == null || p.respondeu_template === "" ? null : p.respondeu_template === "true",
     synced_at: new Date().toISOString(),
   };
@@ -103,11 +113,15 @@ export async function syncOwners(db: SupabaseClient, hs: HubspotClient): Promise
 }
 
 async function metricStages(db: SupabaseClient): Promise<MetricStages> {
-  const rows = check(await db.schema("painel").from("settings").select("key, value").in("key", ["hubspot_stage_descartado", "hubspot_stage_dsq", "hubspot_agendado_stages"]), "ler etapas das métricas");
+  const rows = check(await db.schema("painel").from("settings").select("key, value").in("key", ["hubspot_stage_descartado", "hubspot_stage_dsq", "hubspot_agendado_stages", "hubspot_cadencia_etapas"]), "ler etapas das métricas");
   const find = (k: string) => rows.find((x: { key: string }) => x.key === k)?.value;
   const get = (k: string) => { const v = find(k); return v == null ? null : String(v); };
   const ag = find("hubspot_agendado_stages");
-  return { descartado: get("hubspot_stage_descartado"), dsq: get("hubspot_stage_dsq"), agendado: Array.isArray(ag) ? ag.map(String) : [] };
+  const cad = find("hubspot_cadencia_etapas");
+  return {
+    descartado: get("hubspot_stage_descartado"), dsq: get("hubspot_stage_dsq"), agendado: Array.isArray(ag) ? ag.map(String) : [],
+    cadencia: cad && typeof cad === "object" && !Array.isArray(cad) ? Object.keys(cad) : [],
+  };
 }
 
 /** Volta o cursor do sync de Leads para uma data (para reler, ex.: depois de passar a guardar um campo novo). */
@@ -120,7 +134,8 @@ export async function resetLeadsCursor(db: SupabaseClient, since: string): Promi
 export async function syncLeads(db: SupabaseClient, hs: HubspotClient): Promise<number> {
   const p = db.schema("painel");
   const stages = await metricStages(db);
-  const extra = [stages.descartado, stages.dsq, ...(stages.agendado ?? [])].filter(Boolean).map((id) => `hs_v2_date_entered_${id}`);
+  const extra = [...new Set([stages.descartado, stages.dsq, ...(stages.agendado ?? []), ...etapasEntrada(stages)].filter(Boolean))]
+    .map((id) => `hs_v2_date_entered_${id}`);
   const cur = check(await p.from("settings").select("value").eq("key", CURSOR_KEY), "ler cursor do HubSpot");
   let since = Date.parse(cur.length ? String(cur[0].value) : INITIAL_SINCE);
   let total = 0;

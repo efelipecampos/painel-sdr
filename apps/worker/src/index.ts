@@ -9,6 +9,7 @@ import { HubspotClient, resetLeadsCursor, syncLeads, syncOwners, syncStages } fr
 import { dailyCheck, stuckMeetings, syncMeetings } from "./hubspot/meetings.js";
 import { marcarRespostas } from "./hubspot/respostas.js";
 import { gravarCamposContato } from "./hubspot/contatos.js";
+import { marcarDiaResposta } from "./hubspot/diaResposta.js";
 import { checkGoogle } from "./google.js";
 import { rodarJornada, syncTemplates } from "./jornada/motor.js";
 import { PoliApi } from "@painel/shared/poli";
@@ -119,6 +120,16 @@ const syncRespostas = tarefaHubspot("Respondeu template", 'marcar "Respondeu tem
 // Campos "Poli - ..." do Contato e dos Negócios abertos (2026-10-09; antes eram da integração)
 const syncCamposContato = tarefaHubspot("campos do contato", 'gravar os campos "Poli - ..." dos Contatos e Negócios no HubSpot',
   async () => { const r = await gravarCamposContato(db, hubspot!); return r.contatos || r.negocios ? `campos atualizados em ${r.contatos} contatos e ${r.negocios} negócios` : null; });
+// "Respondeu algum dia de prospecção?" no Lead (2026-10-26): a cada 15 min, como o sync dos Leads, que traz a etapa.
+const DIA_MINUTOS = 15;
+let ultimoDia = 0;
+const syncDiaResposta = tarefaHubspot("dia da resposta", 'marcar "Respondeu algum dia de prospecção?" nos Leads do HubSpot',
+  async () => {
+    if (Date.now() - ultimoDia < DIA_MINUTOS * 60_000) return null;
+    const n = await marcarDiaResposta(db, hubspot!, 20);
+    ultimoDia = Date.now();
+    return n ? `${n} Leads com o dia da resposta marcado` : null;
+  });
 
 async function syncHubspot(force: boolean): Promise<boolean> {
   if (!hubspot) return false;
@@ -182,6 +193,7 @@ if (process.argv.includes("--testar-alerta")) {
     }
     await syncRespostas();
     await syncCamposContato();
+    await syncDiaResposta();
     try {
       await syncGoogle();
     } catch (err) {

@@ -36,6 +36,17 @@ describe("toRow", () => {
     expect(toRow({ id: "3", properties: {} }, "c", { descartado: null, dsq: null, agendado: ["1250901139"] }).entered_agendado_at).toBeNull();
   });
 
+  it("guarda as datas de entrada nas etapas da cadência e nas de saída dela", () => {
+    const stages = { descartado: "DESC", dsq: "DSQ", agendado: ["GA"], cadencia: ["D1", "D2"] };
+    const row = toRow({ id: "4", properties: {
+      hs_v2_date_entered_D1: "2026-10-20T12:00:00Z", hs_v2_date_entered_D2: "2026-10-21T12:00:00Z",
+      hs_v2_date_entered_GA: "2026-10-21T15:00:00Z", hs_v2_date_entered_DSQ: null,
+    } }, "c", stages);
+    expect(row.etapas_entrada).toEqual({ D1: "2026-10-20T12:00:00Z", D2: "2026-10-21T12:00:00Z", GA: "2026-10-21T15:00:00Z" });
+    expect(toRow({ id: "5", properties: {} }, "c", stages).etapas_entrada).toBeNull();
+    expect(toRow({ id: "6", properties: { hs_v2_date_entered_DESC: "2026-10-22T10:00:00Z" } }, "c", { descartado: "DESC", dsq: null }).etapas_entrada).toBeNull();
+  });
+
   it("Lead sem contato associado e sem propriedades", () => {
     expect(toRow({ id: "9", properties: {} }, null)).toMatchObject({ hubspot_contact_id: null, stage_id: null, owner_id: null });
   });
