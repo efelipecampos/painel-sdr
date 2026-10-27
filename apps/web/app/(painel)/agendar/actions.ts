@@ -84,8 +84,9 @@ export async function carregarLead(input: { leadId?: string; ref?: string }): Pr
   // Reuniões do contato no HubSpot que não são do painel (aviso de duplicidade)
   let hubspotFora: LeadLoaded["hubspotFora"] = [];
   try {
-    const { data: nossas } = await db.from("meetings").select("hubspot_meeting_id").eq("hubspot_contact_id", info.contactId).not("hubspot_meeting_id", "is", null);
-    const ids = new Set((nossas ?? []).map((x: { hubspot_meeting_id: string }) => x.hubspot_meeting_id));
+    const { data: nossas } = await db.from("meetings").select("hubspot_meeting_id, hubspot_agenda_meeting_id").eq("hubspot_contact_id", info.contactId);
+    // as do painel: a criada por ele (até 2026-10-27) e a que a integração do Calendar criou
+    const ids = new Set((nossas ?? []).flatMap((x: { hubspot_meeting_id: string | null; hubspot_agenda_meeting_id: string | null }) => [x.hubspot_meeting_id, x.hubspot_agenda_meeting_id]).filter(Boolean));
     const limite = Date.now() - 30 * 86400_000;
     hubspotFora = (await hubspot().meetingsOfContact(info.contactId))
       .filter((x) => !ids.has(x.id) && x.start && Date.parse(x.start) >= limite)
