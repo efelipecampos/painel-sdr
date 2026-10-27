@@ -14,6 +14,29 @@ export interface RequestWithRawBody extends Request {
 // A Poli está configurada (no painel deles) pra entregar na raiz "/" — o
 // alias "/webhooks/poli" fica mantido por clareza/documentação, caso o
 // painel seja reconfigurado depois.
+let tagFormatLogged = 0;
+
+/** Caminhos do corpo com o tipo de cada folha; valor só de uuid/name/id dentro de algo chamado tag (não é dado do lead). */
+export function describeShape(body: unknown): { shape: Record<string, string>; tagValues: Record<string, string> } {
+  const shape: Record<string, string> = {};
+  const tagValues: Record<string, string> = {};
+  const walk = (v: unknown, path: string, inTag: boolean, depth: number) => {
+    if (Array.isArray(v)) {
+      shape[path] = `array(${v.length})`;
+      if (v.length && depth < 6) walk(v[0], `${path}[0]`, inTag, depth + 1);
+    } else if (v && typeof v === "object") {
+      if (depth >= 6) { shape[path] = "object"; return; }
+      for (const [k, x] of Object.entries(v)) walk(x, path ? `${path}.${k}` : k, inTag || /tag/i.test(k), depth + 1);
+    } else {
+      shape[path] = v === null ? "null" : typeof v;
+      const leaf = path.split(".").pop() ?? "";
+      if (inTag && /^(uuid|id|name)$/.test(leaf) && v != null) tagValues[path] = String(v).slice(0, 80);
+    }
+  };
+  walk(body, "", false, 0);
+  return { shape, tagValues };
+}
+
 let ackFormatLogged = false;
 
 export const webhookHandler = async (req: RequestWithRawBody, res: Response) => {
@@ -32,6 +55,13 @@ export const webhookHandler = async (req: RequestWithRawBody, res: Response) => 
   // o evento cru já foi pro raw_events acima. Confirma recebido, pra Poli não
   // reentregar. Sem o corpo no log: ele traz nome e telefone do lead (LGPD).
   const rawObjectType = (req.body as { object?: unknown } | undefined)?.object;
+  // Formato do evento de tag no contato ainda não visto (descarte por tag, 2026-10-27): registra os 3 primeiros
+  // por processo só com a estrutura (caminho → tipo), e o valor apenas de uuid/nome dentro de chaves de tag.
+  const rawEventName = String((req.body as { event?: unknown } | undefined)?.event ?? "");
+  if (rawObjectType === "contact" && /tag/i.test(rawEventName) && tagFormatLogged < 3) {
+    tagFormatLogged++;
+    req.log.info({ event: rawEventName, ...describeShape(req.body) }, "Formato do evento de tag (só estrutura)");
+  }
   if (rawObjectType !== "message") {
     return res.status(200).json({ received: true, handled: false });
   }
