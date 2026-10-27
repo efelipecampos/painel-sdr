@@ -23,6 +23,8 @@ export type CaptureReason =
   | "atendimento"
   | "contato"
   | "contato_atualizado"
+  | "tag_descarte"
+  | "tag_fora_do_descarte"
   | "fora_da_equipe";
 
 export interface RawEventBody {
@@ -38,6 +40,7 @@ export interface RawEventBody {
     attendance?: { uuid?: unknown; attendant?: { email?: unknown } | null } | null;
     current_attendance?: { uuid?: unknown; attendant?: { email?: unknown } | null } | null;
     attendant?: { email?: unknown } | null;
+    tag?: { uuid?: unknown; attributes?: { name?: unknown } | null } | null;
   } | null;
 }
 
@@ -120,6 +123,9 @@ export interface DecideOptions {
  * + janela de 10 min: a reentrega igual não duplica, e o mesmo evento repetido
  * depois (ex.: o contato encaminhado de novo à mesma SDR) entra como novo.
  */
+/** Prefixo das tags da Poli que descartam o Lead no HubSpot. */
+export const TAG_DESCARTE_PREFIXO = "Descarte - ";
+
 export function bodyEventId(body: RawEventBody, eventType: string | undefined, now: number): string {
   const hash = createHash("sha256").update(JSON.stringify(body)).digest("hex").slice(0, 32);
   return `${eventType ?? "evento"}:${hash}:${Math.floor(now / 600_000)}`;
@@ -143,6 +149,15 @@ export function decideRawEventCapture(body: RawEventBody, options: DecideOptions
   const naoMensagem = (object === "message" && event === "ack") || object === "attendance" || object === "contact";
   if (naoMensagem) {
     const reason: CaptureReason = object === "message" ? "ack" : object === "attendance" ? "atendimento" : "contato";
+    // Tag no contato (descarte por tag, decisão do Felipe, 2026-10-27): o evento não traz atendimento nem quem aplicou.
+    // Entra só a tag de descarte vinculada ("Descarte - ..."; criadas pelo painel). Tirar a tag não desfaz o descarte.
+    if (object === "contact" && (event === "tag_linked" || event === "tag_unlinked")) {
+      const id = { ...base, externalId: bodyEventId(body, base.eventType, options.now ?? Date.now()) };
+      const nome = asString(body.value?.tag?.attributes?.name) ?? "";
+      return event === "tag_linked" && nome.startsWith(TAG_DESCARTE_PREFIXO)
+        ? { capture: true, reason: "tag_descarte", ...id }
+        : { capture: false, reason: "tag_fora_do_descarte", ...id };
+    }
     if (object === "contact" && (event === "updated" || event === "forwarded")) {
       return { capture: false, reason: "contato_atualizado", ...base };
     }

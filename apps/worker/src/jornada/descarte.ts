@@ -11,7 +11,9 @@ const NAO_MEXER = new Set([DESCARTADO, "1250901142", "1250901139", "1358962969"]
 type Lead = { id: string; properties: Record<string, string | null> };
 
 /** Devolve o resultado para o registro do envio: descartado, já fora do funil, sem Lead no HubSpot ou erro. */
-export async function descartarNoHubspot(hs: HubspotClient, contactId: string | null, motivo: string, obs: string): Promise<string> {
+export async function descartarNoHubspot(
+  hs: Pick<HubspotClient, "call">, contactId: string | null, motivo: string, obs: string, opcoes: { prefixo?: boolean } = {},
+): Promise<string> {
   if (!contactId) return "sem Lead no HubSpot";
   try {
     const a = await hs.call<{ results?: { toObjectId: string | number }[] }>(`/crm/v4/objects/contacts/${contactId}/associations/leads`);
@@ -30,7 +32,8 @@ export async function descartarNoHubspot(hs: HubspotClient, contactId: string | 
         hs_pipeline_stage: DESCARTADO,
         sdr__motivo_de_perda: motivo,
         hs_lead_disqualification_note: obs,
-        hs_lead_name: nomeDescartado(lead.properties.hs_lead_name),
+        // descarte por tag da Poli: sem prefixo no nome (decisão do Felipe, 2026-10-27)
+        ...(opcoes.prefixo === false ? {} : { hs_lead_name: nomeDescartado(lead.properties.hs_lead_name) }),
       },
     }, "PATCH");
     return "descartado";

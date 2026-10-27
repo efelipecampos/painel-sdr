@@ -10,6 +10,7 @@ import { dailyCheck, stuckMeetings, syncMeetings } from "./hubspot/meetings.js";
 import { marcarRespostas } from "./hubspot/respostas.js";
 import { gravarCamposContato } from "./hubspot/contatos.js";
 import { marcarDiaResposta } from "./hubspot/diaResposta.js";
+import { processarTagsDescarte } from "./jornada/tagDescarte.js";
 import { checkGoogle } from "./google.js";
 import { rodarJornada, syncTemplates } from "./jornada/motor.js";
 import { PoliApi } from "@painel/shared/poli";
@@ -130,6 +131,9 @@ const syncDiaResposta = tarefaHubspot("dia da resposta", 'marcar "Respondeu algu
     ultimoDia = Date.now();
     return n ? `${n} Leads com o dia da resposta marcado` : null;
   });
+// Descarte do Lead no HubSpot por tag "Descarte - ..." da Poli (2026-10-27).
+const syncTagsDescarte = tarefaHubspot("descarte por tag", "descartar no HubSpot os Leads com tag de descarte da Poli",
+  async () => { const n = await processarTagsDescarte(db, hubspot!); return n ? `${n} Leads descartados por tag da Poli` : null; });
 
 async function syncHubspot(force: boolean): Promise<boolean> {
   if (!hubspot) return false;
@@ -194,6 +198,7 @@ if (process.argv.includes("--testar-alerta")) {
     await syncRespostas();
     await syncCamposContato();
     await syncDiaResposta();
+    await syncTagsDescarte();
     try {
       await syncGoogle();
     } catch (err) {

@@ -231,6 +231,17 @@ describe("captureRawEvent — filtro da equipe de pré-vendas", () => {
     expect(store.rows).toHaveLength(2);
   });
 
+  it("tag no contato: grava só a tag de descarte vinculada; ignora outras tags e a remoção", async () => {
+    const tag = (event: string, name: string) => ({
+      object: "contact", event, uuid: "c-1",
+      value: { contact: { uuid: "c-1" }, tag: { uuid: "t-1", attributes: { name } }, timestamp: "2026-10-27T15:00:00Z" },
+    });
+    expect(await captureRawEvent(tag("tag_linked", "Descarte - Sem CNPJ"), "contacts.contact.tag_linked", store.deps)).toMatchObject({ capture: true, reason: "tag_descarte" });
+    expect(await captureRawEvent(tag("tag_linked", "Cliente Atendido"), "contacts.contact.tag_linked", store.deps)).toMatchObject({ capture: false, reason: "tag_fora_do_descarte" });
+    expect(await captureRawEvent(tag("tag_unlinked", "Descarte - Sem CNPJ"), "contacts.contact.tag_unlinked", store.deps)).toMatchObject({ capture: false, reason: "tag_fora_do_descarte" });
+    expect(store.rows).toHaveLength(1);
+  });
+
   it("evento igual: reentrega não duplica, mas repetido 10 min depois entra", async () => {
     vi.useFakeTimers();
     try {
