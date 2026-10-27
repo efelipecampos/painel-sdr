@@ -4,14 +4,14 @@ import { descartarNoHubspot } from "./descarte.js";
 import { observacaoTag, processarTagsDescarte } from "./tagDescarte.js";
 
 /** HubSpot falso: um contato com um Lead aberto no pipeline do SDR; guarda o PATCH. */
-function fakeHs(etapa = "1250901135") {
+function fakeHs(etapa = "1250901135", nota: string | null = null) {
   const patches: Record<string, string>[] = [];
   return {
     patches,
     hs: {
       call: async (path: string, body?: unknown) => {
         if (path.includes("/associations/leads")) return { results: [{ toObjectId: 77 }] } as never;
-        if (path.endsWith("batch/read")) return { results: [{ id: "77", properties: { hs_pipeline: "841793591", hs_pipeline_stage: etapa, hs_lead_name: "Fulano", hs_createdate: "2026-10-20" } }] } as never;
+        if (path.endsWith("batch/read")) return { results: [{ id: "77", properties: { hs_pipeline: "841793591", hs_pipeline_stage: etapa, hs_lead_name: "Fulano", hs_createdate: "2026-10-20", hs_lead_disqualification_note: nota } }] } as never;
         patches.push((body as { properties: Record<string, string> }).properties);
         return {} as never;
       },
@@ -80,6 +80,22 @@ describe("descarte por tag da Poli", () => {
     expect(patches[0].hs_lead_disqualification_note).toMatch(/^Descartado via integração com Tag Poli\. Tag: Descarte - Sem CNPJ\. SDR do atendimento: Jéssica\./);
     expect(registros.map((r) => r.resultado)).toEqual(["descartado", "tag sem motivo configurado"]);
     expect(settings.tag_descarte_cursor).toBe(20);
+  });
+
+  it("Lead já Descartado: troca o motivo e acrescenta a observação abaixo da anterior", async () => {
+    const { db, registros } = fakeDb([evento(11, "t-cnpj", "Descarte - Sem CNPJ")]);
+    const { hs, patches } = fakeHs("1250901141", "Descartado à mão: valor");
+    expect(await processarTagsDescarte(db, hs)).toBe(1);
+    expect(patches[0].sdr__motivo_de_perda).toBe("Sem CNPJ");
+    expect(patches[0].hs_lead_disqualification_note).toMatch(/^Descartado à mão: valor\nDescartado via integração com Tag Poli\. Tag: Descarte - Sem CNPJ\./);
+    expect(patches[0].hs_pipeline_stage).toBeUndefined();
+    expect(registros[0].resultado).toBe("motivo atualizado");
+  });
+
+  it("Jornada continua sem mexer em Lead já Descartado", async () => {
+    const { hs, patches } = fakeHs("1250901141");
+    expect(await descartarNoHubspot(hs, "555", "Sem CNPJ", "obs")).toBe("já fora do funil");
+    expect(patches).toHaveLength(0);
   });
 
   it("Lead em Garantir Agendamento não é mexido", async () => {

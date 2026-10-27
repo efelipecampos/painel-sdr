@@ -1,6 +1,7 @@
 // Descarte do Lead no HubSpot por tag da Poli (decisão do Felipe, 2026-10-27). O SDR aplica no contato uma tag
 // "Descarte - <motivo>"; a integração grava o evento "tag_linked" em raw_events e aqui o Lead é descartado com o motivo
 // da tag (painel.settings.poli_tags_descarte), sem prefixo no nome e com a observação abaixo. Tirar a tag não desfaz.
+// Lead já Descartado: troca o motivo e acrescenta a observação (descartado de novo por outro motivo).
 // Cada evento fica registrado em painel.tag_descartes. Erro do HubSpot para a rodada e tenta de novo na próxima.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { HubspotClient } from "../hubspot/leads.js";
@@ -61,7 +62,7 @@ export async function processarTagsDescarte(db: SupabaseClient, hs: Pick<Hubspot
     const sdr = chat[0] ? { sdr_id: chat[0].sdr_id, nome: (Array.isArray(rel) ? rel[0]?.name : rel?.name) ?? null } : null;
 
     const resultado = !motivo ? "tag sem motivo configurado"
-      : await descartarNoHubspot(hs, hubspotId, motivo, observacaoTag(tagNome, sdr?.nome ?? null, em), { prefixo: false });
+      : await descartarNoHubspot(hs, hubspotId, motivo, observacaoTag(tagNome, sdr?.nome ?? null, em), { prefixo: false, redescartar: true });
     if (resultado.startsWith("erro")) {
       novoCursor = ev.id - 1; // tenta este de novo na próxima rodada
       await gravarCursor(db, novoCursor);
@@ -71,7 +72,7 @@ export async function processarTagsDescarte(db: SupabaseClient, hs: Pick<Hubspot
       raw_event_id: ev.id, poli_contact_uuid: contato, tag_uuid: tagUuid, tag_nome: tagNome, motivo,
       hubspot_contact_id: hubspotId, sdr_id: sdr?.sdr_id ?? null, aplicada_em: em.toISOString(), resultado,
     }, { onConflict: "raw_event_id", ignoreDuplicates: true }), "registrar descarte por tag");
-    if (resultado === "descartado") descartados++;
+    if (resultado === "descartado" || resultado === "motivo atualizado") descartados++;
     if (eventos.length === max) novoCursor = ev.id;
   }
   await gravarCursor(db, novoCursor);

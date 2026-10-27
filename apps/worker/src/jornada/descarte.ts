@@ -12,7 +12,7 @@ type Lead = { id: string; properties: Record<string, string | null> };
 
 /** Devolve o resultado para o registro do envio: descartado, já fora do funil, sem Lead no HubSpot ou erro. */
 export async function descartarNoHubspot(
-  hs: Pick<HubspotClient, "call">, contactId: string | null, motivo: string, obs: string, opcoes: { prefixo?: boolean } = {},
+  hs: Pick<HubspotClient, "call">, contactId: string | null, motivo: string, obs: string, opcoes: { prefixo?: boolean; redescartar?: boolean } = {},
 ): Promise<string> {
   if (!contactId) return "sem Lead no HubSpot";
   try {
@@ -21,11 +21,20 @@ export async function descartarNoHubspot(
     if (!ids.length) return "sem Lead no HubSpot";
     const r = await hs.call<{ results: Lead[] }>("/crm/v3/objects/leads/batch/read", {
       inputs: ids.slice(0, 100).map((id) => ({ id })),
-      properties: ["hs_pipeline", "hs_pipeline_stage", "hs_lead_name", "hs_createdate"],
+      properties: ["hs_pipeline", "hs_pipeline_stage", "hs_lead_name", "hs_createdate", "hs_lead_disqualification_note"],
     });
     const lead = r.results.filter((l) => l.properties.hs_pipeline === PIPELINE)
       .sort((x, y) => String(y.properties.hs_createdate ?? "").localeCompare(String(x.properties.hs_createdate ?? "")))[0];
     if (!lead) return "sem Lead no HubSpot";
+    // Tag de descarte num Lead já Descartado (decisão do Felipe, 2026-10-27): troca o motivo e acrescenta a observação
+    // nova abaixo da anterior, qualquer que tenha sido o descarte anterior (à mão, Jornada ou tag).
+    if (opcoes.redescartar && lead.properties.hs_pipeline_stage === DESCARTADO) {
+      const anterior = (lead.properties.hs_lead_disqualification_note ?? "").trim();
+      await hs.call(`/crm/v3/objects/leads/${lead.id}`, {
+        properties: { sdr__motivo_de_perda: motivo, hs_lead_disqualification_note: anterior ? `${anterior}\n${obs}` : obs },
+      }, "PATCH");
+      return "motivo atualizado";
+    }
     if (NAO_MEXER.has(String(lead.properties.hs_pipeline_stage))) return "já fora do funil";
     await hs.call(`/crm/v3/objects/leads/${lead.id}`, {
       properties: {
