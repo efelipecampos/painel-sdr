@@ -11,6 +11,7 @@ import { alertaSemHubspot, enviarStatusPendentes, sincronizarReunioesAgenda } fr
 import { marcarRespostas } from "./hubspot/respostas.js";
 import { gravarCamposContato } from "./hubspot/contatos.js";
 import { marcarDiaResposta } from "./hubspot/diaResposta.js";
+import { enviarScores } from "./hubspot/scoreContato.js";
 import { processarTagsDescarte } from "./jornada/tagDescarte.js";
 import { checkGoogle } from "./google.js";
 import { alertaDesequilibrio } from "./desequilibrio.js";
@@ -151,6 +152,18 @@ const syncDiaResposta = tarefaHubspot("dia da resposta", 'marcar "Respondeu algu
     ultimoDia = Date.now();
     return n ? `${n} Leads com o dia da resposta marcado` : null;
   });
+// Score da IA no campo "[IA] Score" do Contato (2026-10-28): só o que mudou, a cada 10 min (o score roda de 2 em 2
+// horas; não precisa consultar o banco a cada rodada). A primeira rodada depois do deploy começa a carga inicial
+// (~1.400 contatos, até 5 lotes de 100 por rodada); a rodada que enche os 5 lotes repete logo em seguida.
+const SCORE_HS_MINUTOS = 10;
+let ultimoScoreHs = 0;
+const syncScoreContato = tarefaHubspot("score no contato", 'gravar o "[IA] Score" nos Contatos do HubSpot',
+  async () => {
+    if (Date.now() - ultimoScoreHs < SCORE_HS_MINUTOS * 60_000) return null;
+    const n = await enviarScores(db, hubspot!, 5);
+    if (n < 500) ultimoScoreHs = Date.now();
+    return n ? `nota da IA gravada em ${n} Contatos` : null;
+  });
 // Descarte do Lead no HubSpot por tag "Descarte - ..." da Poli (2026-10-27).
 const syncTagsDescarte = tarefaHubspot("descarte por tag", "descartar no HubSpot os Leads com tag de descarte da Poli",
   async () => { const n = await processarTagsDescarte(db, hubspot!); return n ? `${n} Leads descartados por tag da Poli` : null; });
@@ -219,6 +232,7 @@ if (process.argv.includes("--testar-alerta")) {
     await syncCamposContato();
     await syncDiaResposta();
     await syncTagsDescarte();
+    await syncScoreContato();
     try {
       await syncGoogle();
     } catch (err) {
