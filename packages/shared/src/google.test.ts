@@ -81,6 +81,22 @@ describe("livre e ocupado", () => {
     expect(isFreeOcupado(o, t("08:45"), t("09:45"), 30)).toBe(false);  // só 15 min antes
     expect(isFreeOcupado(o, t("08:30"), t("09:30"), 30)).toBe(true);   // meia hora antes
   });
+  it("Google pediu para esperar (403 rateLimitExceeded, 429, 5xx): tenta de novo 1 s, 2 s, 4 s", async () => {
+    const esperas: number[] = [];
+    let n = 0;
+    const cal = new GoogleCalendar("tk", async () => (++n < 3 ? json(403, { error: { errors: [{ reason: "rateLimitExceeded" }] } }) : json(200, { id: "ev1", status: "confirmed" })),
+      async (ms) => { esperas.push(ms); });
+    expect((await cal.patch("ev1", { title: "x" }, "primary", false)).id).toBe("ev1");
+    expect(esperas).toEqual([1000, 2000]);
+    const sempre = new GoogleCalendar("tk", async () => json(503, {}), async () => {});
+    await expect(sempre.patch("ev1", { title: "x" })).rejects.toThrow(/503/);
+  });
+  it("403 de permissão (forbidden) não é repetido", async () => {
+    let n = 0;
+    const cal = new GoogleCalendar("tk", async () => { n++; return json(403, { error: { errors: [{ reason: "forbidden" }] } }); }, async () => {});
+    await expect(cal.patch("ev1", { title: "x" })).rejects.toThrow(/forbidden/);
+    expect(n).toBe(1);
+  });
   it("lê o livre/ocupado e trata agenda com erro como falha (não como livre)", async () => {
     const cal = new GoogleCalendar("tk", async () => json(200, { calendars: { primary: { busy: [{ start: "2026-10-12T13:00:00Z", end: "2026-10-12T14:00:00Z" }] } } }));
     expect(await cal.busy(t("07:00"), t("20:00"))).toEqual([{ start: new Date("2026-10-12T13:00:00Z"), end: new Date("2026-10-12T14:00:00Z") }]);
