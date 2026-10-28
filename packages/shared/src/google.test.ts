@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { randomBytes } from "node:crypto";
-import { GoogleCalendar, GoogleError, accessToken, activeTitle, archiveTitle, authUrl, decryptToken, encryptToken, eventState, exchangeCode, isFree, isFreeOcupado } from "./google";
+import { GoogleCalendar, GoogleError, accessToken, activeTitle, almocos, archiveTitle, authUrl, decryptToken, encryptToken, eventState, exchangeCode, isFree, isFreeOcupado } from "./google";
 
 const KEY = randomBytes(32).toString("base64");
 const creds = { clientId: "cid", clientSecret: "sec", redirectUri: "https://x/api/google/callback" };
@@ -108,7 +108,7 @@ describe("livre e ocupado", () => {
     const urls: string[] = [];
     const pages: Record<string, unknown> = {
       "": { items: [ev("propria", "16:00", "17:00"), ev("livre", "16:30", "17:30", { transparency: "transparent" })], nextPageToken: "p2" },
-      p2: { items: [ev("recusada", "16:30", "17:00", { attendees: [{ self: true, responseStatus: "declined" }] }), ev("cancelada", "16:30", "17:00", { status: "cancelled" }), ev("outra", "17:30", "18:00")] },
+      p2: { items: [ev("recusada", "16:30", "17:00", { attendees: [{ self: true, responseStatus: "declined" }] }), ev("cancelada", "16:30", "17:00", { status: "cancelled" }), ev("outra", "17:30", "18:00", { attendees: [{ email: "gestor@poli.digital" }] })] },
     };
     const cal = new GoogleCalendar("tk", async (u) => {
       urls.push(String(u));
@@ -122,7 +122,7 @@ describe("livre e ocupado", () => {
     expect(new URL(urls[0]).searchParams.get("fields")).not.toMatch(/summary|description/);
     expect(urls).toHaveLength(2);
   });
-  it("reunião com cliente marcada fora do painel (convidado de fora da empresa) ganha o intervalo; almoço e reunião interna não", async () => {
+  it("reunião com cliente marcada fora do painel (convidado de fora da empresa) ganha o intervalo; reunião interna não", async () => {
     const ev = (id: string, s: string, e: string, emails: string[]) => ({
       id, start: { dateTime: t(s).toISOString() }, end: { dateTime: t(e).toISOString() },
       attendees: [{ email: "closer@poli.digital", self: true }, ...emails.map((email) => ({ email }))],
@@ -134,16 +134,45 @@ describe("livre e ocupado", () => {
     ] }));
     const o = await cal.ocupados(t("00:00"), t("23:59"), { internos: INTERNOS });
     expect(o.cliente).toEqual([{ start: t("14:00"), end: t("15:00") }]);
-    expect(o.google).toHaveLength(3);
+    expect(o.google).toHaveLength(2); // o "almoço" sem convidado não ocupa (2026-10-28): vem da configuração do closer
     expect(isFreeOcupado(o, t("15:00"), t("16:00"), 30)).toBe(false);  // logo depois da reunião com cliente (caso da Alessandra)
     expect(isFreeOcupado(o, t("15:30"), t("16:30"), 30)).toBe(true);
     expect(isFreeOcupado(o, t("13:15"), t("13:45"), 30)).toBe(false);  // só 15 min antes da reunião com cliente
     expect(isFreeOcupado(o, t("13:00"), t("13:30"), 30)).toBe(true);   // meia hora antes; e logo depois do almoço, sem intervalo
     expect(isFreeOcupado(o, t("11:00"), t("12:00"), 30)).toBe(true);   // entre a reunião interna e o almoço, sem intervalo
   });
-  it("evento de dia inteiro ocupa o dia no fuso de São Paulo", async () => {
-    const cal = new GoogleCalendar("tk", async () => json(200, { items: [{ id: "ferias", start: { date: "2026-10-12" }, end: { date: "2026-10-13" } }] }));
+  it("Fora do escritório de dia inteiro ocupa o dia no fuso de São Paulo; dia inteiro comum não", async () => {
+    const cal = new GoogleCalendar("tk", async () => json(200, { items: [
+      { id: "ooo", eventType: "outOfOffice", start: { date: "2026-10-12" }, end: { date: "2026-10-13" } },
+      { id: "ferias", start: { date: "2026-10-12" }, end: { date: "2026-10-13" }, attendees: [{ email: "gestor@poli.digital" }] },
+    ] }));
     expect((await cal.ocupados(t("00:00"), t("23:59"), { internos: INTERNOS })).google).toEqual([{ start: t("00:00"), end: new Date("2026-10-13T00:00:00-03:00") }]);
+  });
+  it("bloqueio falso (2026-10-28): só ocupa reunião com convidado, interna ou de cliente, e Fora do escritório", async () => {
+    const ev = (id: string, s: string, e: string, extra: object = {}) => ({ id, start: { dateTime: t(s).toISOString() }, end: { dateTime: t(e).toISOString() }, ...extra });
+    const eu = { email: "closer@poli.digital", self: true };
+    const sala = { email: "sala@resource.calendar.google.com", resource: true };
+    const cal = new GoogleCalendar("tk", async () => json(200, { items: [
+      ev("bloco", "08:00", "09:00"),                                                       // sem convidado
+      ev("so-eu-e-sala", "09:00", "10:00", { attendees: [eu, sala] }),                     // só o closer e uma sala
+      ev("foco", "10:00", "11:00", { eventType: "focusTime", attendees: [eu] }),            // tempo de concentração
+      ev("colega", "11:00", "12:00", { attendees: [eu, { email: "ana@chatshub.com.br" }] }), // interna: ocupa sem intervalo
+      ev("cliente", "14:00", "15:00", { attendees: [eu, { email: "x@cliente.com" }] }),     // cliente: ocupa com intervalo
+      ev("medico", "15:00", "16:00", { eventType: "outOfOffice" }),                         // fora do escritório
+      ev("recusada", "16:00", "17:00", { attendees: [{ ...eu, responseStatus: "declined" }, { email: "x@cliente.com" }] }),
+    ] }));
+    const o = await cal.ocupados(t("00:00"), t("23:59"), { internos: INTERNOS });
+    expect(o.google).toEqual([{ start: t("11:00"), end: t("12:00") }, { start: t("14:00"), end: t("15:00") }, { start: t("15:00"), end: t("16:00") }]);
+    expect(o.cliente).toEqual([{ start: t("14:00"), end: t("15:00") }]);
+  });
+  it("almoço configurado do closer: um intervalo por dia, no horário de São Paulo", () => {
+    expect(almocos(t("00:00"), t("23:59"), "12:00", "13:15")).toEqual([{ start: t("12:00"), end: t("13:15") }]);
+    expect(almocos(new Date("2026-10-12T03:00:00Z"), new Date("2026-10-14T03:00:00Z"), "12:00", "13:15")).toHaveLength(2);
+    expect(almocos(t("14:00"), t("18:00"), "12:00", "13:15")).toEqual([]);
+    const o = { google: almocos(t("00:00"), t("23:59"), "12:00", "13:15"), cliente: [] };
+    expect(isFreeOcupado(o, t("11:00"), t("12:00"), 15)).toBe(true);
+    expect(isFreeOcupado(o, t("12:30"), t("13:30"), 15)).toBe(false);
+    expect(isFreeOcupado(o, t("13:15"), t("14:15"), 15)).toBe(true);
   });
   it("sala de reunião (recurso) não faz do evento uma reunião com cliente", async () => {
     const cal = new GoogleCalendar("tk", async () => json(200, { items: [{ id: "x", start: { dateTime: t("10:00").toISOString() }, end: { dateTime: t("11:00").toISOString() },

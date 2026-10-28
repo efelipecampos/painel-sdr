@@ -48,6 +48,18 @@ export async function adicionarUsuario(form: FormData) {
 }
 
 /** Troca de papel com a sessão de quem pede (o banco confere as regras). */
+/** Almoço do closer (2026-10-28): o painel não agenda reunião nesse horário. Só quem gerencia usuários. */
+export async function definirAlmoco(form: FormData) {
+  if (!(await getMe())?.canManageUsers) redirect("/");
+  const id = String(form.get("sdr_id") ?? "");
+  const ini = String(form.get("inicio") ?? "");
+  const fim = String(form.get("fim") ?? "");
+  if (!/^\d{2}:\d{2}$/.test(ini) || !/^\d{2}:\d{2}$/.test(fim) || fim <= ini) voltar({ erro: "Almoço inválido: o fim precisa ser depois do início." });
+  const { error } = await createAdminClient().schema("painel").from("sdrs").update({ almoco_inicio: ini, almoco_fim: fim }).eq("id", id);
+  if (error) voltar({ erro: error.message });
+  voltar({ salvo: "almoco" });
+}
+
 export async function definirPapel(form: FormData) {
   if (!(await getMe())?.canManageUsers) redirect("/");
   const { error } = await (await createClient()).schema("painel").rpc("definir_papel", {

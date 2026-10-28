@@ -31,6 +31,12 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
         <p className="muted" style={{ margin: 0 }}>
           O painel só vê os seus horários livres e ocupados (nunca o conteúdo dos seus compromissos) e cria ou altera os eventos das reuniões que ele agendou.
         </p>
+        <p className="muted" style={{ margin: 0 }}>
+          Para o painel, você está ocupado em: reunião com convidado (cliente ou colega da empresa), evento marcado como
+          &quot;Fora do escritório&quot; no Google e o seu horário de almoço, que o gestor configura no painel. Bloco sem
+          convidado, &quot;Tempo de concentração&quot; e evento comum de dia inteiro não fecham a sua agenda. Ausência de verdade
+          (médico, folga, férias) vai como &quot;Fora do escritório&quot;.
+        </p>
         <div className="group">
           <a className={`btn${ok ? "" : " primary"}`} href="/api/google/connect">{ok ? "Conectar de novo" : "Conectar minha agenda do Google"}</a>
         </div>
