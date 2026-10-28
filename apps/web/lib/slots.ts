@@ -157,3 +157,13 @@ export function semanasDaJanela(windowDays: string[], holidays: Set<string>): { 
   return weeks;
 }
 
+
+/** Reunião flash (2026-10-28): começa em 5, 10 ou 15 min e dura sempre 60 min. */
+export const FLASH_MINUTOS = [5, 10, 15] as const;
+export const FLASH_DURACAO = 60;
+
+/** Início da flash: agora + N min, arredondado para o próximo minuto cheio (o convite não mostra segundos). */
+export function inicioFlash(now: Date, minutos: number): { start: Date; end: Date } {
+  const t = Math.ceil(now.getTime() / 60_000) * 60_000 + minutos * 60_000;
+  return { start: new Date(t), end: new Date(t + FLASH_DURACAO * 60_000) };
+}

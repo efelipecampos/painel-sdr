@@ -6,7 +6,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { pedirTroca } from "../reunioes/actions";
-import { buscarLeads, carregarLead, conferir, confirmar, horariosSemana, semanas, type LeadLoaded, type LeadResult } from "./actions";
+import { buscarLeads, carregarLead, closersFlash, conferir, confirmar, horariosSemana, semanas, type LeadLoaded, type LeadResult } from "./actions";
 import type { DiaGrade } from "@/lib/slots";
 
 export interface CarouselOption {
@@ -60,6 +60,11 @@ export function AgendarForm({ carousels, initialLead, sdrs, meuSdr, voltar }: {
   const [check, setCheck] = useState<{ erro: string | null; avisos: string[]; count: number } | null>(null);
   const [checking, setChecking] = useState(false);
   const [state, action, confirming] = useActionState(confirmar, {});
+  // Reunião flash (2026-10-28): cliente na linha, passa na hora para o closer que o SDR escolheu
+  const [flash, setFlash] = useState(false);
+  const [flashMin, setFlashMin] = useState(5);
+  const [flashCloser, setFlashCloser] = useState("");
+  const [flashClosers, setFlashClosers] = useState<{ id: string; name: string; ocupado: boolean | null }[] | null>(null);
   // pedido de troca na tela de sucesso
   const [swap, setSwap] = useState<"idle" | "form" | "sent" | "blocked">("idle");
   const [swapReason, setSwapReason] = useState("");
@@ -149,10 +154,24 @@ export function AgendarForm({ carousels, initialLead, sdrs, meuSdr, voltar }: {
   };
 
   const endMin = startTime ? toMin(startTime) + duration : 0;
-  const ready = !!info && !!company.trim() && !!carousel && !!day && !!check && !check.erro && check.count > 0 && !checking && !!sdrId;
-  const summary = day && startTime && check && !check.erro && check.count > 0
-    ? `${dayLabel(day)}, ${startTime}–${fmtMin(endMin)} · ${company.trim() || "…"} · ${BRAND[brand]}, ${carousel?.name ?? ""}`
-    : "Escolha um horário para continuar";
+  const escolhido = flashClosers?.find((c) => c.id === flashCloser);
+  const ready = flash
+    ? !!info && !!company.trim() && !!carousel && !!flashCloser && !!sdrId
+    : !!info && !!company.trim() && !!carousel && !!day && !!check && !check.erro && check.count > 0 && !checking && !!sdrId;
+  const summary = flash
+    ? (flashCloser ? `Flash em ${flashMin} min · 60 min · ${escolhido?.name ?? ""} · ${company.trim() || "…"} · ${BRAND[brand]}, ${carousel?.name ?? ""}` : "Escolha o closer para continuar")
+    : day && startTime && check && !check.erro && check.count > 0
+      ? `${dayLabel(day)}, ${startTime}–${fmtMin(endMin)} · ${company.trim() || "…"} · ${BRAND[brand]}, ${carousel?.name ?? ""}`
+      : "Escolha um horário para continuar";
+
+  // flash: lista de closers com quem está ocupado no intervalo (muda com o "começa em")
+  useEffect(() => {
+    if (!flash) return;
+    let alive = true;
+    setFlashClosers(null);
+    closersFlash(flashMin).then((l) => { if (alive) setFlashClosers(l); }).catch(() => { if (alive) setFlashClosers([]); });
+    return () => { alive = false; };
+  }, [flash, flashMin]);
   const hsHint = info ? "Lead carregado com os dados do HubSpot. Você não precisa colar nada."
     : "Busque entre os seus leads pelo nome ou telefone. Link ou ID do HubSpot só se o lead não aparecer.";
 
@@ -308,9 +327,13 @@ export function AgendarForm({ carousels, initialLead, sdrs, meuSdr, voltar }: {
             <section className="card" style={{ gap: 16 }} aria-labelledby="sec-slot">
               <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
                 <h2 id="sec-slot" className="card-title">2. Horário</h2>
-                <span className="ag-hint">{carousel && info ? `Horários livres para ${BRAND[brand]}, ${carousel.name} · Brasília` : "Escolha o lead e o carrossel para ver os horários."}</span>
+                <div role="group" aria-label="Tipo de agendamento" style={{ display: "flex", gap: 8 }}>
+                  <button type="button" className="ag-chip" aria-pressed={!flash} onClick={() => setFlash(false)}>Com horário</button>
+                  <button type="button" className="ag-chip" aria-pressed={flash} onClick={() => setFlash(true)}>Reunião flash</button>
+                </div>
+                <span className="ag-hint">{flash ? "Cliente na linha: passa agora para o closer que você escolher." : carousel && info ? `Horários livres para ${BRAND[brand]}, ${carousel.name} · Brasília` : "Escolha o lead e o carrossel para ver os horários."}</span>
                 <span className="spacer" />
-                {week && (
+                {!flash && week && (
                   <>
                     <button type="button" className="ag-arrow" aria-label="Semana anterior" disabled={weekIdx === 0} onClick={() => setWeekIdx(weekIdx - 1)}><Chevron left /></button>
                     <span style={{ fontWeight: 500 }}>{week.label}</span>
@@ -319,7 +342,34 @@ export function AgendarForm({ carousels, initialLead, sdrs, meuSdr, voltar }: {
                 )}
               </div>
 
-              {week && (
+              {flash && (
+                <div className="ag-adjust">
+                  <div className="ag-field">
+                    <span id="lbl-flash-min" className="ag-label">Começa em</span>
+                    <div role="group" aria-labelledby="lbl-flash-min" style={{ display: "flex", gap: 8 }}>
+                      {[5, 10, 15].map((m) => (
+                        <button key={m} type="button" className="ag-chip" aria-pressed={flashMin === m} onClick={() => setFlashMin(m)}>{m} min</button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="ag-field">
+                    <label htmlFor="flash-closer" className="ag-label">Closer</label>
+                    <select id="flash-closer" className="field" value={flashCloser} onChange={(e) => setFlashCloser(e.target.value)} disabled={flashClosers === null}>
+                      <option value="">{flashClosers === null ? "Consultando as agendas…" : "Escolha o closer"}</option>
+                      {(flashClosers ?? []).map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}{c.ocupado ? " (ocupado na agenda)" : c.ocupado === null ? " (agenda não lida)" : ""}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }} aria-live="polite">
+                    <span className="ag-label">Duração</span>
+                    <span style={{ fontSize: 14, lineHeight: "22px", fontWeight: 600 }}>60 min</span>
+                    {escolhido?.ocupado && <span className="ag-warn">{escolhido.name} tem compromisso na agenda nesse horário. Confirme com o closer antes de passar.</span>}
+                  </div>
+                </div>
+              )}
+
+              {!flash && week && (
                 <div className="ag-week" aria-busy={gridLoading}>
                   {(grid ?? week.days.map((d) => ({ day: d.day, label: dayLabel(d.day), closed: d.closed, slots: [] }))).map((d) => (
                     <div key={d.day} className="ag-day">
@@ -340,7 +390,7 @@ export function AgendarForm({ carousels, initialLead, sdrs, meuSdr, voltar }: {
                 </div>
               )}
 
-              {day && (
+              {!flash && day && (
                 <div className="ag-adjust">
                   <div className="ag-field">
                     <label htmlFor="start" className="ag-label">Início</label>
@@ -388,15 +438,18 @@ export function AgendarForm({ carousels, initialLead, sdrs, meuSdr, voltar }: {
               <input type="hidden" name="leadId" value={lead?.leadId ?? ""} />
               <input type="hidden" name="contactId" value={info?.contactId ?? ""} />
               <input type="hidden" name="sdrId" value={sdrId} />
+              <input type="hidden" name="flash" value={flash ? "1" : ""} />
+              <input type="hidden" name="flashMin" value={flashMin} />
+              <input type="hidden" name="flashCloser" value={flashCloser} />
               <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
                 <span style={{ fontSize: 14, lineHeight: "22px", fontWeight: 600 }}>{summary}</span>
-                <span className="ag-hint">O closer é definido pelo carrossel e só aparece depois que você confirmar. Ao confirmar, o sistema cria o evento com Google Meet e envia o convite ao lead.</span>
+                <span className="ag-hint">{flash ? "Reunião flash: começa no tempo escolhido, com o closer que você escolheu. Ao confirmar, o sistema cria o evento com Google Meet na agenda dele e envia o convite ao lead." : "O closer é definido pelo carrossel e só aparece depois que você confirmar. Ao confirmar, o sistema cria o evento com Google Meet e envia o convite ao lead."}</span>
                 {info && !company.trim() && <span className="ag-warn">Preencha o nome da empresa do lead.</span>}
                 {info && !sdrId && <span className="ag-warn">Escolha o SDR responsável.</span>}
                 {state.erro && <span role="alert" style={{ color: "var(--danger)" }}>{state.erro}</span>}
               </div>
               <button type="submit" className={`btn${ready ? " primary" : ""}`} style={{ height: 44, padding: "0 24px", fontWeight: 600 }} disabled={!ready || confirming}>
-                {confirming ? "Agendando…" : "Agendar"}
+                {confirming ? "Agendando…" : flash ? "Agendar flash" : "Agendar"}
               </button>
             </form>
           </>
