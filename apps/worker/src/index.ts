@@ -13,6 +13,7 @@ import { gravarCamposContato } from "./hubspot/contatos.js";
 import { marcarDiaResposta } from "./hubspot/diaResposta.js";
 import { processarTagsDescarte } from "./jornada/tagDescarte.js";
 import { checkGoogle } from "./google.js";
+import { alertaDesequilibrio } from "./desequilibrio.js";
 import { GoogleCalendar, accessToken, decryptToken } from "@painel/shared/google";
 import { rodarJornada, syncTemplates } from "./jornada/motor.js";
 import { PoliApi } from "@painel/shared/poli";
@@ -232,6 +233,12 @@ if (process.argv.includes("--testar-alerta")) {
       await syncHubspotMeetings();
     } catch (err) {
       console.error("[worker] erro nas reuniões do HubSpot:", err instanceof Error ? err.message : err);
+    }
+    try {
+      const t = await alertaDesequilibrio(db);
+      if (t) await postToGoogleChat(t);
+    } catch (err) {
+      console.error("[worker] erro no alerta de desequilíbrio:", err instanceof Error ? err.message : err);
     }
     startScore(monitor);
     await monitor.check();

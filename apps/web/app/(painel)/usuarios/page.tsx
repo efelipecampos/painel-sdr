@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getMe } from "@/lib/supabase/server";
-import { adicionarUsuario, enviarLinkSenha } from "./actions";
+import { adicionarUsuario, definirAlmoco, enviarLinkSenha } from "./actions";
 import { ActiveSwitch } from "./ActiveSwitch";
 import { PapelSelect } from "./PapelSelect";
 
@@ -22,7 +23,7 @@ const ROLES = [
 const PAPEIS_NOVO = ["sdr", "closer", "gestor", "admin"];
 const BRAND: Record<string, string> = { poli: "Poli", chatshub: "ChatsHub" };
 const SALVO: Record<string, string> = {
-  on: "Usuário reativado.", off: "Usuário desativado.", papel: "Papel alterado.",
+  on: "Usuário reativado.", off: "Usuário desativado.", papel: "Papel alterado.", almoco: "Almoço do closer salvo.",
   convite: "Usuário adicionado. O convite foi enviado por e-mail; o link leva a pessoa a criar a senha.",
   existente: "Usuário adicionado. Esse e-mail já tinha login: se a pessoa não souber a senha, use \"Enviar link de senha\".",
   link: "Link para criar senha enviado por e-mail.",
@@ -40,6 +41,8 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
     db.from("carousel_members").select("closer_id, active, carousels(name, brand, active)"),
     db.from("settings").select("value").eq("key", "google_archive_calendar_id").maybeSingle(),
   ]);
+  const { data: alm } = await createAdminClient().schema("painel").from("sdrs").select("id, almoco_inicio, almoco_fim");
+  const almoco = new Map(((alm ?? []) as { id: string; almoco_inicio: string; almoco_fim: string }[]).map((a) => [a.id, a]));
   if (error) throw new Error(`Não foi possível ler os usuários: ${error.message}`);
   const team = ((data ?? []) as Usuario[]).filter((u) => !u.is_bot && u.papel in PAPEL);
   const filter = sp.p && sp.p in PAPEL ? sp.p : "all";
@@ -123,10 +126,23 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
                       </div>
                     ) : "—"}</td>
                     <td>{u.papel !== "closer" ? <span className="ag-hint" style={{ fontSize: 14 }}>Não precisa</span>
-                      : u.agenda === "conectada" ? "Conectada"
-                      : <div className="rn-stack" style={{ gap: 2, alignItems: "flex-start" }}>
-                          <span className="ag-pill" style={{ marginRight: 0 }}>{u.agenda === "desconectada" ? "Desconectada" : "Não conectada"}</span>
-                          <span className="ag-hint">O closer conecta em Minha agenda, no painel.</span>
+                      : <div className="rn-stack" style={{ gap: 6, alignItems: "flex-start" }}>
+                          {u.agenda === "conectada" ? <span>Conectada</span> : <>
+                            <span className="ag-pill" style={{ marginRight: 0 }}>{u.agenda === "desconectada" ? "Desconectada" : "Não conectada"}</span>
+                            <span className="ag-hint">O closer conecta em Minha agenda, no painel.</span>
+                          </>}
+                          {u.sdr_id && (
+                            <form action={definirAlmoco} style={{ display: "flex", alignItems: "center", gap: 6 }} aria-label={`Almoço de ${u.name}`}>
+                              <input type="hidden" name="sdr_id" value={u.sdr_id} />
+                              <span className="ag-hint">Almoço</span>
+                              <input type="time" name="inicio" step={300} className="field" style={{ width: 96 }} aria-label="Início do almoço"
+                                defaultValue={(almoco.get(u.sdr_id)?.almoco_inicio ?? "12:00").slice(0, 5)} />
+                              <span className="ag-hint">às</span>
+                              <input type="time" name="fim" step={300} className="field" style={{ width: 96 }} aria-label="Fim do almoço"
+                                defaultValue={(almoco.get(u.sdr_id)?.almoco_fim ?? "13:15").slice(0, 5)} />
+                              <button type="submit" className="rn-mini ghost">Salvar</button>
+                            </form>
+                          )}
                         </div>}</td>
                     <td>{u.tem_login ? (
                       <div className="rn-stack" style={{ gap: 2, alignItems: "flex-start" }}>

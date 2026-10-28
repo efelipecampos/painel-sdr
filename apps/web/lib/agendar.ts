@@ -1,6 +1,6 @@
 // Agendamento no servidor (Fase 10d): regras, disponibilidade real (Google + painel) e contagem às cegas.
 // Nada daqui devolve ao navegador id ou nome de closer antes da confirmação: só contagens.
-import { GoogleError, isFreeOcupado, type Ocupado } from "@painel/shared/google";
+import { GoogleError, almocos, isFreeOcupado, type Ocupado } from "@painel/shared/google";
 import { calendarOf, logCalendar } from "@/lib/google";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { AgendaRules } from "@/lib/slots";
@@ -70,12 +70,16 @@ export async function busyOf(closers: string[], from: Date, to: Date, ignoreMeet
   const { data: own } = ignoreMeeting
     ? await admin().from("meetings").select("closer_id, google_event_id").eq("id", ignoreMeeting).maybeSingle()
     : { data: null };
+  // almoço de cada closer (configuração do painel, 2026-10-28): ocupa sem intervalo, como um bloqueio
+  const { data: alm } = await admin().from("sdrs").select("id, almoco_inicio, almoco_fim").in("id", closers.length ? closers : ["00000000-0000-0000-0000-000000000000"]);
+  const almocoDe = new Map(((alm ?? []) as { id: string; almoco_inicio: string; almoco_fim: string }[])
+    .map((a) => [a.id, almocos(from, to, a.almoco_inicio.slice(0, 5), a.almoco_fim.slice(0, 5))]));
   await Promise.all(closers.map(async (c) => {
     try {
       const cal = await calendarOf(c);
       const o = await cal.ocupados(from, to, { internos: DOMINIOS_EMPRESA, excetoEvento: own?.closer_id === c ? own.google_event_id : null });
       const p = (ms ?? []).filter((m) => m.closer_id === c && m.id !== ignoreMeeting).map((m) => ({ start: new Date(m.starts_at), end: new Date(m.ends_at) }));
-      out.set(c, { google: o.google, cliente: [...o.cliente, ...p] });
+      out.set(c, { google: [...o.google, ...(almocoDe.get(c) ?? [])], cliente: [...o.cliente, ...p] });
     } catch (e) {
       if (e instanceof GoogleError) await logCalendar({ closer_id: c, op: e.op, ok: false, http_status: e.status, reason: e.reason });
       else await logCalendar({ closer_id: c, op: "livre_ocupado", ok: false, reason: String((e as Error).message).slice(0, 200) });

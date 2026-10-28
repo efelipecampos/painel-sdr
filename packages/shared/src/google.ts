@@ -181,11 +181,16 @@ export class GoogleCalendar {
   }
 
   /**
-   * Ocupados da agenda, lendo os eventos (o freeBusy junta tudo e não diz o que é cada um). Segue a regra do
-   * freeBusy: evento "disponível", recusado ou cancelado não ocupa. Separa as reuniões com cliente: evento com pelo
-   * menos um convidado de fora da empresa (domínio fora de `internos`) ganha o intervalo do carrossel (decisão do
-   * Felipe, 2026-10-13). `excetoEvento`: a própria reunião que está mudando de horário não ocupa o closer.
-   * Pede só horário, situação e convidados; os e-mails servem só para comparar o domínio e não saem daqui.
+   * Ocupados da agenda, lendo os eventos (o freeBusy junta tudo e não diz o que é cada um). Só ocupa (decisão do
+   * Felipe, 2026-10-28: bloco sem convidado fechava a agenda e tirava reunião do closer):
+   *  - reunião com cliente: pelo menos um convidado de fora da empresa (domínio fora de `internos`); ganha o
+   *    intervalo do carrossel (2026-10-13);
+   *  - reunião interna: pelo menos um colega da empresa além do próprio closer (sala/recurso não conta);
+   *  - "Fora do escritório" do Google (outOfOffice), inclusive o dia inteiro.
+   * Não ocupa: evento sem convidado (ou só com o closer e/ou sala), "Tempo de concentração" (focusTime), evento comum
+   * de dia inteiro, evento "disponível", recusado, cancelado e local de trabalho. O almoço vem da configuração do
+   * closer no painel. `excetoEvento`: a própria reunião que está mudando de horário não ocupa o closer.
+   * Pede só horário, situação, tipo e convidados; os e-mails servem só para comparar o domínio e não saem daqui.
    */
   async ocupados(from: Date, to: Date, opts: { internos: string[]; excetoEvento?: string | null }, calendarId = "primary"): Promise<Ocupado> {
     type Ev = {
@@ -204,15 +209,19 @@ export class GoogleCalendar {
       });
       const j = await this.call<{ items?: Ev[]; nextPageToken?: string }>("livre_ocupado", `${API}/calendars/${enc(calendarId)}/events?${q}`);
       for (const ev of j.items ?? []) {
-        if ((opts.excetoEvento && ev.id === opts.excetoEvento) || ev.status === "cancelled" || ev.transparency === "transparent" || ev.eventType === "workingLocation") continue;
+        if ((opts.excetoEvento && ev.id === opts.excetoEvento) || ev.status === "cancelled" || ev.transparency === "transparent"
+          || ev.eventType === "workingLocation" || ev.eventType === "focusTime") continue;
         if (ev.attendees?.some((a) => a.self && a.responseStatus === "declined")) continue;
+        const ausente = ev.eventType === "outOfOffice";
+        const outros = (ev.attendees ?? []).filter((a) => !a.self && !a.resource && !!a.email);
+        if (!ausente && (outros.length === 0 || !ev.start?.dateTime)) continue; // sem convidado ou dia inteiro comum
         // dia inteiro: o Google manda só a data; o dia vale no fuso de negócio (São Paulo, -03:00, sem horário de verão)
         const at = (d?: { dateTime?: string; date?: string }) => (d?.dateTime ? new Date(d.dateTime) : d?.date ? new Date(`${d.date}T00:00:00-03:00`) : null);
         const s = at(ev.start);
         const e = at(ev.end);
         if (!s || !e || e <= s) continue;
         out.google.push({ start: s, end: e });
-        const externo = ev.attendees?.some((a) => !a.self && !a.resource && !!a.email && !internos.has(a.email.split("@").pop()!.toLowerCase()));
+        const externo = !ausente && outros.some((a) => !internos.has(a.email!.split("@").pop()!.toLowerCase()));
         if (externo) out.cliente.push({ start: s, end: e });
       }
       page = j.nextPageToken;
@@ -307,6 +316,21 @@ export function isFree(busy: Interval[], start: Date, end: Date, gapMinutes: num
 
 /** Ocupado de um closer: tudo o que ocupa (google) e, separado, as reuniões com cliente (painel + Google com convidado de fora). */
 export interface Ocupado { google: Interval[]; cliente: Interval[] }
+
+/** Almoço padrão do closer (decisão do Felipe, 2026-10-28); o gestor ajusta por closer. */
+export const ALMOCO_PADRAO = { inicio: "12:00", fim: "13:15" } as const;
+
+/** Intervalos de almoço (horário de São Paulo, sem horário de verão) de cada dia que toca [from, to). */
+export function almocos(from: Date, to: Date, inicio: string, fim: string): Interval[] {
+  const out: Interval[] = [];
+  const dia = (d: Date) => new Date(d.getTime() - 3 * 3600_000).toISOString().slice(0, 10);
+  for (let d = dia(from); d <= dia(new Date(to.getTime() - 1)); d = new Date(Date.parse(`${d}T12:00:00Z`) + 86400_000).toISOString().slice(0, 10)) {
+    const s = new Date(`${d}T${inicio}:00-03:00`);
+    const e = new Date(`${d}T${fim}:00-03:00`);
+    if (e > s && s < to && e > from) out.push({ start: s, end: e });
+  }
+  return out;
+}
 
 /**
  * Livre considerando o tipo do ocupado: o intervalo do carrossel vale só entre reuniões com cliente (decisão do
