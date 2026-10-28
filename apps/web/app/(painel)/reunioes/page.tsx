@@ -141,7 +141,7 @@ export default async function ReunioesPage({ searchParams }: { searchParams: Pro
                     <td>{r.sdr ?? "—"}</td>
                     <td><div className="rn-stack"><span>{r.closer ?? "—"}</span><span className="ag-hint">{assigned}</span>
                       {req.some((x) => x.status === "pendente") && <span className="ag-warn">Troca pedida</span>}</div></td>
-                    <td><StatusCell id={r.id} status={r.status} problema={problem(r) ? r.google_state : null} semHubspot={!!e && semHubspot(e, now)} /></td>
+                    <td><StatusCell id={r.id} status={r.status} problema={problem(r) ? r.google_state : null} semHubspot={!!e && semHubspot(e, now)} company={r.company ?? "lead"} /></td>
                     <td><ActionsCell id={r.id} status={r.status} futura={Date.parse(r.starts_at) > now} permissao={r.permissao} brand={r.brand}
                       meetUrl={e?.meet_url ?? null} pedidoPendente={req.some((x) => x.status === "pendente")} company={r.company ?? "lead"} /></td>
                   </tr>

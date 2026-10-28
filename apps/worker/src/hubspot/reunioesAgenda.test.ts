@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { camposDiferentes, camposPainel, semHubspot, statusDoHubspot } from "./reunioesAgenda";
+import { camposDiferentes, camposPainel, quemVale, semHubspot, statusDoHubspot } from "./reunioesAgenda";
 
 describe("status vindo do HubSpot", () => {
   it("correspondência combinada; Rescheduled conta como agendada", () => {
@@ -37,12 +37,28 @@ describe("no Calendar e não no HubSpot", () => {
 describe("campos que o painel impõe na Reunião do Calendar", () => {
   it("SDR, closer e tipo Apresentação; sobrescreve só o que está diferente", () => {
     const quer = camposPainel({ sdr_owner_id: "sdr1", closer_owner_id: "closer1" });
-    expect(quer).toEqual({ hs_activity_type: "[Reunião] - Apresentação", atividade_criada_por: "sdr1", hubspot_owner_id: "closer1" });
-    expect(camposDiferentes(quer, { hs_activity_type: "[Call] Follow Up", atividade_criada_por: "sdr1", hubspot_owner_id: "outro" }))
+    expect(quer).toEqual({ hs_activity_type: "[Reunião] - Apresentação", sdr_quem_agendou_a_reuniao: "true", atividade_criada_por: "sdr1",
+      hubspot_owner_id: "closer1", closer_responsavel_pela_reuniao: "closer1" });
+    expect(camposDiferentes(quer, { hs_activity_type: "[Call] Follow Up", sdr_quem_agendou_a_reuniao: "true", atividade_criada_por: "sdr1", hubspot_owner_id: "outro", closer_responsavel_pela_reuniao: "closer1" }))
       .toEqual({ hs_activity_type: "[Reunião] - Apresentação", hubspot_owner_id: "closer1" });
     expect(camposDiferentes(quer, { ...quer })).toEqual({});
   });
   it("sem dono no HubSpot: não mexe nesse campo", () => {
-    expect(camposPainel({ sdr_owner_id: null, closer_owner_id: null })).toEqual({ hs_activity_type: "[Reunião] - Apresentação" });
+    expect(camposPainel({ sdr_owner_id: null, closer_owner_id: null })).toEqual({ hs_activity_type: "[Reunião] - Apresentação", sdr_quem_agendou_a_reuniao: "true" });
+  });
+});
+
+describe("status mudou no painel e no HubSpot: vale a última mudança", () => {
+  const m = { status_changed_at: "2026-10-28T13:00:00Z", hubspot_outcome: "SCHEDULED" };
+  it("HubSpot igual ao último conhecido: vale o painel", () => {
+    expect(quemVale(m, "SCHEDULED", "2026-10-28T14:00:00Z")).toBe("painel");
+  });
+  it("HubSpot mudou depois do painel: vale o HubSpot; antes: vale o painel", () => {
+    expect(quemVale(m, "COMPLETED", "2026-10-28T13:05:00Z")).toBe("hubspot");
+    expect(quemVale(m, "COMPLETED", "2026-10-28T12:55:00Z")).toBe("painel");
+  });
+  it("sem data no HubSpot: vale o painel", () => {
+    expect(quemVale(m, "COMPLETED", null)).toBe("painel");
+    expect(quemVale({ hubspot_outcome: null }, null, null)).toBe("painel");
   });
 });

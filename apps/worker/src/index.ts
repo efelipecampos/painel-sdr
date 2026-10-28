@@ -7,7 +7,7 @@ import { Monitor, postToGoogleChat } from "./alerts.js";
 import { config } from "./config.js";
 import { HubspotClient, resetLeadsCursor, syncLeads, syncOwners, syncStages } from "./hubspot/leads.js";
 import { syncMeetings } from "./hubspot/meetings.js";
-import { alertaSemHubspot, sincronizarReunioesAgenda } from "./hubspot/reunioesAgenda.js";
+import { alertaSemHubspot, enviarStatusPendentes, sincronizarReunioesAgenda } from "./hubspot/reunioesAgenda.js";
 import { marcarRespostas } from "./hubspot/respostas.js";
 import { gravarCamposContato } from "./hubspot/contatos.js";
 import { marcarDiaResposta } from "./hubspot/diaResposta.js";
@@ -82,7 +82,14 @@ async function syncHubspotMeetings(): Promise<void> {
   if (!hubspot) return;
   const r = await syncMeetings(db, hubspot);
   if (r.atualizadas || r.erros) console.log(`[worker] HubSpot reuniões antigas do painel: ${r.atualizadas} atualizadas, ${r.erros} com erro`);
-  if (Date.now() - lastAgenda < 5 * 60_000) return;
+  const st = await enviarStatusPendentes(db, hubspot);
+  if (st.enviadas || st.doHubspot || st.erros) console.log(`[worker] status de reunião: ${st.enviadas} enviados ao HubSpot, ${st.doHubspot} mudados antes no HubSpot, ${st.erros} com erro`);
+  if (Date.now() - lastAgenda < 5 * 60_000) {
+    // reunião recém-agendada: liga e preenche os campos em ~30 s, sem esperar a rodada de 5 min
+    const n = await sincronizarReunioesAgenda(db, hubspot, calendarDe, Date.now(), true);
+    if (n.ligadas || n.erros) console.log(`[worker] HubSpot reuniões novas do Calendar: ${n.ligadas} ligadas, ${n.erros} com erro`);
+    return;
+  }
   lastAgenda = Date.now();
   const g = await sincronizarReunioesAgenda(db, hubspot, calendarDe);
   if (g.ligadas || g.status || g.liberadas || g.erros) console.log(`[worker] HubSpot reuniões do Calendar: ${g.ligadas} ligadas, ${g.status} status atualizados, ${g.liberadas} horários liberados/retomados no Google, ${g.erros} com erro`);
