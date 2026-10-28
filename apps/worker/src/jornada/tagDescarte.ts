@@ -6,11 +6,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { HubspotClient } from "../hubspot/leads.js";
 import { descartarNoHubspot } from "./descarte.js";
+import { contatosPorTelefone } from "../hubspot/contatosTelefone.js";
 
 const EVENTO = "contacts.contact.tag_linked";
 const CURSOR = "tag_descarte_cursor";
 
-type Payload = { value?: { contact?: { uuid?: string }; tag?: { uuid?: string; attributes?: { name?: string } }; timestamp?: string } };
+type Payload = { value?: { contact?: { uuid?: string; attributes?: { phone?: string } }; tag?: { uuid?: string; attributes?: { name?: string } }; timestamp?: string } };
 
 /** "Descartado via integração com Tag Poli. Tag: ... SDR do atendimento: ... Em dd/mm/aaaa hh:mm." */
 export function observacaoTag(tag: string, sdr: string | null, em: Date): string {
@@ -54,6 +55,13 @@ export async function processarTagsDescarte(db: SupabaseClient, hs: Pick<Hubspot
       ? check(await p.from("leads").select("id, hubspot_contact_id").eq("poli_contact_uuid", contato), "ler lead da tag") as { id: string; hubspot_contact_id: string | null }[]
       : [];
     const hubspotId = leads.find((l) => l.hubspot_contact_id)?.hubspot_contact_id ?? null;
+    // o contato que o painel conhece e os outros do HubSpot com o mesmo telefone (contato duplicado, 2026-10-28)
+    let contatos = [hubspotId].filter((c): c is string => !!c);
+    try {
+      contatos = [...new Set([...contatos, ...(await contatosPorTelefone(hs, v.contact?.attributes?.phone))])];
+    } catch (e) {
+      if (!contatos.length) throw e; // sem o contato conhecido, a busca é o único caminho: tenta na próxima rodada
+    }
     const chat = leads.length
       ? check(await p.from("chats").select("sdr_id, sdrs(name)").in("lead_id", leads.map((l) => l.id)).not("sdr_id", "is", null)
           .order("opened_at", { ascending: false }).limit(1), "ler SDR do atendimento") as unknown as { sdr_id: string; sdrs: unknown }[]
@@ -62,7 +70,7 @@ export async function processarTagsDescarte(db: SupabaseClient, hs: Pick<Hubspot
     const sdr = chat[0] ? { sdr_id: chat[0].sdr_id, nome: (Array.isArray(rel) ? rel[0]?.name : rel?.name) ?? null } : null;
 
     const resultado = !motivo ? "tag sem motivo configurado"
-      : await descartarNoHubspot(hs, hubspotId, motivo, observacaoTag(tagNome, sdr?.nome ?? null, em), { prefixo: false, redescartar: true });
+      : await descartarNoHubspot(hs, contatos, motivo, observacaoTag(tagNome, sdr?.nome ?? null, em), { prefixo: false, redescartar: true });
     if (resultado.startsWith("erro")) {
       novoCursor = ev.id - 1; // tenta este de novo na próxima rodada
       await gravarCursor(db, novoCursor);
