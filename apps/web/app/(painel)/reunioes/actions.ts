@@ -10,7 +10,7 @@ import { isFree } from "@painel/shared/google";
 import { busyOf, freeAt, loadRules } from "@/lib/agendar";
 import { postGestaoSdr } from "@/lib/chat";
 import { APP_URL } from "@/lib/google";
-import { loadMeeting, moveEvent, recreateEventDefault, renameEvent } from "@/lib/reuniao-google";
+import { loadMeeting, moveEvent, recreateEventDefault, removeEvent, renameEvent } from "@/lib/reuniao-google";
 import { checkLivre, checkManual, gridSlots, interval, windowDays } from "@/lib/slots";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -22,6 +22,21 @@ export async function mudarStatus(id: string, status: string): Promise<{ erro?: 
   const { error } = await (await createClient()).schema("painel").rpc("definir_status_reuniao", { p_id: id, p_status: status });
   if (error) return { erro: error.message.includes("acesso negado") ? "Você não pode alterar esta reunião." : error.message };
   revalidatePath("/reunioes");
+  return {};
+}
+
+/** Excluir (só gestor/admin, 2026-10-28): registra no banco (devolve a vez) e apaga o evento sem avisar os convidados. */
+export async function excluirReuniao(id: string): Promise<{ erro?: string }> {
+  const m = await loadMeeting(id);
+  if (!m) return { erro: "Reunião não encontrada." };
+  const { error } = await (await createClient()).schema("painel").rpc("excluir_reuniao", { p_id: id });
+  if (error) return { erro: error.message.includes("gestor") ? "Só gestor ou admin pode excluir reunião." : error.message };
+  revalidatePath("/reunioes");
+  try {
+    await removeEvent(m);
+  } catch (e) {
+    return { erro: `Reunião excluída no painel, mas o evento não saiu da agenda do Google: ${(e as Error).message}. Apague o evento na agenda do closer.` };
+  }
   return {};
 }
 

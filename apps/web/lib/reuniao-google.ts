@@ -130,6 +130,14 @@ export async function moveEvent(before: MeetingRow, after: MeetingRow): Promise<
   }).eq("id", after.id);
 }
 
+/** Apaga o evento da reunião (Excluir), onde quer que ele esteja (agenda do closer ou arquivo). */
+export async function removeEvent(m: MeetingRow): Promise<void> {
+  if (!m.google_event_id) return;
+  m = await localizar(m);
+  const cal = await calendarOf(m.closer_id);
+  await withLog(m.closer_id, "apagar", () => cal.remove(m.google_event_id!, m.google_calendar_id || "primary"), m.id);
+}
+
 /** Título novo (troca de marca): na agenda do closer o título puro; no arquivo, com o closer no final. */
 export async function renameEvent(m: MeetingRow): Promise<void> {
   if (!m.google_event_id || !m.title) return;
