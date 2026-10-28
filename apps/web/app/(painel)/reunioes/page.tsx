@@ -132,7 +132,7 @@ export default async function ReunioesPage({ searchParams }: { searchParams: Pro
                 const e = ex.get(r.id);
                 const req = reqs.filter((x) => x.meeting_id === r.id);
                 const assigned = req.some((x) => x.status === "aprovado") ? "Trocado a pedido do SDR"
-                  : e?.assigned_by === "manual" ? "Trocado por um gestor" : "Pelo carrossel";
+                  : e?.assigned_by === "manual" ? "Trocado por um gestor" : e?.assigned_by === "flash" ? "Flash · escolhido pelo SDR" : "Pelo carrossel";
                 return (
                   <tr key={r.id}>
                     <td className="rn-time">{formatDateTime(r.starts_at).slice(6)}</td>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkLivre, checkManual, gridSlots, windowDays, type AgendaRules } from "./slots";
+import { checkLivre, checkManual, gridSlots, inicioFlash, windowDays, type AgendaRules } from "./slots";
 
 const hours = [1, 2, 3, 4, 5].map((weekday) => ({ weekday, enabled: true, start_time: "08:20", end_time: "17:45" }))
   .concat([0, 6].map((weekday) => ({ weekday, enabled: false, start_time: "08:00", end_time: "18:00" })));
@@ -83,5 +83,14 @@ describe("edição livre (gestor e admin)", () => {
   it("só recusa formato ou duração inválidos", () => {
     expect(checkLivre("2026-10-13", 30, rules, NOW).erro).toMatch(/inválido/);
     expect(checkLivre("2026-10-13T10:00", 0, rules, NOW).erro).toMatch(/1 a 1440/);
+  });
+});
+
+describe("reunião flash", () => {
+  it("começa em N min a partir do próximo minuto cheio e dura 60 min", () => {
+    const r = inicioFlash(new Date("2026-10-28T14:02:31Z"), 10);
+    expect(r.start.toISOString()).toBe("2026-10-28T14:13:00.000Z");
+    expect(r.end.toISOString()).toBe("2026-10-28T15:13:00.000Z");
+    expect(inicioFlash(new Date("2026-10-28T14:02:00Z"), 5).start.toISOString()).toBe("2026-10-28T14:07:00.000Z");
   });
 });

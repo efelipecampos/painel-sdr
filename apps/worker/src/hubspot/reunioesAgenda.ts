@@ -70,12 +70,20 @@ async function liberarNoGoogle(db: SupabaseClient, calendarDe: CalendarDe, m: Me
   if (liberar === !!m.google_liberada || !m.closer_id || !m.google_event_id) return false;
   const cal = await calendarDe(m.closer_id);
   if (!cal) return false;
+  const op = liberar ? "liberar" : "ocupar";
+  const log = (ok: boolean, e?: GoogleError) => db.schema("painel").from("calendar_log").insert({
+    closer_id: m.closer_id, meeting_id: m.id, op, ok, http_status: e?.status ?? null, reason: e?.reason ?? null,
+  });
   try {
+    // o cliente do Google já tenta de novo quando o Google pede para esperar (limite de pedidos)
     await cal.patch(m.google_event_id, liberar ? { transparency: "transparent", colorId: CINZA } : { transparency: "opaque", colorId: null },
       m.google_calendar_id || "primary", false);
+    await log(true);
   } catch (e) {
-    // evento apagado ou fora da agenda do closer (arquivado antes de 27/10): não há o que liberar, não tenta de novo
-    if (!(e instanceof GoogleError && [403, 404, 410].includes(e.status))) throw e;
+    const ge = e instanceof GoogleError ? e : null;
+    await log(false, ge ?? undefined);
+    // só evento apagado (404/410) conta como "nada a liberar"; o resto (403 de permissão, limite) tenta na próxima rodada
+    if (!(ge && (ge.status === 404 || ge.status === 410))) throw e;
   }
   await db.schema("painel").from("meetings").update({ google_liberada: liberar }).eq("id", m.id);
   return true;

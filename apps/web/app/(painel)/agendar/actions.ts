@@ -6,7 +6,7 @@ import { GoogleError } from "@painel/shared/google";
 import { HubspotLive, parseHubspotRef, suggestCarousel, type LeadInfo } from "@painel/shared/hubspot";
 import { APP_URL, calendarOf, logCalendar } from "@/lib/google";
 import { busyOf, candidates, countWeek, freeAt, loadRules } from "@/lib/agendar";
-import { checkManual, gridSlots, interval, semanasDaJanela, windowDays, type DiaGrade } from "@/lib/slots";
+import { FLASH_MINUTOS, checkManual, gridSlots, inicioFlash, interval, semanasDaJanela, windowDays, type DiaGrade } from "@/lib/slots";
 import { reuniaoReaproveitavel } from "@/lib/reaproveitar";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient, getMe, isManager, type Me } from "@/lib/supabase/server";
@@ -181,6 +181,28 @@ export interface ConfirmState {
 }
 
 /** Confirma: confere tudo de novo no servidor, distribui, cria o evento e só então mostra o closer. */
+/**
+ * Reunião flash (2026-10-28): todos os closers ativos com agenda conectada, de qualquer carrossel, com aviso de quem
+ * está ocupado no intervalo (agora + N min, 60 min). O SDR escolhe; ocupado só avisa.
+ */
+export async function closersFlash(minutos: number): Promise<{ id: string; name: string; ocupado: boolean | null }[]> {
+  await who();
+  const db = admin();
+  const { data: conns } = await db.from("google_connections").select("closer_id").eq("status", "conectada");
+  const ids = (conns ?? []).map((c: { closer_id: string }) => c.closer_id);
+  if (!ids.length) return [];
+  // só closer conecta a agenda do Google no painel
+  const { data: nomes } = await db.from("sdrs").select("id, name").in("id", ids).eq("active", true);
+  const closers = ((nomes ?? []) as { id: string }[]).map((c) => c.id);
+  if (!closers.length) return [];
+  const { start, end } = inicioFlash(new Date(), FLASH_MINUTOS.includes(minutos as 5) ? minutos : 5);
+  const busy = await busyOf(closers, start, end);
+  const livres = new Set(freeAt(busy, start, end, 0));
+  return ((nomes ?? []) as { id: string; name: string }[])
+    .map((c) => ({ id: c.id, name: c.name, ocupado: busy.has(c.id) ? !livres.has(c.id) : null }))
+    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+}
+
 export async function confirmar(_: ConfirmState, form: FormData): Promise<ConfirmState> {
   const me = await who();
   const s = (k: string) => String(form.get(k) ?? "").trim();
@@ -191,7 +213,11 @@ export async function confirmar(_: ConfirmState, form: FormData): Promise<Confir
   const handoff = s("handoff");
   const company = s("company").slice(0, 120);
   if (!company) return { erro: "Preencha a empresa do lead (vai no título da reunião)." };
-  if (!carouselId || !local) return { erro: "Escolha o carrossel e o horário." };
+  const flash = s("flash") === "1";
+  const flashMin = Number(s("flashMin"));
+  const flashCloser = s("flashCloser");
+  if (flash && (!carouselId || !FLASH_MINUTOS.includes(flashMin as 5) || !flashCloser)) return { erro: "Escolha o carrossel, em quanto tempo começa e o closer." };
+  if (!flash && (!carouselId || !local)) return { erro: "Escolha o carrossel e o horário." };
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { erro: "O e-mail do lead parece inválido. Corrija ou deixe em branco." };
   if (handoff.length > 4000) return { erro: "A passagem de bastão está longa demais (máximo 4.000 caracteres)." };
   const guests = s("guests").split(/[,;\s]+/).map((x) => x.trim().toLowerCase()).filter(Boolean);
@@ -217,25 +243,37 @@ export async function confirmar(_: ConfirmState, form: FormData): Promise<Confir
   } catch (e) {
     return { erro: (e as Error).message };
   }
-  const check = checkManual(local, duration, ctx.rules, new Date());
+  const check = flash ? { erro: null, foraDoPadrao: false, avisos: [] as string[] } : checkManual(local, duration, ctx.rules, new Date());
   if (check.erro) return { erro: check.erro };
-  const { start, end } = interval(local, duration);
+  const { start, end } = flash ? inicioFlash(new Date(), flashMin) : interval(local, duration);
 
   const db = admin();
   const leadId = loaded.leadId ?? (await db.rpc("lead_para_agendar", { p_hubspot_contact_id: info.contactId, p_name: info.name, p_company: company })).data as string;
-  const livres = freeAt(await busyOf(await candidates(carouselId, leadId, info.contactId), start, end), start, end, ctx.carousel.gap_minutes);
-  if (!livres.length) return { erro: "Nenhum closer está livre neste horário agora. Escolha outro horário." };
-
-  const r = await db.rpc("reservar_reuniao", {
-    p_carousel: carouselId, p_lead: leadId, p_starts: start.toISOString(), p_ends: end.toISOString(),
-    p_livres: livres, p_sdr: sdrId, p_created_by: me.id,
-  });
-  if (r.error) {
-    if (r.error.hint === "sem_closer_livre") return { erro: "Nenhum closer está livre neste horário agora. Escolha outro horário." };
-    if (r.error.hint === "closer_do_lead_ocupado") return { erro: "O closer que já atende este lead não está livre neste horário. Escolha outro horário." };
-    return { erro: `Não foi possível agendar: ${r.error.message}` };
+  let meetingId: string;
+  let closerId: string;
+  if (flash) {
+    // flash: o closer é o que o SDR escolheu (ocupado só avisa na tela); ignora o lead preso ao closer
+    const r = await db.rpc("reservar_reuniao_flash", {
+      p_carousel: carouselId, p_lead: leadId, p_closer: flashCloser, p_starts: start.toISOString(), p_ends: end.toISOString(),
+      p_sdr: sdrId, p_created_by: me.id,
+    });
+    if (r.error) return { erro: r.error.hint === "closer_sem_agenda" ? "Esse closer está inativo ou sem agenda conectada. Escolha outro." : `Não foi possível agendar: ${r.error.message}` };
+    meetingId = r.data as string;
+    closerId = flashCloser;
+  } else {
+    const livres = freeAt(await busyOf(await candidates(carouselId, leadId, info.contactId), start, end), start, end, ctx.carousel.gap_minutes);
+    if (!livres.length) return { erro: "Nenhum closer está livre neste horário agora. Escolha outro horário." };
+    const r = await db.rpc("reservar_reuniao", {
+      p_carousel: carouselId, p_lead: leadId, p_starts: start.toISOString(), p_ends: end.toISOString(),
+      p_livres: livres, p_sdr: sdrId, p_created_by: me.id,
+    });
+    if (r.error) {
+      if (r.error.hint === "sem_closer_livre") return { erro: "Nenhum closer está livre neste horário agora. Escolha outro horário." };
+      if (r.error.hint === "closer_do_lead_ocupado") return { erro: "O closer que já atende este lead não está livre neste horário. Escolha outro horário." };
+      return { erro: `Não foi possível agendar: ${r.error.message}` };
+    }
+    ({ meeting_id: meetingId, closer_id: closerId } = (r.data as { meeting_id: string; closer_id: string }[])[0]);
   }
-  const { meeting_id: meetingId, closer_id: closerId } = (r.data as { meeting_id: string; closer_id: string }[])[0];
 
   const [{ data: sdr }, { data: conn }] = await Promise.all([
     sdrId ? db.from("sdrs").select("poli_email").eq("id", sdrId).single() : Promise.resolve({ data: null }),
@@ -250,7 +288,7 @@ export async function confirmar(_: ConfirmState, form: FormData): Promise<Confir
     const cal = await calendarOf(closerId);
     const ev = await cal.insert({
       title, start, end, attendees,
-      description: `Reunião agendada pelo Painel SDR.\n\nPassagem de bastão (equipe Poli, precisa de login): ${APP_URL}/reuniao/${meetingId}`,
+      description: `${flash ? "Reunião flash agendada pelo Painel SDR." : "Reunião agendada pelo Painel SDR."}\n\nPassagem de bastão (equipe Poli, precisa de login): ${APP_URL}/reuniao/${meetingId}`,
     });
     await logCalendar({ closer_id: closerId, meeting_id: meetingId, op: "criar", ok: true });
     const up = await db.from("meetings").update({
@@ -271,7 +309,7 @@ export async function confirmar(_: ConfirmState, form: FormData): Promise<Confir
   const name = String(cl?.name ?? "Closer");
   const DIAS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
   const hhmm = (d: Date) => d.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
-  const dl = local.slice(0, 10);
+  const dl = flash ? start.toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" }) : local.slice(0, 10);
   return { ok: {
     meetingId, closer: name, closerIni: name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase(),
     quando: `${DIAS[new Date(`${dl}T12:00:00Z`).getUTCDay()]} ${dl.slice(8, 10)}/${dl.slice(5, 7)}, ${hhmm(start)}–${hhmm(end)} · ${company} · ${title.split(" - ")[0].replace("Apresentação ", "")}, ${ctx.carousel.name}`,
