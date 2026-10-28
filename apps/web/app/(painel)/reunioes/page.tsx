@@ -11,7 +11,7 @@ export const metadata = { title: "Reuniões — Painel SDR" };
 
 interface Row {
   id: string; starts_at: string; ends_at: string; status: string; title: string | null; lead_name: string | null; company: string | null;
-  carousel: string | null; brand: string | null; closer: string | null; sdr: string | null; fora_do_padrao: boolean; google_state: string | null; permissao: string;
+  carousel: string | null; brand: string | null; closer: string | null; sdr: string | null; fora_do_padrao: boolean; google_state: string | null; permissao: string; excluida: boolean;
 }
 
 const FILTERS = [["all", "Todas"], ["agendada", "Agendadas"], ["done", "Realizadas"], ["noshow", "No show"], ["cancelada", "Canceladas"], ["problem", "Com problema"]] as const;
@@ -19,6 +19,7 @@ const BRAND: Record<string, string> = { poli: "Poli", chatshub: "ChatsHub" };
 const problem = (r: Row) => r.status === "agendada" && !!r.google_state && r.google_state !== "ok";
 function match(r: Row, f: string) {
   if (f === "all") return true;
+  if (r.excluida) return false; // excluída só aparece em Todas
   if (f === "problem") return problem(r);
   if (problem(r)) return false;
   if (f === "done") return r.status === "validada" || r.status === "invalidada";
@@ -141,9 +142,9 @@ export default async function ReunioesPage({ searchParams }: { searchParams: Pro
                     <td>{r.sdr ?? "—"}</td>
                     <td><div className="rn-stack"><span>{r.closer ?? "—"}</span><span className="ag-hint">{assigned}</span>
                       {req.some((x) => x.status === "pendente") && <span className="ag-warn">Troca pedida</span>}</div></td>
-                    <td><StatusCell id={r.id} status={r.status} problema={problem(r) ? r.google_state : null} semHubspot={!!e && semHubspot(e, now)} company={r.company ?? "lead"} /></td>
-                    <td><ActionsCell id={r.id} status={r.status} futura={Date.parse(r.starts_at) > now} permissao={r.permissao} brand={r.brand}
-                      meetUrl={e?.meet_url ?? null} pedidoPendente={req.some((x) => x.status === "pendente")} company={r.company ?? "lead"} /></td>
+                    <td>{r.excluida ? <span className="ag-pill" style={{ marginRight: 0 }}>Excluída</span> : <StatusCell id={r.id} status={r.status} problema={problem(r) ? r.google_state : null} semHubspot={!!e && semHubspot(e, now)} company={r.company ?? "lead"} />}</td>
+                    <td>{r.excluida ? null : <ActionsCell id={r.id} status={r.status} futura={Date.parse(r.starts_at) > now} permissao={r.permissao} brand={r.brand}
+                      meetUrl={e?.meet_url ?? null} pedidoPendente={req.some((x) => x.status === "pendente")} company={r.company ?? "lead"} />}</td>
                   </tr>
                 );
               })}

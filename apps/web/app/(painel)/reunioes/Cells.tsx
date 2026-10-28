@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { closersLivres, decidirPedido, mudarStatus, passarMarca, pedirTroca, recriarEvento, trocarCloser } from "./actions";
+import { closersLivres, decidirPedido, excluirReuniao, mudarStatus, passarMarca, pedirTroca, recriarEvento, trocarCloser } from "./actions";
 
 type Msg = { erro?: string; ok?: string } | null;
 
@@ -101,6 +101,12 @@ export function ActionsCell({ id, status, futura, permissao, brand, meetUrl, ped
           </button>
         )}
         {meetUrl && status === "agendada" && <a href={meetUrl} target="_blank" rel="noreferrer" aria-label={`Abrir o Meet da reunião com ${company}`}>Abrir Meet</a>}
+        {permissao === "gestor" && (
+          <button type="button" className="link" style={{ color: "var(--danger)" }} disabled={pending} aria-label={`Excluir a reunião com ${company}`}
+            onClick={() => { if (confirm(`Excluir a reunião com ${company}? O evento sai da agenda do closer (e a Reunião do HubSpot junto), a vez volta para o closer e a reunião deixa de contar nas métricas. Não dá para desfazer.`)) run(() => excluirReuniao(id), "Reunião excluída."); }}>
+            Excluir
+          </button>
+        )}
       </div>
       {open === "pedir" && (
         <div className="rn-pop">
