@@ -95,7 +95,10 @@ export async function moveEvent(before: MeetingRow, after: MeetingRow): Promise<
   // reunião que estava no arquivo (cancelada/no show) volta antes para a agenda do closer antigo
   if (before.status !== after.status || before.google_calendar_id === (await archiveId().catch(() => ""))) {
     await syncEventWithStatus({ ...before, status: after.status });
-    before = (await loadMeeting(before.id))!;
+    // só a agenda vem do banco: o closer de antes continua o de antes (bug de 2026-10-28: recarregar trazia o closer
+    // novo, e o painel tentava mexer no evento da agenda do antigo com o acesso do novo, 403)
+    const atual = (await loadMeeting(before.id))!;
+    before = { ...before, google_event_id: atual.google_event_id, google_calendar_id: atual.google_calendar_id };
   }
   const oldCal = await calendarOf(before.closer_id);
   const where = before.google_calendar_id || "primary";

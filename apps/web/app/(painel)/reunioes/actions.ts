@@ -110,8 +110,11 @@ export async function reagendar(_: { erro?: string }, form: FormData): Promise<{
   }
   const me = (await (await createClient()).auth.getUser()).data.user?.id ?? null;
   const after = (await loadMeeting(id))!;
-  // hubspot_sync_needed: o worker atualiza a Reunião no HubSpot (horário e closer) em seguida
-  await admin().from("meetings").update({ fora_do_padrao: check.foraDoPadrao, hubspot_sync_needed: true }).eq("id", id);
+  // hubspot_sync_needed: o worker atualiza a Reunião no HubSpot (horário e closer) em seguida. Cancelada que volta a
+  // agendada: o status também vai para o HubSpot, senão o CANCELED de lá cancela de novo (bug de 2026-10-28)
+  await admin().from("meetings").update({
+    fora_do_padrao: check.foraDoPadrao, hubspot_sync_needed: true, ...(before.status !== after.status ? { hubspot_status_pendente: true } : {}),
+  }).eq("id", id);
   await admin().from("meeting_changes").insert({
     meeting_id: id, changed_by: me, from_starts: before.starts_at, to_starts: after.starts_at, from_closer: before.closer_id, to_closer: after.closer_id,
   });
@@ -187,8 +190,11 @@ export async function editarLivre(_: { erro?: string }, form: FormData): Promise
   if (r.error) return { erro: `Não foi possível salvar: ${r.error.message}` };
   const me = (await (await createClient()).auth.getUser()).data.user?.id ?? null;
   const after = (await loadMeeting(id))!;
-  // hubspot_sync_needed: o worker atualiza a Reunião no HubSpot (horário e closer) em seguida
-  await admin().from("meetings").update({ fora_do_padrao: check.foraDoPadrao, hubspot_sync_needed: true }).eq("id", id);
+  // hubspot_sync_needed: o worker atualiza a Reunião no HubSpot (horário e closer) em seguida. Cancelada que volta a
+  // agendada: o status também vai para o HubSpot, senão o CANCELED de lá cancela de novo (bug de 2026-10-28)
+  await admin().from("meetings").update({
+    fora_do_padrao: check.foraDoPadrao, hubspot_sync_needed: true, ...(before.status !== after.status ? { hubspot_status_pendente: true } : {}),
+  }).eq("id", id);
   await admin().from("meeting_changes").insert({
     meeting_id: id, changed_by: me, from_starts: before.starts_at, to_starts: after.starts_at, from_closer: before.closer_id, to_closer: after.closer_id,
   });
