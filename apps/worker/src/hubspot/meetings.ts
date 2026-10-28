@@ -16,6 +16,7 @@ export interface MeetingForHubspot {
   hubspot_meeting_id: string | null; hubspot_contact_id: string | null; hubspot_lead_id: string | null;
   hubspot_status_synced?: string | null; google_event_id?: string | null; hubspot_agenda_meeting_id?: string | null;
   hubspot_outcome?: string | null; created_at?: string; closer_id?: string; google_calendar_id?: string | null; google_liberada?: boolean;
+  hubspot_status_pendente?: boolean; status_changed_at?: string | null;
   closer_owner_id: string | null; sdr_owner_id: string | null;
 }
 
@@ -44,7 +45,7 @@ export function associations(m: MeetingForHubspot) {
 export async function load(db: SupabaseClient, filter: (q: any) => any): Promise<MeetingForHubspot[]> {
   const p = db.schema("painel");
   const { data, error } = await filter(p.from("meetings")
-    .select("id, status, title, starts_at, ends_at, meet_url, hubspot_meeting_id, hubspot_contact_id, hubspot_lead_id, hubspot_status_synced, google_event_id, hubspot_agenda_meeting_id, hubspot_outcome, created_at, closer_id, google_calendar_id, google_liberada, closer:sdrs!meetings_closer_id_fkey(poli_email), sdr:sdrs!meetings_sdr_id_fkey(poli_email)")
+    .select("id, status, title, starts_at, ends_at, meet_url, hubspot_meeting_id, hubspot_contact_id, hubspot_lead_id, hubspot_status_synced, google_event_id, hubspot_agenda_meeting_id, hubspot_outcome, created_at, closer_id, google_calendar_id, google_liberada, hubspot_status_pendente, status_changed_at, closer:sdrs!meetings_closer_id_fkey(poli_email), sdr:sdrs!meetings_sdr_id_fkey(poli_email)")
     .eq("source", "painel").not("google_event_id", "is", null));
   if (error) throw new Error(`ler reuniões para o HubSpot: ${error.message}`);
   const emails = [...new Set((data ?? []).flatMap((m: any) => [m.closer?.poli_email, m.sdr?.poli_email]).filter(Boolean))];

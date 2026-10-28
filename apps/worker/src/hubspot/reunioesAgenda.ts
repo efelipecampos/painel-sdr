@@ -5,9 +5,9 @@
 // LGPD: logs e alertas sem nome, telefone ou e-mail de lead (o título da reunião leva só a empresa).
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { BUSINESS_TIMEZONE, type MeetingStatus } from "@painel/shared";
-import type { GoogleCalendar } from "@painel/shared/google";
+import { GoogleError, type GoogleCalendar } from "@painel/shared/google";
 import type { HubspotClient } from "./leads.js";
-import { load, type MeetingForHubspot } from "./meetings.js";
+import { OUTCOME, load, type MeetingForHubspot } from "./meetings.js";
 import { semHubspot } from "@painel/shared/hubspot";
 
 export { semHubspot };
@@ -36,8 +36,9 @@ type Props = Record<string, string | null>;
 export function camposPainel(m: Pick<MeetingForHubspot, "sdr_owner_id" | "closer_owner_id"> | undefined): Record<string, string> {
   return {
     hs_activity_type: "[Reunião] - Apresentação",
+    sdr_quem_agendou_a_reuniao: "true",
     ...(m?.sdr_owner_id ? { atividade_criada_por: m.sdr_owner_id } : {}),
-    ...(m?.closer_owner_id ? { hubspot_owner_id: m.closer_owner_id } : {}),
+    ...(m?.closer_owner_id ? { hubspot_owner_id: m.closer_owner_id, closer_responsavel_pela_reuniao: m.closer_owner_id } : {}),
   };
 }
 export function camposDiferentes(quer: Record<string, string>, tem: Props): Record<string, string> {
@@ -69,19 +70,27 @@ async function liberarNoGoogle(db: SupabaseClient, calendarDe: CalendarDe, m: Me
   if (liberar === !!m.google_liberada || !m.closer_id || !m.google_event_id) return false;
   const cal = await calendarDe(m.closer_id);
   if (!cal) return false;
-  await cal.patch(m.google_event_id, liberar ? { transparency: "transparent", colorId: CINZA } : { transparency: "opaque", colorId: null },
-    m.google_calendar_id || "primary", false);
+  try {
+    await cal.patch(m.google_event_id, liberar ? { transparency: "transparent", colorId: CINZA } : { transparency: "opaque", colorId: null },
+      m.google_calendar_id || "primary", false);
+  } catch (e) {
+    // evento apagado ou fora da agenda do closer (arquivado antes de 27/10): não há o que liberar, não tenta de novo
+    if (!(e instanceof GoogleError && [403, 404, 410].includes(e.status))) throw e;
+  }
   await db.schema("painel").from("meetings").update({ google_liberada: liberar }).eq("id", m.id);
   return true;
 }
 
-export async function sincronizarReunioesAgenda(db: SupabaseClient, hs: Pick<HubspotClient, "call">, calendarDe: CalendarDe, now = Date.now()): Promise<RodadaAgenda> {
+/** `recentes`: só as agendadas na última hora ainda sem Reunião do Calendar (roda a cada rodada do worker). */
+export async function sincronizarReunioesAgenda(db: SupabaseClient, hs: Pick<HubspotClient, "call">, calendarDe: CalendarDe, now = Date.now(), recentes = false): Promise<RodadaAgenda> {
   const p = db.schema("painel");
   const out: RodadaAgenda = { ligadas: 0, status: 0, liberadas: 0, erros: 0 };
   const desde = await settingDesde(db);
-  const rows: MeetingForHubspot[] = await load(db, (q) => q.gte("starts_at", new Date(now - JANELA_DIAS * 86400_000).toISOString()));
+  const rows: MeetingForHubspot[] = await load(db, (q) => recentes
+    ? q.is("hubspot_agenda_meeting_id", null).gte("created_at", new Date(now - 3600_000).toISOString())
+    : q.gte("starts_at", new Date(now - JANELA_DIAS * 86400_000).toISOString()));
   if (!rows.length) return out;
-  const agenda = await batchRead(hs, rows.map((m) => m.google_event_id!), ["hs_meeting_outcome", "hs_activity_type", "atividade_criada_por", "hubspot_owner_id"], "hs_unique_id");
+  const agenda = await batchRead(hs, rows.map((m) => m.google_event_id!), ["hs_meeting_outcome", "hs_activity_type", "sdr_quem_agendou_a_reuniao", "atividade_criada_por", "hubspot_owner_id", "closer_responsavel_pela_reuniao"], "hs_unique_id");
   const doStatus = (m: MeetingForHubspot) => m.starts_at >= desde;
   const antigas = rows.filter((m) => doStatus(m) && m.hubspot_meeting_id && !agenda.get(m.google_event_id!)?.properties.hs_meeting_outcome);
   const painel = antigas.length ? await batchRead(hs, antigas.map((m) => m.hubspot_meeting_id!), ["hs_meeting_outcome"]) : new Map();
@@ -105,6 +114,10 @@ export async function sincronizarReunioesAgenda(db: SupabaseClient, hs: Pick<Hub
         await p.from("meetings").update({ hubspot_agenda_meeting_id: null }).eq("id", m.id);
       }
       if (!doStatus(m)) continue;
+      if (m.hubspot_status_pendente) { // mudou no painel: enviarStatusPendentes decide quem vale
+        if (await liberarNoGoogle(db, calendarDe, m, m.status)) out.liberadas++;
+        continue;
+      }
       const s = statusDoHubspot(copia?.properties.hs_meeting_outcome, m.hubspot_meeting_id ? painel.get(m.hubspot_meeting_id)?.properties.hs_meeting_outcome : null);
       if (s && (s.status !== m.status || s.outcome !== m.hubspot_outcome)) {
         const { data, error } = await p.rpc("aplicar_status_hubspot", { p_id: m.id, p_status: s.status, p_outcome: s.outcome });
@@ -115,6 +128,50 @@ export async function sincronizarReunioesAgenda(db: SupabaseClient, hs: Pick<Hub
     } catch (e) {
       out.erros++;
       console.error(`[worker] reunião ${m.id} no HubSpot:`, (e as Error).message);
+    }
+  }
+  return out;
+}
+
+/**
+ * Status marcado no painel → hs_meeting_outcome da Reunião oficial (a do Calendar; sem ela, a antiga do painel).
+ * Vale a última mudança: se o HubSpot mudou depois (valor diferente do último conhecido e data posterior à
+ * mudança no painel), o painel recebe o do HubSpot. Sem Reunião no HubSpot ainda: fica pendente.
+ */
+export function quemVale(m: { status_changed_at?: string | null; hubspot_outcome?: string | null }, noHubspot: string | null, mudouEm: string | null): "painel" | "hubspot" {
+  if ((noHubspot ?? null) === (m.hubspot_outcome ?? null) || !mudouEm || !m.status_changed_at) return "painel";
+  return Date.parse(mudouEm) > Date.parse(m.status_changed_at) ? "hubspot" : "painel";
+}
+
+export async function enviarStatusPendentes(db: SupabaseClient, hs: Pick<HubspotClient, "call">): Promise<{ enviadas: number; doHubspot: number; erros: number }> {
+  const p = db.schema("painel");
+  const out = { enviadas: 0, doHubspot: 0, erros: 0 };
+  const { data, error } = await p.from("meetings")
+    .select("id, status, status_changed_at, hubspot_outcome, hubspot_agenda_meeting_id, hubspot_meeting_id")
+    .eq("hubspot_status_pendente", true).limit(50);
+  if (error) throw new Error(`ler status pendentes: ${error.message}`);
+  for (const m of data ?? []) {
+    const alvo = m.hubspot_agenda_meeting_id ?? m.hubspot_meeting_id;
+    if (!alvo) continue;
+    try {
+      const cur = await hs.call<{ properties: Props; propertiesWithHistory?: Record<string, { value: string; timestamp: string }[]> }>(
+        `/crm/v3/objects/meetings/${alvo}?properties=hs_meeting_outcome&propertiesWithHistory=hs_meeting_outcome`);
+      const atual = cur.properties.hs_meeting_outcome || null;
+      const mudouEm = cur.propertiesWithHistory?.hs_meeting_outcome?.[0]?.timestamp ?? null;
+      const s = quemVale(m, atual, mudouEm) === "hubspot" ? statusDoHubspot(atual, null) : null;
+      if (s) {
+        const { error: e2 } = await p.rpc("aplicar_status_hubspot", { p_id: m.id, p_status: s.status, p_outcome: s.outcome });
+        if (e2) throw new Error(`aplicar_status_hubspot: ${e2.message}`);
+        out.doHubspot++;
+        continue;
+      }
+      const outcome = OUTCOME[m.status as MeetingStatus];
+      await hs.call(`/crm/v3/objects/meetings/${alvo}`, { properties: { hs_meeting_outcome: outcome } }, "PATCH");
+      await p.from("meetings").update({ hubspot_outcome: outcome, hubspot_status_pendente: false, hubspot_status_synced: m.status }).eq("id", m.id);
+      out.enviadas++;
+    } catch (e) {
+      out.erros++;
+      console.error(`[worker] status da reunião ${m.id} para o HubSpot:`, (e as Error).message);
     }
   }
   return out;

@@ -1,20 +1,29 @@
 "use server";
 
-// Ações da tela Reuniões (Fase 10d.2): mudança de horário (mesmo evento) e troca de closer. A situação vem do
-// HubSpot desde 2026-10-27 (não se marca mais aqui). A permissão é conferida no banco (permissao_reuniao).
+// Ações da tela Reuniões (Fase 10d.2): situação, mudança de horário (mesmo evento) e troca de closer. A situação
+// marcada aqui vai para a Reunião do HubSpot pelo worker (2026-10-28); não move mais o evento para a agenda de
+// arquivo (isso apaga a Reunião no HubSpot): a cancelada fica Disponível na agenda do closer.
+// A permissão é conferida no banco (permissao_reuniao / definir_status_reuniao) com a sessão do usuário.
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { isFree } from "@painel/shared/google";
 import { busyOf, freeAt, loadRules } from "@/lib/agendar";
 import { postGestaoSdr } from "@/lib/chat";
 import { APP_URL } from "@/lib/google";
-import { loadMeeting, moveEvent, recreateEventDefault, renameEvent, syncEventWithStatus } from "@/lib/reuniao-google";
+import { loadMeeting, moveEvent, recreateEventDefault, renameEvent } from "@/lib/reuniao-google";
 import { checkLivre, checkManual, gridSlots, interval, windowDays } from "@/lib/slots";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { addDays, localToDate } from "@/lib/time";
 
 const admin = () => createAdminClient().schema("painel");
+
+export async function mudarStatus(id: string, status: string): Promise<{ erro?: string }> {
+  const { error } = await (await createClient()).schema("painel").rpc("definir_status_reuniao", { p_id: id, p_status: status });
+  if (error) return { erro: error.message.includes("acesso negado") ? "Você não pode alterar esta reunião." : error.message };
+  revalidatePath("/reunioes");
+  return {};
+}
 
 async function permissao(id: string): Promise<string | null> {
   const { data } = await (await createClient()).schema("painel").rpc("permissao_reuniao", { p_id: id });
@@ -170,9 +179,6 @@ export async function editarLivre(_: { erro?: string }, form: FormData): Promise
   });
   try {
     await moveEvent(before, after);
-    // no show / cancelada com closer novo: o evento novo volta para a agenda de arquivo
-    const now = await loadMeeting(id);
-    if (now) await syncEventWithStatus(now);
   } catch (e) {
     return { erro: `A reunião mudou no painel, mas a agenda do Google não foi atualizada (${(e as Error).message}). Use "Recriar evento" ou avise o admin.` };
   }

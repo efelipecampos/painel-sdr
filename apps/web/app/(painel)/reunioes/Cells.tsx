@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { closersLivres, decidirPedido, passarMarca, pedirTroca, recriarEvento, trocarCloser } from "./actions";
+import { closersLivres, decidirPedido, mudarStatus, passarMarca, pedirTroca, recriarEvento, trocarCloser } from "./actions";
 
 type Msg = { erro?: string; ok?: string } | null;
 
@@ -35,8 +35,8 @@ const SemHubspot = () => (
     style={{ color: "var(--danger)", fontWeight: 600 }}>▲ No Calendar, não está no HubSpot</span>
 );
 
-/** Situação: vem do HubSpot (2026-10-27) e fica travada no painel. Com problema no Google: aviso e recriar evento. */
-export function StatusCell({ id, status, problema, semHubspot }: { id: string; status: string; problema: string | null; semHubspot: boolean }) {
+/** Situação: closer, SDR, gestor e admin escolhem; vai para a Reunião do HubSpot (e o que mudar lá volta para cá). */
+export function StatusCell({ id, status, problema, semHubspot, company }: { id: string; status: string; problema: string | null; semHubspot: boolean; company: string }) {
   const { pending, msg, run } = useAct();
   if (problema) {
     return (
@@ -46,6 +46,10 @@ export function StatusCell({ id, status, problema, semHubspot }: { id: string; s
           {problema !== "recusada_lead" && (
             <button type="button" className="rn-mini" disabled={pending} onClick={() => run(() => recriarEvento(id), "Evento recriado.")}>Recriar evento</button>
           )}
+          <button type="button" className="rn-mini ghost" disabled={pending}
+            onClick={() => { if (confirm(`Marcar a reunião com ${company} como cancelada?`)) run(() => mudarStatus(id, "cancelada"), "Marcada como cancelada."); }}>
+            Marcar como cancelada
+          </button>
         </div>
         {semHubspot && <SemHubspot />}
         <Feedback msg={msg} />
@@ -54,11 +58,13 @@ export function StatusCell({ id, status, problema, semHubspot }: { id: string; s
   }
   return (
     <div className="cell-stack" style={{ gap: 4 }}>
-      <select className={`rn-status${status !== "agendada" ? " set" : ""}`} value={status} disabled aria-label="Situação da reunião (definida no HubSpot)"
-        title="A situação é marcada na Reunião do HubSpot e chega ao painel em até 5 min.">
+      <select className={`rn-status${status !== "agendada" ? " set" : ""}`} value={status} disabled={pending} aria-label={`Situação da reunião com ${company}`}
+        title="Vai para a Reunião no HubSpot em seguida. Se mudarem no HubSpot depois, o painel recebe em até 5 min."
+        onChange={(e) => run(() => mudarStatus(id, e.target.value), "Situação salva. Vai para o HubSpot em seguida.")}>
         {OPCOES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
       </select>
       {semHubspot && <SemHubspot />}
+      <Feedback msg={msg} />
     </div>
   );
 }
