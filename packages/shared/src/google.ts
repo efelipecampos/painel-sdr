@@ -23,6 +23,11 @@ export class GoogleError extends Error {
   get revoked(): boolean {
     return this.reason === "invalid_grant" || this.reason === "unauthorized_client";
   }
+  /** O Google pediu para esperar (limite de pedidos) ou falhou do lado dele: vale tentar de novo. */
+  get temporario(): boolean {
+    return this.status === 429 || this.status >= 500
+      || (this.status === 403 && (this.reason === "rateLimitExceeded" || this.reason === "userRateLimitExceeded"));
+  }
 }
 
 // ---------- cifra do token (AES-256-GCM; chave de 32 bytes em base64 no .env) ----------
@@ -147,13 +152,21 @@ export interface NewEvent {
 const API = "https://www.googleapis.com/calendar/v3";
 const enc = encodeURIComponent;
 
+/** Esperas entre as tentativas quando o Google pede para esperar (2026-10-28: 403 rateLimitExceeded deixava o evento pela metade). */
+export const ESPERAS_GOOGLE_MS = [1000, 2000, 4000];
+
 export class GoogleCalendar {
-  constructor(private readonly token: string, private readonly f: Fetch = fetch) {}
+  constructor(private readonly token: string, private readonly f: Fetch = fetch,
+    private readonly esperar: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms))) {}
 
   private async call<T>(op: string, url: string, init: RequestInit = {}): Promise<T> {
-    const r = await this.f(url, { ...init, headers: { authorization: `Bearer ${this.token}`, "content-type": "application/json", ...init.headers } });
-    if (!r.ok) throw await failOf(op, r);
-    return (r.status === 204 ? undefined : await r.json()) as T;
+    for (let i = 0; ; i++) {
+      const r = await this.f(url, { ...init, headers: { authorization: `Bearer ${this.token}`, "content-type": "application/json", ...init.headers } });
+      if (r.ok) return (r.status === 204 ? undefined : await r.json()) as T;
+      const err = await failOf(op, r);
+      if (!err.temporario || i >= ESPERAS_GOOGLE_MS.length) throw err;
+      await this.esperar(ESPERAS_GOOGLE_MS[i]);
+    }
   }
 
   /** Intervalos ocupados da agenda principal do closer (sem conteúdo dos eventos). */

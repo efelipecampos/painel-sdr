@@ -42,17 +42,45 @@ export async function syncEventWithStatus(m: MeetingRow): Promise<void> {
   const title = m.title ?? "";
   if (shouldArchive) {
     const { data: c } = await admin().from("sdrs").select("name").eq("id", m.closer_id).single();
-    if (!inArchive) await withLog(m.closer_id, "mover", () => cal.move(m.google_event_id!, arq, m.google_calendar_id || "primary"), m.id);
+    if (!inArchive) {
+      await withLog(m.closer_id, "mover", () => cal.move(m.google_event_id!, arq, m.google_calendar_id || "primary"), m.id);
+      // grava já: se o título/cor falhar, o banco continua apontando para onde o evento está (bug de 2026-10-28)
+      await admin().from("meetings").update({ google_calendar_id: arq }).eq("id", m.id);
+    }
     await withLog(m.closer_id, "alterar", () => cal.patch(m.google_event_id!, {
       title: archiveTitle(title, c?.name ?? ""), colorId: ARCHIVE_COLOR[m.status as keyof typeof ARCHIVE_COLOR],
     }, arq, false), m.id);
-    await admin().from("meetings").update({ google_calendar_id: arq }).eq("id", m.id);
   } else if (inArchive) {
     const dest = await closerCalendarId(m.closer_id);
     await withLog(m.closer_id, "mover", () => cal.move(m.google_event_id!, dest, arq), m.id);
-    await withLog(m.closer_id, "alterar", () => cal.patch(m.google_event_id!, { title, colorId: null }, dest, false), m.id);
     await admin().from("meetings").update({ google_calendar_id: dest, google_state: "ok" }).eq("id", m.id);
+    await withLog(m.closer_id, "alterar", () => cal.patch(m.google_event_id!, { title, colorId: null }, dest, false), m.id);
   }
+}
+
+/**
+ * O evento está na agenda que o banco indica? Se não estiver (apagado, sem permissão), procura na agenda de arquivo
+ * e, achando, corrige o banco. Devolve a reunião com a agenda certa (bug de 2026-10-28: banco apontava para a agenda
+ * do closer e o evento já estava no arquivo).
+ */
+export async function localizar(m: MeetingRow): Promise<MeetingRow> {
+  if (!m.google_event_id) return m;
+  const arq = await archiveId().catch(() => "");
+  if (!arq || m.google_calendar_id === arq) return m;
+  const cal = await calendarOf(m.closer_id);
+  const achou = async (c: string) => {
+    try {
+      const ev = await cal.get(m.google_event_id!, c);
+      return !!ev && ev.status !== "cancelled";
+    } catch (e) {
+      if (e instanceof GoogleError && [403, 404, 410].includes(e.status)) return false;
+      throw e;
+    }
+  };
+  if (await achou(m.google_calendar_id || "primary")) return m;
+  if (!(await achou(arq))) return m;
+  await admin().from("meetings").update({ google_calendar_id: arq }).eq("id", m.id);
+  return { ...m, google_calendar_id: arq };
 }
 
 /**
@@ -61,6 +89,7 @@ export async function syncEventWithStatus(m: MeetingRow): Promise<void> {
  */
 export async function moveEvent(before: MeetingRow, after: MeetingRow): Promise<void> {
   if (!before.google_event_id) return;
+  before = await localizar(before);
   const start = new Date(after.starts_at);
   const end = new Date(after.ends_at);
   // reunião que estava no arquivo (cancelada/no show) volta antes para a agenda do closer antigo
@@ -97,6 +126,7 @@ export async function moveEvent(before: MeetingRow, after: MeetingRow): Promise<
   await withLog(before.closer_id, "apagar", () => oldCal.remove(before.google_event_id!, where), after.id);
   await admin().from("meetings").update({
     google_event_id: ev.id, google_calendar_id: await closerCalendarId(after.closer_id), meet_url: ev.hangoutLink ?? null, google_state: "ok",
+    google_liberada: false, // evento novo nasce Ocupado; se a reunião estiver cancelada, o worker libera de novo
   }).eq("id", after.id);
 }
 
@@ -125,6 +155,7 @@ export async function recreateEventDefault(m: MeetingRow): Promise<void> {
  * se o Google não tiver mais o evento, cria um novo na agenda do closer, convidando o lead e o SDR.
  */
 export async function recreateEvent(m: MeetingRow, inviteSdr: boolean, sdrEmail: string | null): Promise<void> {
+  m = await localizar(m);
   const cal = await calendarOf(m.closer_id);
   const where = m.google_calendar_id || "primary";
   if (m.google_event_id) {
@@ -144,7 +175,7 @@ export async function recreateEvent(m: MeetingRow, inviteSdr: boolean, sdrEmail:
     description: `Reunião agendada pelo Painel SDR.\n\nPassagem de bastão (equipe Poli, precisa de login): ${APP_URL}/reuniao/${m.id}`,
   }), m.id);
   await admin().from("meetings").update({
-    google_event_id: ev.id, google_calendar_id: await closerCalendarId(m.closer_id), meet_url: ev.hangoutLink ?? null, google_state: "ok",
+    google_event_id: ev.id, google_calendar_id: await closerCalendarId(m.closer_id), meet_url: ev.hangoutLink ?? null, google_state: "ok", google_liberada: false,
     hubspot_sync_needed: true,
   }).eq("id", m.id);
 }
