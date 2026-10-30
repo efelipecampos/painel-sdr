@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkLivre, checkManual, gridSlots, inicioFlash, windowDays, type AgendaRules } from "./slots";
+import { checkLivre, checkManual, checkMesmoDia, gridSlots, inicioFlash, windowDays, type AgendaRules } from "./slots";
 
 const hours = [1, 2, 3, 4, 5].map((weekday) => ({ weekday, enabled: true, start_time: "08:20", end_time: "17:45" }))
   .concat([0, 6].map((weekday) => ({ weekday, enabled: false, start_time: "08:00", end_time: "18:00" })));
@@ -92,5 +92,28 @@ describe("reunião flash", () => {
     expect(r.start.toISOString()).toBe("2026-10-28T14:13:00.000Z");
     expect(r.end.toISOString()).toBe("2026-10-28T15:13:00.000Z");
     expect(inicioFlash(new Date("2026-10-28T14:02:00Z"), 5).start.toISOString()).toBe("2026-10-28T14:07:00.000Z");
+  });
+});
+
+describe("mesmo dia, mesmo closer (SDR)", () => {
+  // sexta 30/10/2026 09:40 em São Paulo; reunião marcada para as 11:00 de hoje
+  const agora = new Date("2026-10-30T12:40:00Z");
+  const reuniao = new Date("2026-10-30T14:00:00Z");
+  it("aceita antecipar para agora ou até 30 min antes", () => {
+    expect(checkMesmoDia("2026-10-30T09:40", 60, reuniao, agora).erro).toBeNull();
+    expect(checkMesmoDia("2026-10-30T09:10", 60, reuniao, agora).erro).toBeNull();
+    expect(checkMesmoDia("2026-10-30T15:00", 45, reuniao, agora).erro).toBeNull();
+  });
+  it("não volta mais de 30 min", () => {
+    expect(checkMesmoDia("2026-10-30T09:00", 60, reuniao, agora).erro).toMatch(/30 minutos/);
+  });
+  it("só para hoje, e só a reunião de hoje", () => {
+    expect(checkMesmoDia("2026-11-03T10:00", 60, reuniao, agora).erro).toMatch(/precisa ser hoje/);
+    expect(checkMesmoDia("2026-10-30T10:00", 60, new Date("2026-11-03T14:00:00Z"), agora).erro).toMatch(/reunião de hoje/);
+  });
+  it("confere formato, duração e fim no mesmo dia", () => {
+    expect(checkMesmoDia("2026-10-30", 60, reuniao, agora).erro).toMatch(/inválido/);
+    expect(checkMesmoDia("2026-10-30T10:00", 5, reuniao, agora).erro).toMatch(/10 a 240/);
+    expect(checkMesmoDia("2026-10-30T23:30", 60, reuniao, agora).erro).toMatch(/terminar hoje/);
   });
 });

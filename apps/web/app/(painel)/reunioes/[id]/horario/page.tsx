@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loadMeeting } from "@/lib/reuniao-google";
-import { dateToLocal, formatDateTime, formatTime } from "@/lib/time";
+import { dateToLocal, formatDateTime, formatTime, localDay } from "@/lib/time";
 import { EditarLivreForm } from "./EditarLivreForm";
 import { HorarioForm } from "./HorarioForm";
+import { MesmoDiaForm } from "./MesmoDiaForm";
 
 export const metadata = { title: "Reagendar — Painel SDR" };
 
@@ -13,11 +14,14 @@ export default async function HorarioPage({ params }: { params: Promise<{ id: st
   const { id } = await params;
   const db = (await createClient()).schema("painel");
   const [{ data: perm }, { data }] = await Promise.all([db.rpc("permissao_reuniao", { p_id: id }), db.rpc("reuniao_detalhe", { p_id: id })]);
-  const m = (data ?? [])[0] as { title: string; starts_at: string; ends_at: string; status: string } | undefined;
+  const m = (data ?? [])[0] as { title: string; starts_at: string; ends_at: string; status: string; closer: string | null } | undefined;
   if (!m || (perm !== "sdr" && perm !== "gestor")) notFound();
   const duration = Math.round((Date.parse(m.ends_at) - Date.parse(m.starts_at)) / 60_000);
   const livre = perm === "gestor";
   const closerId = livre ? (await loadMeeting(id))?.closer_id : undefined;
+  // reunião agendada de hoje: a SDR também pode mudar o horário de hoje com o mesmo closer (2026-10-30)
+  const hoje = localDay(new Date());
+  const mesmoDia = !livre && m.status === "agendada" && localDay(new Date(m.starts_at)) === hoje;
   return (
     <main className="page">
       <div className="page-head"><h1 className="title">{livre ? "Editar reunião" : "Reagendar"}</h1></div>
@@ -35,6 +39,7 @@ export default async function HorarioPage({ params }: { params: Promise<{ id: st
             O convite é o mesmo (mesmo link do Meet). O sistema tenta manter o mesmo closer; se ele não estiver livre no novo horário, o carrossel escolhe outro.
           </p>
           <HorarioForm id={id} initialDuration={duration} />
+          {mesmoDia && <MesmoDiaForm id={id} day={hoje} initialDuration={duration} closerName={m.closer ?? "closer atual"} />}
         </>
       )}
     </main>

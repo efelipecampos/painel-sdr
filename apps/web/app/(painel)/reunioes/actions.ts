@@ -11,7 +11,7 @@ import { busyOf, freeAt, loadRules } from "@/lib/agendar";
 import { postGestaoSdr } from "@/lib/chat";
 import { APP_URL } from "@/lib/google";
 import { loadMeeting, moveEvent, recreateEventDefault, removeEvent, renameEvent } from "@/lib/reuniao-google";
-import { checkLivre, checkManual, gridSlots, interval, windowDays } from "@/lib/slots";
+import { checkLivre, checkManual, checkMesmoDia, gridSlots, interval, windowDays } from "@/lib/slots";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { addDays, localToDate } from "@/lib/time";
@@ -162,15 +162,74 @@ export async function conferirEdicaoLivre(id: string, local: string, duration: n
     erro: null,
     avisos: check.avisos,
     closers: closers.map((c) => {
-      const o = busy.get(c.id);
-      const situacao = !o ? "a agenda não respondeu"
-        : !isFree(o.cliente, start, end, 0) ? "ocupado: outra reunião com cliente neste horário"
-        : !isFree(o.google, start, end, 0) ? "ocupado: compromisso na agenda"
-        : !isFree(o.cliente, start, end, carousel.gap_minutes) ? `livre, mas a menos de ${carousel.gap_minutes} min de outra reunião com cliente`
-        : "livre";
+      const situacao = situacaoCloser(busy.get(c.id), start, end, carousel.gap_minutes);
       return { id: c.id, name: c.name, atual: c.id === m.closer_id, situacao, livre: situacao === "livre" };
     }),
   };
+}
+
+type Ocupacao = Awaited<ReturnType<typeof busyOf>> extends Map<string, infer O> ? O : never;
+
+function situacaoCloser(o: Ocupacao | undefined, start: Date, end: Date, gap: number): string {
+  return !o ? "a agenda não respondeu"
+    : !isFree(o.cliente, start, end, 0) ? "ocupado: outra reunião com cliente neste horário"
+    : !isFree(o.google, start, end, 0) ? "ocupado: compromisso na agenda"
+    : !isFree(o.cliente, start, end, gap) ? `livre, mas a menos de ${gap} min de outra reunião com cliente`
+    : "livre";
+}
+
+// ---------- Mesmo dia, mesmo closer: SDR (decisão do Felipe, 2026-10-30) ----------
+// A reunião de hoje vai para outro horário de hoje (ex.: o cliente pediu para antecipar e o closer topou), inclusive
+// até 30 min atrás, sem trocar o closer. Agenda ocupada não bloqueia: o painel só avisa. Fica no histórico com o motivo.
+
+export async function conferirMesmoDia(id: string, local: string, duration: number): Promise<{ erro: string | null; situacao: string }> {
+  try {
+    await guard(id);
+  } catch (e) {
+    return { erro: (e as Error).message, situacao: "" };
+  }
+  const { m, carouselId } = await candidatos(id);
+  const check = checkMesmoDia(local, duration, new Date(m.starts_at), new Date());
+  if (check.erro) return { erro: check.erro, situacao: "" };
+  const { carousel } = await loadRules(carouselId);
+  const { start, end } = interval(local, duration);
+  const busy = await busyOf([m.closer_id], start, end, id);
+  return { erro: null, situacao: situacaoCloser(busy.get(m.closer_id), start, end, carousel.gap_minutes) };
+}
+
+export async function mudarMesmoDia(_: { erro?: string }, form: FormData): Promise<{ erro?: string }> {
+  const id = String(form.get("id"));
+  const local = String(form.get("local") ?? "");
+  const duration = Number(form.get("duration"));
+  const motivo = String(form.get("motivo") ?? "").trim().slice(0, 1000);
+  try {
+    await guard(id);
+  } catch (e) {
+    return { erro: (e as Error).message };
+  }
+  if (!motivo) return { erro: "Escreva o motivo (ex.: o cliente pediu para antecipar e o closer confirmou)." };
+  const before = await loadMeeting(id);
+  if (!before) return { erro: "Reunião não encontrada." };
+  if (before.status !== "agendada") return { erro: "Só a reunião agendada muda de horário por aqui." };
+  const check = checkMesmoDia(local, duration, new Date(before.starts_at), new Date());
+  if (check.erro) return { erro: check.erro };
+  const { start, end } = interval(local, duration);
+  const r = await admin().rpc("editar_reuniao_livre", { p_meeting: id, p_starts: start.toISOString(), p_ends: end.toISOString(), p_closer: before.closer_id, p_motivo: motivo });
+  if (r.error) return { erro: `Não foi possível mudar o horário: ${r.error.message}` };
+  const me = (await (await createClient()).auth.getUser()).data.user?.id ?? null;
+  const after = (await loadMeeting(id))!;
+  // fora_do_padrao: é uma exceção ao fluxo normal da SDR; o worker leva o novo horário para o HubSpot
+  await admin().from("meetings").update({ fora_do_padrao: true, hubspot_sync_needed: true }).eq("id", id);
+  await admin().from("meeting_changes").insert({
+    meeting_id: id, changed_by: me, from_starts: before.starts_at, to_starts: after.starts_at, from_closer: before.closer_id, to_closer: after.closer_id,
+    tipo: "mesmo_dia", motivo,
+  });
+  try {
+    await moveEvent(before, after);
+  } catch (e) {
+    return { erro: `O horário mudou no painel, mas a agenda do Google não foi atualizada (${(e as Error).message}). Avise o gestor.` };
+  }
+  redirect(`/reunioes?mudou=${id}`);
 }
 
 export async function editarLivre(_: { erro?: string }, form: FormData): Promise<{ erro?: string }> {
