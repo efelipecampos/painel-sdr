@@ -67,6 +67,27 @@ export function gridSlots(day: string, duration: number, r: AgendaRules, now: Da
 
 export interface ManualCheck { erro: string | null; avisos: string[]; foraDoPadrao: boolean }
 
+/** Quanto o horário pode voltar no "mesmo dia, mesmo closer": a reunião que já começou (decisão do Felipe, 2026-10-30). */
+export const MESMO_DIA_PASSADO_MAX = 30;
+
+/**
+ * Reunião de hoje para outro horário de hoje, com o mesmo closer (SDR, 2026-10-30). Ex.: o cliente pediu para
+ * antecipar e o closer topou. Pode voltar até 30 min; agenda ocupada não bloqueia (o painel só avisa).
+ */
+export function checkMesmoDia(local: string, duration: number, meetingStart: Date, now: Date): { erro: string | null } {
+  const fail = (erro: string) => ({ erro });
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(local)) return fail("Horário inválido.");
+  if (!Number.isInteger(duration) || duration < 10 || duration > 240) return fail("A duração precisa ser de 10 a 240 minutos.");
+  const hoje = localDay(now);
+  if (localDay(meetingStart) !== hoje) return fail("Só a reunião de hoje muda com o mesmo closer. Para outro dia, use os horários acima.");
+  if (local.slice(0, 10) !== hoje) return fail("O novo horário precisa ser hoje.");
+  if (localToDate(local).getTime() < now.getTime() - MESMO_DIA_PASSADO_MAX * 60_000) {
+    return fail(`O horário pode voltar no máximo ${MESMO_DIA_PASSADO_MAX} minutos (para a reunião que já começou).`);
+  }
+  if (toMin(local.slice(11)) + duration > 24 * 60) return fail("A reunião precisa terminar hoje.");
+  return { erro: null };
+}
+
 /** Confere um horário escolhido à mão ("AAAA-MM-DDTHH:mm" local) e uma duração em minutos. */
 export function checkManual(local: string, duration: number, r: AgendaRules, now: Date): ManualCheck {
   const fail = (erro: string): ManualCheck => ({ erro, avisos: [], foraDoPadrao: false });
