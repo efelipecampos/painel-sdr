@@ -6,8 +6,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient, getMe, isManager } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { montarTexto, preencher, variaveisDesconhecidas, type Janela, type TipoEnvio } from "@painel/shared/jornada";
-import { PoliApi, PoliError } from "@painel/shared/poli";
+import { linhaTemplate, PoliApi, PoliError } from "@painel/shared/poli";
 
 export interface Resultado { ok: boolean; msg: string }
 
@@ -166,4 +167,28 @@ export async function textoTemplate(uuid: string): Promise<{ body: string; butto
   const { db } = await guard();
   const { data } = await db.from("poli_templates").select("body, buttons").eq("uuid", uuid).maybeSingle();
   return data ? { body: data.body ?? "", buttons: ((data.buttons as { text: string }[]) ?? []).map((b) => b.text) } : null;
+}
+
+/** Busca agora a lista de templates do Poli (sem esperar o worker, que atualiza a cada 30 min). Grava com a
+ *  service_role, como o worker: o gestor só lê painel.poli_templates. */
+export async function atualizarTemplates(): Promise<Resultado> {
+  await guard();
+  const base = process.env.POLI_API_BASE_URL?.trim(), token = process.env.POLI_API_TOKEN?.trim();
+  if (!base || !token) return { ok: false, msg: "A API do Poli não está configurada no servidor." };
+  const conta = process.env.POLI_ACCOUNT_UUID?.trim() || "9b8af98e-0407-49a2-bce9-3620f29c513a";
+  try {
+    const ts = await new PoliApi(base, token).listTemplates(conta);
+    const admin = createAdminClient().schema("painel");
+    const { count: antes } = await admin.from("poli_templates").select("uuid", { count: "exact", head: true });
+    const agora = new Date().toISOString();
+    for (let i = 0; i < ts.length; i += 200) {
+      const { error } = await admin.from("poli_templates").upsert(ts.slice(i, i + 200).map((t) => linhaTemplate(t, agora)));
+      if (error) return { ok: false, msg: "Não foi possível gravar os templates." };
+    }
+    const novos = Math.max(0, ts.length - (antes ?? ts.length));
+    revalidatePath("/jornada", "layout"); // Regras e Acompanhamento
+    return { ok: true, msg: novos ? `Atualizado: ${novos} template${novos > 1 ? "s" : ""} novo${novos > 1 ? "s" : ""}.` : "Atualizado. Nenhum template novo." };
+  } catch (e) {
+    return { ok: false, msg: e instanceof PoliError ? `O Poli não respondeu (HTTP ${e.status}). Tente de novo em instantes.` : "Não foi possível falar com o Poli." };
+  }
 }

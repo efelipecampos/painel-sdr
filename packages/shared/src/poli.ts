@@ -130,6 +130,11 @@ export function toTemplate(t: RawTemplate): PoliTemplate {
   };
 }
 
+/** Linha de painel.poli_templates para um template da API (o worker, a cada 30 min, e o botão da Jornada). */
+export function linhaTemplate(t: PoliTemplate, syncedAt: string) {
+  return { uuid: t.uuid, key: t.key, status: t.status, category: t.category, body: t.body, buttons: t.buttons.map((text) => ({ text })), meta_name: t.metaName, synced_at: syncedAt };
+}
+
 /** Motivo curto do erro, sem copiar o corpo inteiro (pode ter dado do contato). */
 async function motivo(res: Response): Promise<string> {
   try {

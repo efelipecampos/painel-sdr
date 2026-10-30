@@ -21,3 +21,9 @@ export async function carregarTemplates(db: ReturnType<SupabaseClient["schema"]>
   }
   return templates.sort((a, b) => (usos.get(b.key) ?? 0) - (usos.get(a.key) ?? 0) || a.key.localeCompare(b.key));
 }
+
+/** Hora (São Paulo) da última cópia da lista de templates do Poli, para o cabeçalho da Jornada. */
+export async function templatesAtualizadosEm(db: ReturnType<SupabaseClient["schema"]>): Promise<string | null> {
+  const { data } = await db.from("poli_templates").select("synced_at").order("synced_at", { ascending: false }).limit(1).maybeSingle();
+  return data ? new Date(data.synced_at).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }) : null;
+}

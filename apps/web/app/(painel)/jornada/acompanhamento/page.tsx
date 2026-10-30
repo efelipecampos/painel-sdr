@@ -7,7 +7,7 @@ import { JornadaTabs } from "../JornadaTabs";
 import { FunilView, type Etapa } from "./FunilView";
 import { PeriodoJornada } from "./PeriodoJornada";
 import { PorTemplate, type LinhaTemplate } from "./PorTemplate";
-import { carregarTemplates } from "../templates";
+import { carregarTemplates, templatesAtualizadosEm } from "../templates";
 import s from "../jornada.module.css";
 
 export const dynamic = "force-dynamic";
@@ -50,7 +50,7 @@ export default async function JornadaAcompanhamentoPage({ searchParams }: { sear
 
   return (
     <main className={s.page}>
-      <JornadaTabs atual="acompanhamento" />
+      <JornadaTabs atual="acompanhamento" templatesEm={await templatesAtualizadosEm(db)} />
       <div className={s.periodBar}>
         <PeriodoJornada atual={p.key} de={p.de} ate={p.ate} />
         <div style={{ flexGrow: 1 }} />

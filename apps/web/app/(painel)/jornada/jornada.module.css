@@ -3,6 +3,7 @@
 .head { display: flex; align-items: center; gap: 12px; }
 .h1 { margin: 0; font-size: 18px; line-height: 24px; font-weight: 700; color: #6868d7; }
 .tabs { display: flex; gap: 4px; margin-left: 12px; }
+.tplSync { margin-left: auto; display: flex; align-items: center; gap: 12px; color: #a7abb5; }
 .tab { height: 36px; display: flex; align-items: center; padding: 0 12px; border-radius: 8px; border: 1px solid #4e5d7f; background: #313a4f; text-decoration: none; font-size: 14px; color: #f6f7f9; }
 .tabOn { border-color: #5757d3; background: #5757d3; font-weight: 600; }
 .tabSoon { height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border-radius: 8px; border: 1px dashed #4e5d7f; font-size: 14px; color: #a7abb5; }
