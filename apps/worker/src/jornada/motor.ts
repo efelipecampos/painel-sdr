@@ -7,7 +7,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 import { botaoClicado, escolherRegra, JANELA_TEXTO_MS, montarTexto, preencher, type Regra } from "@painel/shared/jornada";
-import { PoliApi, PoliError, type PoliTemplate } from "@painel/shared/poli";
+import { linhaTemplate, PoliApi, PoliError, type PoliTemplate } from "@painel/shared/poli";
 import type { HubspotClient } from "../hubspot/leads.js";
 import { descartarNoHubspot } from "./descarte.js";
 
@@ -36,7 +36,7 @@ export async function syncTemplates(db: SupabaseClient, poli: PoliApi, cfg: Jorn
   const now = new Date().toISOString();
   for (let i = 0; i < ts.length; i += 200) {
     const { error } = await db.schema("painel").from("poli_templates").upsert(
-      ts.slice(i, i + 200).map((t) => ({ uuid: t.uuid, key: t.key, status: t.status, category: t.category, body: t.body, buttons: t.buttons.map((text) => ({ text })), meta_name: t.metaName, synced_at: now })),
+      ts.slice(i, i + 200).map((t) => linhaTemplate(t, now)),
     );
     if (error) throw new Error(`gravar templates do Poli: ${error.message}`);
   }

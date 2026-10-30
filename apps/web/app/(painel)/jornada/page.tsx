@@ -4,7 +4,7 @@ import { createClient, getMe, isManager } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { localToDate, localDay } from "@/lib/time";
 import { JornadaTabs } from "./JornadaTabs";
-import { carregarTemplates } from "./templates";
+import { carregarTemplates, templatesAtualizadosEm } from "./templates";
 import { RegrasView, type RegraLinha } from "./RegrasView";
 import s from "./jornada.module.css";
 
@@ -91,7 +91,7 @@ export default async function JornadaRegrasPage() {
 
   return (
     <main className={s.page}>
-      <JornadaTabs atual="regras" />
+      <JornadaTabs atual="regras" templatesEm={await templatesAtualizadosEm(db)} />
       <RegrasView
         regras={linhas}
         templates={templates}
