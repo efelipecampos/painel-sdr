@@ -1,6 +1,8 @@
 # Fase 9 — SDR Modelo
 
-Especificação aprovada pelo Felipe em 2026-10-09 (todas as propostas aceitas). Falta o desenho das telas antes do código. A 1ª versão do SDR Ideal depende de reuniões validadas suficientes (agendamento pelo painel desde 09/10/2026).
+Especificação aprovada pelo Felipe em 2026-10-09 (todas as propostas aceitas). Telas em `design/` (SDRModeloTime, SDRModeloUm, SDRIdeal).
+
+Entrega em partes (2026-10-30): **9a** números no banco, versões do SDR Ideal e aderência (migration `20261030180000_sdr_modelo_numeros.sql`; RPCs `sdr_modelo_numeros`, `sdr_modelo_aderencia`, `dias_uteis`; versão 1 gravada pela migration com as faixas dos 3 melhores dos 30 dias anteriores); **9b** telas `/sdr-modelo` (time), `/sdr-modelo/[id]` (um SDR; o SDR vê só a dele, em "Meu SDR Modelo") e `/sdr-modelo/ideal` (configuração, só gestor e admin), com as migrations `20261030190000_sdr_modelo_exemplos.sql` (exemplos de conversas) e `20261030200000_sdr_ideal_salvar.sql` (salvar versão); **9c** comportamentos de conversa pela IA (teste com 20 conversas e custo antes de ligar); **9d** sugestões semanais da IA.
 
 ## 1. Para que serve
 
@@ -23,9 +25,9 @@ Os comportamentos são de dois tipos.
 | 1ª resposta | Mediana do tempo de primeira resposta | `spec.md` §2 |
 | Tempo de resposta | Mediana do tempo de resposta | `spec.md` §2 |
 | Taxa de resposta | leads que responderam ÷ leads abordados no período | Definição nova (Felipe, 2026-10-09) |
-| Descartes | descartados ÷ leads que responderam no período | Descartados (`spec.md` §2) |
+| Descartes | descartados ÷ leads abordados no período (decisão do Felipe, 2026-10-30: ÷ responderam passava de 100%, porque a maioria dos descartados nunca respondeu) | Descartados (`spec.md` §2) |
 | Reuniões validadas | reuniões validadas ÷ leads que responderam, pela data da reunião | `painel.meetings` (agendamentos pelo painel desde 09/10/2026) |
-| Confirmação de reunião | % das reuniões do SDR em que houve mensagem de confirmação **no dia** e mensagens **logo antes** da reunião (decisão do Felipe, 2026-10-09). "logo antes" = até 60 min antes do início. **Em aberto:** a mensagem precisa ser do próprio SDR ou vale qualquer pessoa da equipe? | `painel.meetings` + `painel.chat_messages` |
+| Confirmação de reunião | % das reuniões do SDR (validada, invalidada ou no show, pela data de início) em que **alguém da equipe** (não precisa ser o próprio SDR) escreveu ao lead nos **60 min antes** do início (decisões do Felipe, 2026-10-09 e 2026-10-30). Reunião marcada menos de 60 min antes (ex.: flash) fica fora da conta. | `painel.meetings` + `painel.chat_messages` |
 
 Comportamento novo do tipo número precisa de código, porque tem cálculo no banco.
 
@@ -71,6 +73,11 @@ A IA é a mesma do score (Celeris, `SCORE_IA`), com as conversas mascaradas.
 - **Melhor que a faixa conta como dentro (2026-10-15).** Cada comportamento tem um lado melhor: maior é melhor (volume, taxa de resposta, reuniões validadas, confirmação, perguntas, gatilhos) ou menor é melhor (1ª resposta, tempo de resposta). Descartes não têm lado melhor: abaixo ou acima da faixa contam como fora. A tela mostra "melhor que a faixa". O lado melhor fica editável na configuração do SDR Ideal.
 
 - Métricas no banco (RPC). O front só exibe.
-- Período com amostra pequena (menos de 10 conversas avaliadas ou menos de 3 reuniões) mostra "amostra pequena" no comportamento em vez de dentro/fora.
+- Período com amostra pequena (menos de 10 conversas avaliadas ou menos de 3 reuniões) mostra "amostra pequena" no comportamento em vez de dentro/fora. Nas medianas (1ª resposta e tempo de resposta), menos de 10 respostas no período também é amostra pequena. Amostra pequena e comportamento sem faixa ficam fora da nota.
+- A aderência de um período usa a versão do SDR Ideal em uso no fim dele (a primeira, se o período é anterior a todas).
+- Volume: o dia de hoje conta como dia útil inteiro.
+- Exemplos de conversas (tela de um SDR): até 3 casos "a melhorar" e 1 "bom exemplo" no período. 1ª resposta e tempo de resposta: as respostas mais lentas × a mais rápida. Reuniões validadas: invalidadas/no show × a validada mais recente. Confirmação: reuniões sem mensagem da equipe na hora antes × uma com. Volume, taxa de resposta e descartes são contagens, sem exemplo. Só o nome do lead e o link do Poli.
+- Salvar o SDR Ideal: os pesos dos comportamentos ativos somam 100; o "de" não passa do "até"; comportamento de conversa ativo precisa do texto do que a IA olha; se outra pessoa salvou no meio da edição, recusa e pede para recarregar. Na tela, tempo é editado em minutos.
+- Até a 9c, os comportamentos de conversa não entram na aderência, mesmo ligados.
 - LGPD: as conversas vão mascaradas para a IA. Os exemplos na tela levam ao chat, sem copiar telefone.
 - Custo: limite de conversas por rodada e registro de tokens, como no score.

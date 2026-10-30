@@ -25,6 +25,8 @@ export default async function PainelLayout({ children }: { children: ReactNode }
           {(me.role === "sdr" || isManager(me)) && <Link href="/" className="btn small">Painel</Link>}
           {isManager(me) && <Link href="/carrosseis" className="btn small">Carrosséis</Link>}
           {me.role === "sdr" && <Link href={`/sdr/${me.sdrId}`} className="btn small">Meus chats</Link>}
+          {isManager(me) && <Link href="/sdr-modelo" className="btn small">SDR Modelo</Link>}
+          {me.role === "sdr" && <Link href={`/sdr-modelo/${me.sdrId}`} className="btn small">Meu SDR Modelo</Link>}
           {me.role === "closer" && <Link href="/agenda" className="btn small">Minha agenda</Link>}
           {(me.role === "sdr" || isManager(me)) && <Link href="/agendar" className="btn small">Agendar</Link>}
           <Link href="/reunioes" className="btn small">Reuniões</Link>

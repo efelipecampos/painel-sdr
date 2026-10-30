@@ -56,13 +56,14 @@ describe("segurança do banco", () => {
     const byTable = new Map<string, string[]>();
     for (const r of res.rows) byTable.set(r.table_name, [...(byTable.get(r.table_name) ?? []), r.privilege_type]);
     expect([...byTable.keys()].sort()).toEqual([...CONFIG_TABLES, "carousel_members", "carousels", "profiles",
-      "journey_config", "journey_rule_changes", "journey_rules", "journey_sends", "poli_templates"].sort());
+      "journey_config", "journey_rule_changes", "journey_rules", "journey_sends", "poli_templates", "sdr_ideal_versoes"].sort());
     // Jornada (Fase 11): a RLS limita a gestor e admin; envios e templates só o worker grava.
     expect(byTable.get("journey_rules")).toEqual(["INSERT", "SELECT", "UPDATE"]);
     expect(byTable.get("journey_config")).toEqual(["SELECT", "UPDATE"]);
     expect(byTable.get("journey_rule_changes")).toEqual(["INSERT", "SELECT"]);
     expect(byTable.get("journey_sends")).toEqual(["SELECT"]);
     expect(byTable.get("poli_templates")).toEqual(["SELECT"]);
+    expect(byTable.get("sdr_ideal_versoes")).toEqual(["SELECT"]);
     expect(byTable.get("carousels")).toEqual(["INSERT", "SELECT", "UPDATE"]);
     expect(byTable.get("carousel_members")).toEqual(["DELETE", "INSERT", "SELECT", "UPDATE"]);
     expect(byTable.get("profiles")).toEqual(["SELECT"]);
