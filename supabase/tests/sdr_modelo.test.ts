@@ -25,7 +25,7 @@ beforeEach(async () => {
     reset role;
     select set_config('request.jwt.claims', '{"role":"service_role"}', false);
     select set_config('request.jwt.claim.sub', '', false);
-    delete from painel.sdr_ideal_versoes; delete from painel.holidays;
+    delete from painel.sdr_ideal_versoes; delete from painel.holidays; delete from painel.sdr_modelo_dias;
     update painel.settings set value = 'true'::jsonb where key = 'metrics_business_only';
     delete from painel.meeting_status_history; delete from painel.meetings;
     delete from painel.response_events; delete from painel.chat_owner_history; delete from painel.chat_messages;
@@ -266,5 +266,35 @@ describe("salvar o SDR Ideal", () => {
     await expect(como(uG, 1, comps(40).replace('"ativo":false', '"ativo":true').replace('"peso":60', '"peso":55'))).rejects.toThrow(/o que a IA olha/);
     expect(await como(uG, 1, comps(40))).toBe(2);
     await expect(como(uG, 1, comps(50))).rejects.toThrow(/Outra pessoa salvou a versão 2/);
+  });
+});
+
+describe("números guardados por dia", () => {
+  it("batem com sdr_metrics em dois dias; o dia é refeito se foi calculado antes do fim do dia seguinte", async () => {
+    await lead("X", [["template_bot", day("09:00")], ["lead", day("09:05")], ["sdr", day("09:20")], ["lead", day("10:00")], ["sdr", day("10:02")]]);
+    await lead("X", [["template_bot", day("09:00", "06")], ["lead", day("09:10", "06")], ["sdr", day("09:40", "06")]]);
+    await lead("Y", [["template_bot", day("11:00", "06")]]);
+    const de = day("00:00"), ate = day("00:00", "07");
+    const novo = (await db.query<Record<string, number>>("select * from painel.sdr_modelo_numeros($1, $2) order by name", [de, ate])).rows;
+    const velho = (await db.query<Record<string, number>>("select * from painel.sdr_metrics($1, $2) order by name", [de, ate])).rows;
+    for (const k of ["leads_abordados", "leads_responderam", "descartados", "primeira_resposta_s", "resposta_s"]) {
+      expect(novo.map((r) => r[k]), k).toEqual(velho.map((r) => r[k]));
+    }
+    expect(novo.every((r) => r.dias_faltando === 0)).toBe(true);
+    // cálculo "antigo" do dia 05 (feito no próprio dia): é refeito na próxima leitura
+    await db.query("update painel.sdr_modelo_dias set calculado_em = $1 where dia = '2026-10-05'", [day("20:00")]);
+    await db.query("delete from painel.sdr_modelo_dia_sdr where dia = '2026-10-05'");
+    const de5 = (await db.query<{ leads_abordados: number }>("select leads_abordados from painel.sdr_modelo_numeros($1, $2) where name = 'SDR X'", [de, ate])).rows[0];
+    expect(de5.leads_abordados).toBe(2);
+  });
+
+  it("dia com número guardado que ainda pode mudar (ontem) não conta como faltando", async () => {
+    const ontem = new Date(Date.now() - 86400e3).toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
+    const role = "select set_config('request.jwt.claims', '{\"role\":\"service_role\"}', true)";
+    await db.query(role);
+    const falta = async () => (await db.query<{ n: number }>("select painel.sdr_modelo_preparar($1, $1, 10) n", [ontem])).rows[0].n;
+    expect(await falta()).toBe(0);
+    expect(await falta()).toBe(0);
+    expect((await db.query("select 1 from painel.sdr_modelo_dias where dia = $1", [ontem])).rows).toHaveLength(1);
   });
 });

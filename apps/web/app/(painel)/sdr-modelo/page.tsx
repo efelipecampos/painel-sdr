@@ -15,7 +15,7 @@ export default async function SdrModeloTimePage({ searchParams }: { searchParams
   if (me?.role === "sdr" && me.sdrId) redirect(`/sdr-modelo/${me.sdrId}`);
   if (!isManager(me)) redirect("/");
   const p = resolveDias(await searchParams);
-  const { linhas, numeros, versao } = await carregar(p.from, p.to);
+  const { linhas, numeros, versao, diasFaltando } = await carregar(p.from, p.to);
   const qs = `?de=${p.de}&ate=${p.ate}`;
 
   // SDRs com atividade no período, em ordem alfabética (não é ranking)
@@ -50,6 +50,7 @@ export default async function SdrModeloTimePage({ searchParams }: { searchParams
           </Link>
         </div>
       </div>
+      {diasFaltando > 0 && <div className="alert" role="status">Ainda calculando {diasFaltando} {diasFaltando === 1 ? "dia" : "dias"} deste período. Recarregue a página em alguns segundos.</div>}
       {!versao
         ? <div className="card"><p className={s.empty}>Ainda não há versão do SDR Ideal.</p></div>
         : sdrs.length === 0

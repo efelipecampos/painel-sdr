@@ -32,7 +32,7 @@ export default async function SdrModeloUmPage({ params, searchParams }: {
 
   const p = resolveDias(sp);
   const pa = anterior(p);
-  const [{ linhas, numeros, versao }, antes] = await Promise.all([carregar(p.from, p.to), carregar(pa.from, pa.to)]);
+  const [{ linhas, numeros, versao, diasFaltando }, antes] = await Promise.all([carregar(p.from, p.to), carregar(pa.from, pa.to)]);
   const db = (await createClient()).schema("painel");
   const exemplos = Object.fromEntries(await Promise.all(COM_EXEMPLO.map(async (c) => {
     const { data, error } = await db.rpc("sdr_modelo_exemplos", { p_sdr: id, p_from: p.from.toISOString(), p_to: p.to.toISOString(), p_comportamento: c });
@@ -87,6 +87,7 @@ export default async function SdrModeloUmPage({ params, searchParams }: {
         </div>
       </div>
 
+      {diasFaltando > 0 && <div className="alert" role="status">Ainda calculando {diasFaltando} {diasFaltando === 1 ? "dia" : "dias"} deste período. Recarregue a página em alguns segundos.</div>}
       {!versao || !comps.length
         ? <div className="card"><p className={s.empty}>Sem dados do SDR Modelo neste período.</p></div>
         : <UmView aderencia={aderencia} anterior={textoAnterior(aderencia, aderenciaAntes)} comps={comps} inicial={sp.c ?? null} />}
