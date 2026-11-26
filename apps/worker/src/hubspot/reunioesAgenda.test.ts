@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { camposDiferentes, camposPainel, quemVale, semHubspot, statusDoHubspot } from "./reunioesAgenda";
+import { camposDiferentes, camposPainel, quemVale, semHubspot, statusDoHubspot, eventoApagado } from "./reunioesAgenda";
 
 describe("status vindo do HubSpot", () => {
   it("correspondência combinada; Rescheduled conta como agendada", () => {
@@ -60,5 +60,16 @@ describe("status mudou no painel e no HubSpot: vale a última mudança", () => {
   it("sem data no HubSpot: vale o painel", () => {
     expect(quemVale(m, "COMPLETED", null)).toBe("painel");
     expect(quemVale({ hubspot_outcome: null }, null, null)).toBe("painel");
+  });
+});
+
+describe("evento apagado no Google (403 ao pintar de cinza, 2026-11-26)", () => {
+  const m = { google_event_id: "ev", google_calendar_id: "closer@x" } as never;
+  it("apagado: get devolve null", async () => {
+    expect(await eventoApagado({ get: async () => null }, m)).toBe(true);
+  });
+  it("existe ou não deu para ler: tenta de novo na próxima rodada", async () => {
+    expect(await eventoApagado({ get: async () => ({ id: "ev" }) as never }, m)).toBe(false);
+    expect(await eventoApagado({ get: async () => { throw new Error("403"); } }, m)).toBe(false);
   });
 });

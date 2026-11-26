@@ -61,8 +61,17 @@ async function settingDesde(db: SupabaseClient): Promise<string> {
 }
 
 export interface RodadaAgenda { ligadas: number; status: number; liberadas: number; erros: number }
-export type CalendarDe = (closerId: string) => Promise<Pick<GoogleCalendar, "patch"> | null>;
+export type CalendarDe = (closerId: string) => Promise<Pick<GoogleCalendar, "patch" | "get"> | null>;
 const CINZA = "8";
+
+/** O evento não existe mais no Google (apagado/cancelado). Erro na leitura: não dá para saber, conta como existente. */
+export async function eventoApagado(cal: Pick<GoogleCalendar, "get">, m: MeetingForHubspot): Promise<boolean> {
+  try {
+    return (await cal.get(m.google_event_id!, m.google_calendar_id || "primary")) === null;
+  } catch {
+    return false;
+  }
+}
 
 /** Cancelada: evento Disponível e cinza na agenda do closer (libera o horário); voltou a valer: Ocupado e cor normal. */
 async function liberarNoGoogle(db: SupabaseClient, calendarDe: CalendarDe, m: MeetingForHubspot, status: string): Promise<boolean> {
@@ -82,8 +91,11 @@ async function liberarNoGoogle(db: SupabaseClient, calendarDe: CalendarDe, m: Me
   } catch (e) {
     const ge = e instanceof GoogleError ? e : null;
     await log(false, ge ?? undefined);
-    // só evento apagado (404/410) conta como "nada a liberar"; o resto (403 de permissão, limite) tenta na próxima rodada
-    if (!(ge && (ge.status === 404 || ge.status === 410))) throw e;
+    // só evento apagado conta como "nada a liberar"; o resto (403 de permissão, limite) tenta na próxima rodada.
+    // Evento apagado no Google (o closer cancelou pela agenda ou pelo HubSpot) responde 403 ao PATCH, não 404
+    // (2026-11-26: 3 reuniões ficaram tentando a cada 5 min, uma desde 16/11): no 403 confere se o evento ainda existe.
+    const apagado = !!ge && (ge.status === 404 || ge.status === 410 || (ge.status === 403 && await eventoApagado(cal, m)));
+    if (!apagado) throw e;
   }
   await db.schema("painel").from("meetings").update({ google_liberada: liberar }).eq("id", m.id);
   return true;
