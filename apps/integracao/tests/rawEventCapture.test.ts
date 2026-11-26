@@ -242,6 +242,23 @@ describe("captureRawEvent — filtro da equipe de pré-vendas", () => {
     expect(store.rows).toHaveLength(1);
   });
 
+  it("tag de descarte em outros formatos (2026-11-26): pelo cabeçalho, nome solto, lista de tags e grafia diferente", async () => {
+    const h = "contacts.contact.tag_linked";
+    const casos: [unknown, string | undefined][] = [
+      [{ object: "contact", event: "tag_linked", uuid: "c-1", value: { tag: { uuid: "t-1", name: "Descarte - Sem CNPJ" } } }, h],
+      [{ uuid: "c-2", value: { tag: { uuid: "t-1", attributes: { name: "Descarte - Sem CNPJ" } } } }, h],
+      [{ object: "contact", event: "tag_linked", uuid: "c-3", value: { tags: [{ uuid: "t-1", attributes: { name: "descarte – Engano" } }] } }, h],
+      [{ object: "contact", event: "tag_linked", uuid: "c-4", value: { data: { tag: { id: "t-1", name: " Descarte: Engano" } } } }, undefined],
+    ];
+    for (const [corpo, header] of casos) {
+      expect(await captureRawEvent(corpo as never, header, store.deps)).toMatchObject({ capture: true, reason: "tag_descarte" });
+    }
+    // a lista de tags do contato não é a tag do evento
+    const outra = { object: "contact", event: "tag_linked", uuid: "c-5", value: { contact: { tags: [{ name: "Descarte - Engano" }] }, tag: { uuid: "t-9", name: "Cliente VIP" } } };
+    expect(await captureRawEvent(outra as never, h, store.deps)).toMatchObject({ capture: false, reason: "tag_fora_do_descarte" });
+    expect(store.rows).toHaveLength(4);
+  });
+
   it("evento igual: reentrega não duplica, mas repetido 10 min depois entra", async () => {
     vi.useFakeTimers();
     try {

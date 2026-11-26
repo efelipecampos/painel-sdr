@@ -59,6 +59,8 @@ export const config = {
   alertHubspotMinutes: Number(process.env.ALERTA_HUBSPOT_MIN ?? 30),
   /** Painel sem responder por este tempo. */
   alertPainelMinutes: Number(process.env.ALERTA_PAINEL_MIN ?? 5),
+  /** Minutos em horário comercial sem nenhuma tag de descarte da Poli (2026-11-26; ~1 dia útil). 0 desliga. */
+  alertTagMinutes: Number(process.env.ALERTA_TAG_MIN ?? 540),
   /** Google Agenda (Fase 10c). Sem as três variáveis, a conferência das agendas não roda. */
   google: process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_TOKEN_KEY
     ? {

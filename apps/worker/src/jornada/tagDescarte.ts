@@ -11,7 +11,37 @@ import { contatosPorTelefone } from "../hubspot/contatosTelefone.js";
 const EVENTO = "contacts.contact.tag_linked";
 const CURSOR = "tag_descarte_cursor";
 
-type Payload = { value?: { contact?: { uuid?: string; attributes?: { phone?: string } }; tag?: { uuid?: string; attributes?: { name?: string } }; timestamp?: string } };
+type Tag = { uuid?: string; id?: string; name?: string; attributes?: { name?: string } };
+type Contato = { uuid?: string; phone?: string; attributes?: { phone?: string } };
+type Payload = {
+  uuid?: string;
+  value?: { contact?: Contato; tag?: Tag; tags?: Tag[]; timestamp?: string; data?: { contact?: Contato; tag?: Tag } };
+};
+
+/**
+ * Contato, telefone e tag do evento. Formato visto até 12/11 em value.contact / value.tag; as alternativas cobrem o
+ * evento vir com outro formato (2026-11-26: desde 13/11 nenhuma tag era reconhecida).
+ */
+export function lerEventoTag(payload: Payload): { contato: string | null; telefone: string | undefined; tagUuid: string; tagNome: string } {
+  const v = payload.value ?? {};
+  const c = v.contact ?? v.data?.contact;
+  const t = v.tag ?? v.data?.tag ?? v.tags?.[0];
+  return {
+    contato: c?.uuid ?? payload.uuid ?? null,
+    telefone: c?.attributes?.phone ?? c?.phone,
+    tagUuid: t?.uuid ?? t?.id ?? "",
+    tagNome: t?.attributes?.name ?? t?.name ?? "",
+  };
+}
+
+/** Motivo da tag pelo uuid; se o uuid não estiver configurado (tag recriada na Poli), pelo nome já visto antes. */
+async function motivoDaTag(db: SupabaseClient, mapa: Record<string, string>, uuid: string, nome: string): Promise<string | null> {
+  if (mapa[uuid]) return mapa[uuid];
+  if (!nome) return null;
+  const r = check(await db.schema("painel").from("tag_descartes").select("motivo").eq("tag_nome", nome).not("motivo", "is", null)
+    .order("processado_em", { ascending: false }).limit(1), "ler motivo pelo nome da tag") as { motivo: string }[];
+  return r[0]?.motivo ?? null;
+}
 
 /** "Descartado via integração com Tag Poli. Tag: ... SDR do atendimento: ... Em dd/mm/aaaa hh:mm." */
 export function observacaoTag(tag: string, sdr: string | null, em: Date): string {
@@ -45,10 +75,8 @@ export async function processarTagsDescarte(db: SupabaseClient, hs: Pick<Hubspot
   let novoCursor = eventos.length === max ? cursor : ate;
   for (const ev of eventos) {
     const v = ev.payload.value ?? {};
-    const contato = v.contact?.uuid ?? null;
-    const tagUuid = v.tag?.uuid ?? "";
-    const tagNome = v.tag?.attributes?.name ?? "";
-    const motivo = mapa[tagUuid] ?? null;
+    const { contato, telefone, tagUuid, tagNome } = lerEventoTag(ev.payload);
+    const motivo = await motivoDaTag(db, mapa, tagUuid, tagNome);
     const em = new Date(v.timestamp && !Number.isNaN(Date.parse(v.timestamp)) ? v.timestamp : ev.received_at);
 
     const leads = contato
@@ -58,7 +86,7 @@ export async function processarTagsDescarte(db: SupabaseClient, hs: Pick<Hubspot
     // o contato que o painel conhece e os outros do HubSpot com o mesmo telefone (contato duplicado, 2026-10-28)
     let contatos = [hubspotId].filter((c): c is string => !!c);
     try {
-      contatos = [...new Set([...contatos, ...(await contatosPorTelefone(hs, v.contact?.attributes?.phone))])];
+      contatos = [...new Set([...contatos, ...(await contatosPorTelefone(hs, telefone))])];
     } catch (e) {
       if (!contatos.length) throw e; // sem o contato conhecido, a busca é o único caminho: tenta na próxima rodada
     }

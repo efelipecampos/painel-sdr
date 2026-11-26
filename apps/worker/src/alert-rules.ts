@@ -1,7 +1,7 @@
 // Regras dos alertas de operação (Fase 8), sem banco nem rede, para poder testar.
 // LGPD: os textos nunca levam conteúdo de mensagem, nome ou telefone de lead.
 
-export type AlertKey = "fila" | "poli" | "worker" | "hubspot" | "painel" | "score";
+export type AlertKey = "fila" | "poli" | "worker" | "hubspot" | "painel" | "score" | "tags";
 
 /** Mudança de estado de um alerta: "problema" ao passar do limite, "resolvido" quando volta ao normal depois de avisar. */
 export type Transition = { key: AlertKey; kind: "problema" | "resolvido"; minutos: number };
@@ -51,6 +51,7 @@ export function alertText(t: Transition, detalhe = ""): string {
       hubspot: "a sincronização com o HubSpot voltou a funcionar",
       painel: "o painel voltou a responder",
       score: "o score de qualidade voltou a funcionar",
+      tags: "o descarte por tag da Poli voltou a funcionar",
     };
     return `✅ *Painel SDR:* ${ok[t.key]} (problema durou ${t.minutos} min).`;
   }
@@ -61,6 +62,7 @@ export function alertText(t: Transition, detalhe = ""): string {
     hubspot: `a sincronização com o HubSpot está falhando há ${t.minutos} min.`,
     painel: `o painel não responde há ${t.minutos} min.`,
     score: `o score de qualidade está falhando há ${t.minutos} min.`,
+    tags: `nenhuma tag "Descarte - ..." da Poli processada há ${Math.round(t.minutos / 60)} h em horário comercial (o normal é ~10 por dia). Confira se as SDRs estão usando as tags e se a integração as reconhece.`,
   };
   return [`🔴 *Painel SDR:* ${problema[t.key]}`, detalhe].filter(Boolean).join("\n");
 }

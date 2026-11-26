@@ -5,6 +5,7 @@ import { poliWebhookBodySchema } from "./poli/types.js";
 import { parseMessageEvent } from "./poli/parser.js";
 import { processMessage } from "./pipeline/processMessage.js";
 import { captureRawEventSafely } from "./pipeline/captureRawEvent.js";
+import { isTagDescarte, tagEventOf, tagOf } from "./poli/rawEventFilter.js";
 import { isAlreadyProcessed, markProcessed, recordFailure, clearFailure } from "./queue/store.js";
 
 export interface RequestWithRawBody extends Request {
@@ -55,12 +56,15 @@ export const webhookHandler = async (req: RequestWithRawBody, res: Response) => 
   // o evento cru já foi pro raw_events acima. Confirma recebido, pra Poli não
   // reentregar. Sem o corpo no log: ele traz nome e telefone do lead (LGPD).
   const rawObjectType = (req.body as { object?: unknown } | undefined)?.object;
-  // Formato do evento de tag no contato ainda não visto (descarte por tag, 2026-10-27): registra os 3 primeiros
-  // por processo só com a estrutura (caminho → tipo), e o valor apenas de uuid/nome dentro de chaves de tag.
-  const rawEventName = String((req.body as { event?: unknown } | undefined)?.event ?? "");
-  if (rawObjectType === "contact" && /tag/i.test(rawEventName) && tagFormatLogged < 3) {
+  // Tag no contato (descarte por tag): toda tag recebida vai para o log com o nome, o uuid e se foi reconhecida como
+  // descarte (2026-11-26: de 23/11 a 26/11 chegaram 19 tags e nenhuma foi reconhecida, sem rastro no log). As 5
+  // primeiras por processo levam também a estrutura (caminho → tipo). Nada do contato: nome e telefone ficam de fora.
+  const tagEvent = tagEventOf(req.body ?? {}, req.headers["x-webhook-event"] as string | undefined);
+  if (tagEvent) {
+    const tag = tagOf(req.body);
+    const shape = tagFormatLogged < 5 ? describeShape(req.body) : {};
     tagFormatLogged++;
-    req.log.info({ event: rawEventName, ...describeShape(req.body) }, "Formato do evento de tag (só estrutura)");
+    req.log.info({ event: tagEvent, tagNome: tag.name ?? null, tagUuid: tag.uuid ?? null, descarte: isTagDescarte(tag.name), ...shape }, "Tag no contato");
   }
   if (rawObjectType !== "message") {
     return res.status(200).json({ received: true, handled: false });

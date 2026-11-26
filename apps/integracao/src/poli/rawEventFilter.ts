@@ -126,6 +126,53 @@ export interface DecideOptions {
 /** Prefixo das tags da Poli que descartam o Lead no HubSpot. */
 export const TAG_DESCARTE_PREFIXO = "Descarte - ";
 
+/**
+ * "Descarte - <motivo>", tolerante a variações de escrita (2026-11-26: desde 13/11 as tags chegam e nenhuma era
+ * reconhecida): maiúsculas, espaços, hífen/traço/dois-pontos e acentos/normalização Unicode diferentes.
+ */
+export function isTagDescarte(nome: string | undefined): boolean {
+  return !!nome && /^descarte\s*[-‐‑‒–—:]/i.test(nome.normalize("NFC").trim());
+}
+
+/** "tag_linked" / "tag_unlinked" pelo corpo ou, se o corpo não disser, pelo cabeçalho x-webhook-event. */
+export function tagEventOf(body: RawEventBody, headerEvent?: string): "tag_linked" | "tag_unlinked" | undefined {
+  const fromBody = asString(body.object) === "contact" ? asString(body.event) : undefined;
+  const fromHeader = headerEvent?.split(".").pop();
+  for (const e of [fromBody, fromHeader]) if (e === "tag_linked" || e === "tag_unlinked") return e;
+  return undefined;
+}
+
+/**
+ * Tag do evento: procura em value.tag (formato visto até 12/11), value.tags[0], value.data.tag e afins; nome em
+ * `attributes.name` ou `name`. Só lê o que está dentro de chaves "tag" (nada do contato).
+ */
+export function tagOf(body: unknown): { uuid?: string; name?: string } {
+  // formato conhecido primeiro: o contato pode trazer a lista de todas as tags dele, que não é a tag do evento
+  const value = (body as { value?: { tag?: unknown; data?: { tag?: unknown } } } | null)?.value;
+  for (const t of [value?.tag, value?.data?.tag]) {
+    if (t && typeof t === "object" && !Array.isArray(t)) {
+      const o = t as Record<string, unknown>;
+      const attrs = (o.attributes && typeof o.attributes === "object" ? o.attributes : {}) as Record<string, unknown>;
+      const name = asString(attrs.name) ?? asString(o.name);
+      if (name) return { uuid: asString(o.uuid) ?? asString(o.id), name };
+    }
+  }
+  const found: { uuid?: string; name?: string } = {};
+  const visit = (v: unknown, inTag: boolean, depth: number): void => {
+    if (depth > 6 || v == null || typeof v !== "object" || (found.uuid && found.name)) return;
+    if (Array.isArray(v)) { for (const x of v) visit(x, inTag, depth + 1); return; }
+    const o = v as Record<string, unknown>;
+    if (inTag) {
+      const attrs = (o.attributes && typeof o.attributes === "object" ? o.attributes : {}) as Record<string, unknown>;
+      found.name ??= asString(attrs.name) ?? asString(o.name);
+      found.uuid ??= asString(o.uuid) ?? asString(o.id);
+    }
+    for (const [k, x] of Object.entries(o)) if (k !== "attributes") visit(x, inTag || /^tags?$/i.test(k), depth + 1);
+  };
+  visit(body, false, 0);
+  return found;
+}
+
 export function bodyEventId(body: RawEventBody, eventType: string | undefined, now: number): string {
   const hash = createHash("sha256").update(JSON.stringify(body)).digest("hex").slice(0, 32);
   return `${eventType ?? "evento"}:${hash}:${Math.floor(now / 600_000)}`;
@@ -140,21 +187,21 @@ export function decideRawEventCapture(body: RawEventBody, options: DecideOptions
 
   const object = asString(body.object);
   const event = asString(body.event);
+  const tagEvent = tagEventOf(body, options.headerEvent);
 
   // ACK, atendimento e contato (decisão do Felipe, 2026-10-23): só da equipe de pré-vendas, pela mesma
   // regra das mensagens: o dono do atendimento é da equipe, ou o atendimento já tem evento gravado
   // (o que cobre o fechamento e a saída do chat da equipe). O contato "atualizado" fica de fora (volume
   // alto, nada útil) e o "encaminhado" também: ele não traz o e-mail de quem recebe, e o atendimento
   // criado por encaminhamento (INITIATED_BY_FORWARDING) já registra o mesmo momento com o dono.
-  const naoMensagem = (object === "message" && event === "ack") || object === "attendance" || object === "contact";
+  const naoMensagem = (object === "message" && event === "ack") || object === "attendance" || object === "contact" || !!tagEvent;
   if (naoMensagem) {
     const reason: CaptureReason = object === "message" ? "ack" : object === "attendance" ? "atendimento" : "contato";
     // Tag no contato (descarte por tag, decisão do Felipe, 2026-10-27): o evento não traz atendimento nem quem aplicou.
     // Entra só a tag de descarte vinculada ("Descarte - ..."; criadas pelo painel). Tirar a tag não desfaz o descarte.
-    if (object === "contact" && (event === "tag_linked" || event === "tag_unlinked")) {
+    if (tagEvent) {
       const id = { ...base, externalId: bodyEventId(body, base.eventType, options.now ?? Date.now()) };
-      const nome = asString(body.value?.tag?.attributes?.name) ?? "";
-      return event === "tag_linked" && nome.startsWith(TAG_DESCARTE_PREFIXO)
+      return tagEvent === "tag_linked" && isTagDescarte(tagOf(body).name)
         ? { capture: true, reason: "tag_descarte", ...id }
         : { capture: false, reason: "tag_fora_do_descarte", ...id };
     }

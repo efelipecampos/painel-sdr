@@ -81,3 +81,11 @@ describe("alertText", () => {
       .toBe("✅ *Painel SDR:* a fila de eventos voltou a andar (problema durou 12 min).");
   });
 });
+
+describe("alerta do descarte por tag", () => {
+  it("texto em horas, sem dado de lead", () => {
+    const t = alertText({ key: "tags", kind: "problema", minutos: 600 });
+    expect(t).toContain("há 10 h");
+    expect(alertText({ key: "tags", kind: "resolvido", minutos: 600 })).toContain("descarte por tag");
+  });
+});

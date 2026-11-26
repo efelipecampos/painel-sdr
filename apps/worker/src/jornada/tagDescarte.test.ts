@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { descartarNoHubspot } from "./descarte.js";
-import { observacaoTag, processarTagsDescarte } from "./tagDescarte.js";
+import { lerEventoTag, observacaoTag, processarTagsDescarte } from "./tagDescarte.js";
 
 /** HubSpot falso: um contato com um Lead aberto no pipeline do SDR; guarda o PATCH. */
 function fakeHs(etapa = "1250901135", nota: string | null = null) {
@@ -104,5 +104,18 @@ describe("descarte por tag da Poli", () => {
     expect(await processarTagsDescarte(db, hs)).toBe(0);
     expect(patches).toHaveLength(0);
     expect(registros[0].resultado).toBe("já fora do funil");
+  });
+});
+
+describe("lerEventoTag (formatos do evento de tag, 2026-11-26)", () => {
+  it("formato visto até 12/11", () => {
+    expect(lerEventoTag({ value: { contact: { uuid: "c-1", attributes: { phone: "5511" } }, tag: { uuid: "t-1", attributes: { name: "Descarte - Sem CNPJ" } } } }))
+      .toEqual({ contato: "c-1", telefone: "5511", tagUuid: "t-1", tagNome: "Descarte - Sem CNPJ" });
+  });
+  it("nome solto, lista de tags, data e uuid do contato no topo", () => {
+    expect(lerEventoTag({ uuid: "c-2", value: { tags: [{ id: "t-2", name: "Descarte - Engano" }] } }))
+      .toEqual({ contato: "c-2", telefone: undefined, tagUuid: "t-2", tagNome: "Descarte - Engano" });
+    expect(lerEventoTag({ value: { data: { contact: { uuid: "c-3", phone: "55" }, tag: { uuid: "t-3", name: "X" } } } }))
+      .toEqual({ contato: "c-3", telefone: "55", tagUuid: "t-3", tagNome: "X" });
   });
 });

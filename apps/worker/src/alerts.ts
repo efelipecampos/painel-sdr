@@ -73,6 +73,7 @@ export class Monitor {
     try {
       await this.checkFila();
       await this.checkPoli();
+      await this.checkTags();
     } catch (err) {
       // Banco fora: o alerta do worker já cobre (a rodada de leitura também falha).
       console.error("[alertas] erro ao conferir a fila:", short(err));
@@ -99,6 +100,21 @@ export class Monitor {
     if (secs.error) throw new Error(`business_seconds: ${secs.error.message}`);
     const secsSince = secs.data as number;
     await this.report("poli", !poliMuda(secsSince, config.alertPoliMinutes), 0, "", Math.round(secsSince / 60));
+  }
+
+  /** Descarte por tag parado (2026-11-26): de 13/11 a 26/11 nenhuma tag foi reconhecida e ninguém foi avisado. */
+  private async checkTags(): Promise<void> {
+    if (!config.alertTagMinutes) return;
+    const last = await this.db.schema("painel").from("tag_descartes").select("aplicada_em")
+      .order("aplicada_em", { ascending: false }).limit(1);
+    if (last.error) throw new Error(`ler última tag de descarte: ${last.error.message}`);
+    if (!last.data.length) return;
+    const secs = await this.db.schema("painel").rpc("business_seconds", {
+      p_from: last.data[0].aplicada_em, p_to: new Date(this.now()).toISOString(),
+    });
+    if (secs.error) throw new Error(`business_seconds: ${secs.error.message}`);
+    const secsSince = secs.data as number;
+    await this.report("tags", !poliMuda(secsSince, config.alertTagMinutes), 0, "", Math.round(secsSince / 60));
   }
 
   private async checkPainel(): Promise<void> {
